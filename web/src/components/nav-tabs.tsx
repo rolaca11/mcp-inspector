@@ -45,7 +45,7 @@ interface NavTabsProps {
 export function NavTabs({ active, onChange, counts }: NavTabsProps) {
   return (
     <div className="border-b border-border/60 bg-background/40">
-      <div className="mx-auto flex max-w-[1400px] items-end gap-1 px-6">
+      <div className="mx-auto flex max-w-[1400px] items-end gap-2 px-6">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.key === active;
@@ -56,7 +56,7 @@ export function NavTabs({ active, onChange, counts }: NavTabsProps) {
               type="button"
               onClick={() => onChange(item.key)}
               className={cn(
-                "group relative inline-flex items-center gap-2 px-3.5 py-3 text-sm font-medium transition-colors cursor-pointer",
+                "group relative inline-flex items-center gap-2 px-4 py-3.5 text-sm font-medium transition-colors cursor-pointer",
                 isActive
                   ? "text-foreground"
                   : "text-muted-foreground/80 hover:text-foreground",
@@ -74,7 +74,7 @@ export function NavTabs({ active, onChange, counts }: NavTabsProps) {
               {typeof count === "number" && (
                 <span
                   className={cn(
-                    "ml-0.5 rounded-md px-1.5 py-px text-[10px] tabular-nums leading-none font-mono",
+                    "ml-0.5 rounded-md px-1.5 py-0.5 text-[11px] tabular-nums leading-none font-mono",
                     isActive
                       ? "bg-foreground/10 text-foreground"
                       : "bg-muted/50 text-muted-foreground/80",

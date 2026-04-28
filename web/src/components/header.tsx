@@ -86,7 +86,7 @@ export function Header({
 
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-6">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-6">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-3 min-w-0">
           <Logo />
@@ -122,7 +122,7 @@ export function Header({
         <div className="flex-1" />
 
         {/* Right: API badge, search, help, notifications, avatar */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <button

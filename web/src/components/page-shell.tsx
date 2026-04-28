@@ -22,22 +22,22 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto max-w-[1400px] px-6 py-8 flex flex-col gap-6",
+        "mx-auto max-w-[1400px] px-6 py-10 flex flex-col gap-8",
         className,
       )}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2 min-w-0">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3 min-w-0">
           <h1 className="text-2xl font-semibold leading-none tracking-tight text-balance">
             {title}
           </h1>
           {description && (
-            <p className="text-sm text-muted-foreground max-w-2xl text-balance">
+            <p className="text-sm text-muted-foreground max-w-2xl text-balance leading-relaxed">
               {description}
             </p>
           )}
           {meta && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-xs text-muted-foreground">
               {meta}
             </div>
           )}
