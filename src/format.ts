@@ -204,12 +204,19 @@ export function printToolResult(result: CallToolResult, opts: FormatOptions = {}
   if (result.isError) {
     console.log(pc.red(pc.bold("Tool returned isError=true")));
   }
-  printContentBlocks(result.content);
 
-  if (result.structuredContent && Object.keys(result.structuredContent).length > 0) {
-    console.log();
+  // Per the MCP spec, when a tool returns `structuredContent`, the `content`
+  // blocks are a human-readable serialization of the same data, included for
+  // backwards compatibility with clients that can't parse the structured
+  // payload. Show the structured payload only and skip the duplicate prose.
+  const hasStructured =
+    result.structuredContent && Object.keys(result.structuredContent).length > 0;
+
+  if (hasStructured) {
     console.log(pc.bold("structuredContent:"));
     console.log(JSON.stringify(result.structuredContent, null, 2));
+  } else {
+    printContentBlocks(result.content);
   }
 }
 
