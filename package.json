@@ -1,0 +1,48 @@
+{
+  "name": "mcp-inspector",
+  "version": "0.1.0",
+  "description": "CLI-based MCP client for discovering and exercising resources, tools, prompts, and completions over stdio or OAuth-protected HTTP",
+  "type": "module",
+  "bin": {
+    "mcp-inspector": "dist/cli.js",
+    "mcpi": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm clean && pnpm build",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "client",
+    "oauth",
+    "inspector"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@10.24.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^14.0.3",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "shell-quote": "^1.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/shell-quote": "^1.7.5",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
