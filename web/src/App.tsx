@@ -1,11 +1,25 @@
 import * as React from "react";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { NavTabs, type NavKey } from "@/components/nav-tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { ServerProvider, useServer } from "@/contexts/server-context";
+import {
+  ServerProvider,
+  useServer,
+  type ConnectionState,
+} from "@/contexts/server-context";
 import { useServers } from "@/hooks/use-servers";
 import type { MCPServer } from "@/data/types";
 
@@ -18,25 +32,24 @@ import { AuthPage } from "@/pages/auth";
 import { ServersPage } from "@/pages/servers";
 import { Empty } from "@/components/empty";
 
+/**
+ * Outlet context shared with every server-scoped page. Pages that need to
+ * switch the active server (e.g. ServersPage) use `switchToServer`, which
+ * preserves the current sub-route in the URL.
+ */
+export interface ServerLayoutContext {
+  servers: MCPServer[];
+  active: MCPServer;
+  connection: ConnectionState;
+  switchToServer: (next: MCPServer) => void;
+}
+
+export function useServerLayout(): ServerLayoutContext {
+  return useOutletContext<ServerLayoutContext>();
+}
+
 export default function App() {
   const { servers, state: apiState, reload: reloadServers, error } = useServers();
-  const [activeName, setActiveName] = React.useState<string | null>(null);
-  const [tab, setTab] = React.useState<NavKey>("overview");
-
-  React.useEffect(() => {
-    if (servers.length === 0) {
-      setActiveName(null);
-      return;
-    }
-    if (!activeName || !servers.find((s) => s.name === activeName)) {
-      setActiveName(servers[0]!.name);
-    }
-  }, [servers, activeName]);
-
-  const active = React.useMemo<MCPServer | null>(
-    () => servers.find((s) => s.name === activeName) ?? null,
-    [servers, activeName],
-  );
 
   if (apiState === "loading" && servers.length === 0) {
     return (
@@ -46,7 +59,7 @@ export default function App() {
     );
   }
 
-  if (!active) {
+  if (servers.length === 0) {
     return (
       <TooltipProvider>
         <div className="min-h-screen flex flex-col">
@@ -60,43 +73,97 @@ export default function App() {
     );
   }
 
+  const fallback = `/${encodeURIComponent(servers[0]!.name)}/overview`;
+
   return (
     <TooltipProvider>
-      <ServerProvider key={active.name} server={active}>
-        <Shell
-          servers={servers}
-          active={active}
-          tab={tab}
-          onSelect={(s) => setActiveName(s.name)}
-          onTabChange={setTab}
-          apiState={apiState}
-          reloadServers={reloadServers}
-        />
-      </ServerProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to={fallback} replace />} />
+        <Route
+          path=":serverName"
+          element={
+            <ServerLayout
+              servers={servers}
+              apiState={apiState}
+              reloadServers={reloadServers}
+            />
+          }
+        >
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OverviewPage />} />
+          <Route path="resources" element={<ResourcesPage />} />
+          <Route path="tools" element={<ToolsPage />} />
+          <Route path="prompts" element={<PromptsPage />} />
+          <Route path="completions" element={<CompletionsPage />} />
+          <Route path="auth" element={<AuthPage />} />
+          <Route path="servers" element={<ServersRouteElement />} />
+        </Route>
+        <Route path="*" element={<Navigate to={fallback} replace />} />
+      </Routes>
     </TooltipProvider>
   );
 }
 
-interface ShellProps {
+interface ServerLayoutProps {
   servers: MCPServer[];
-  active: MCPServer;
-  tab: NavKey;
-  onSelect: (s: MCPServer) => void;
-  onTabChange: (k: NavKey) => void;
   apiState: ReturnType<typeof useServers>["state"];
   reloadServers: () => void;
 }
 
-function Shell({
+function ServerLayout({ servers, apiState, reloadServers }: ServerLayoutProps) {
+  const { serverName } = useParams<{ serverName: string }>();
+  const active = React.useMemo(
+    () => servers.find((s) => s.name === serverName) ?? null,
+    [servers, serverName],
+  );
+
+  if (!active) {
+    return (
+      <Navigate
+        to={`/${encodeURIComponent(servers[0]!.name)}/overview`}
+        replace
+      />
+    );
+  }
+
+  return (
+    <ServerProvider key={active.name} server={active}>
+      <ServerShell
+        servers={servers}
+        active={active}
+        apiState={apiState}
+        reloadServers={reloadServers}
+      />
+    </ServerProvider>
+  );
+}
+
+interface ServerShellProps {
+  servers: MCPServer[];
+  active: MCPServer;
+  apiState: ReturnType<typeof useServers>["state"];
+  reloadServers: () => void;
+}
+
+function ServerShell({
   servers,
   active,
-  tab,
-  onSelect,
-  onTabChange,
   apiState,
   reloadServers,
-}: ShellProps) {
+}: ServerShellProps) {
   const { data, state, rediscover, disconnect } = useServer();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const switchToServer = React.useCallback(
+    (next: MCPServer) => {
+      // Preserve the current sub-route (e.g. `/old/tools` → `/new/tools`).
+      const segments = location.pathname.split("/").filter(Boolean);
+      const subPath = segments.slice(1).join("/") || "overview";
+      navigate(`/${encodeURIComponent(next.name)}/${subPath}`);
+    },
+    [navigate, location.pathname],
+  );
 
   const counts: Partial<Record<NavKey, number>> = {
     resources: (data?.resources.length ?? 0) + (data?.resourceTemplates.length ?? 0),
@@ -105,39 +172,45 @@ function Shell({
     servers: servers.length,
   };
 
+  const outletContext: ServerLayoutContext = {
+    servers,
+    active,
+    connection: state,
+    switchToServer,
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header
         servers={servers}
         active={active}
-        onSelect={onSelect}
+        onSelect={switchToServer}
         apiState={apiState}
         connection={state}
         onConnect={rediscover}
         onDisconnect={disconnect}
         onReloadServers={reloadServers}
       />
-      <NavTabs active={tab} onChange={onTabChange} counts={counts} />
+      <NavTabs serverName={active.name} counts={counts} />
 
       <main className="flex-1">
-        {tab === "overview" && <OverviewPage onTabChange={onTabChange} />}
-        {tab === "resources" && <ResourcesPage />}
-        {tab === "tools" && <ToolsPage />}
-        {tab === "prompts" && <PromptsPage />}
-        {tab === "completions" && <CompletionsPage />}
-        {tab === "auth" && <AuthPage />}
-        {tab === "servers" && (
-          <ServersPage
-            servers={servers}
-            active={active}
-            onSelect={onSelect}
-            connection={state}
-          />
-        )}
+        <Outlet context={outletContext} />
       </main>
 
       <Footer />
     </div>
+  );
+}
+
+function ServersRouteElement() {
+  const { servers, active, connection, switchToServer } = useServerLayout();
+  return (
+    <ServersPage
+      servers={servers}
+      active={active}
+      onSelect={switchToServer}
+      connection={connection}
+    />
   );
 }
 

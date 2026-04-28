@@ -12,6 +12,7 @@ import {
   Sparkles,
   Terminal,
 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,17 +29,16 @@ import { Empty } from "@/components/empty";
 import { MetaItem, PageShell } from "@/components/page-shell";
 import { StatusDot } from "@/components/status-dot";
 import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import type { NavKey } from "@/components/nav-tabs";
 import { useServer } from "@/contexts/server-context";
 import { useActivity } from "@/hooks/use-activity";
 import type { ActivityEntry } from "@/data/activity";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-interface OverviewPageProps {
-  onTabChange: (key: NavKey) => void;
-}
-
-export function OverviewPage({ onTabChange }: OverviewPageProps) {
+export function OverviewPage() {
+  const navigate = useNavigate();
+  const { serverName } = useParams<{ serverName: string }>();
+  const goTo = (sub: string) =>
+    navigate(`/${encodeURIComponent(serverName!)}/${sub}`);
   const { server, data, state, error, lastDiscoveredAt, rediscover } =
     useServer();
   const activity = useActivity();
@@ -163,7 +163,7 @@ export function OverviewPage({ onTabChange }: OverviewPageProps) {
           }
           accent="info"
           loading={state === "connecting" && !data}
-          onClick={() => onTabChange("resources")}
+          onClick={() => goTo("resources")}
         />
         <StatCard
           icon={Hammer}
@@ -172,7 +172,7 @@ export function OverviewPage({ onTabChange }: OverviewPageProps) {
           subtitle={data && data.tools.length > 0 ? "ready to call" : undefined}
           accent="success"
           loading={state === "connecting" && !data}
-          onClick={() => onTabChange("tools")}
+          onClick={() => goTo("tools")}
         />
         <StatCard
           icon={MessageSquare}
@@ -180,7 +180,7 @@ export function OverviewPage({ onTabChange }: OverviewPageProps) {
           value={data?.prompts.length ?? "—"}
           accent="warning"
           loading={state === "connecting" && !data}
-          onClick={() => onTabChange("prompts")}
+          onClick={() => goTo("prompts")}
         />
         <StatCard
           icon={Sparkles}
@@ -195,7 +195,7 @@ export function OverviewPage({ onTabChange }: OverviewPageProps) {
           subtitle="argument autocompletion"
           accent="default"
           loading={state === "connecting" && !data}
-          onClick={() => onTabChange("completions")}
+          onClick={() => goTo("completions")}
         />
       </div>
 
