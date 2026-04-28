@@ -1,9 +1,17 @@
 # mcp-inspector
 
-A CLI [Model Context Protocol](https://modelcontextprotocol.io) client. Connect
-to MCP servers over **stdio** or **OAuth-protected Streamable HTTP**, discover
-their resources / resource templates / tools / prompts, call them, and request
-completions — from your terminal or scripts.
+A [Model Context Protocol](https://modelcontextprotocol.io) client with three
+front-ends backed by one set of primitives:
+
+- **CLI** — `mcp-inspector <verb> <target>` for scripts and pipelines.
+- **REPL** — `mcp-inspector connect <target>` for an interactive prompt.
+- **Web dashboard** — `mcp-inspector serve` boots a local HTTP server that
+  hosts the bundled React/Tailwind dashboard at `/` and a small JSON API at
+  `/api/*`. Same process, same OAuth state, same `.mcp.json`.
+
+Connect to MCP servers over **stdio** or **OAuth-protected Streamable HTTP**,
+discover their resources / resource templates / tools / prompts, call them,
+and request completions.
 
 Built on the official [`@modelcontextprotocol/sdk`](https://www.npmjs.com/package/@modelcontextprotocol/sdk).
 
@@ -12,12 +20,17 @@ Built on the official [`@modelcontextprotocol/sdk`](https://www.npmjs.com/packag
 ## Install
 
 ```sh
-pnpm install
-pnpm build
+pnpm install      # one install — covers CLI and dashboard
+pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
 ```
 
-This produces `dist/cli.js` exposed as `mcp-inspector` (and the alias `mcpi`)
-via `package.json#bin`. To use globally:
+`pnpm build` produces both:
+
+- `dist/cli.js` — the binary exposed as `mcp-inspector` / `mcpi` via
+  `package.json#bin`.
+- `dist/web/` — the static dashboard bundle that `mcp-inspector serve` loads.
+
+To use globally:
 
 ```sh
 pnpm link --global
@@ -135,6 +148,11 @@ mcp-inspector complete            <target> --ref-type <prompt|resource> \
 mcp-inspector auth login          <target>               # force OAuth flow now
 mcp-inspector auth status         <target>
 mcp-inspector auth logout         <target>
+
+mcp-inspector serve               [--port 8765]          # web dashboard at http://127.0.0.1:8765
+                                  [--host 127.0.0.1]
+                                  [--no-open]            # don't open the browser
+                                  [--no-ui]              # JSON API only
 ```
 
 Global flags (available on every leaf command):
@@ -240,22 +258,79 @@ resource-template variable names (lazily populated after connect).
 
 ---
 
+## Web dashboard
+
+`mcp-inspector serve` boots a local HTTP server that exposes:
+
+- `/`        — the bundled React/Tailwind dashboard (`dist/web/`)
+- `/api/*`   — a small JSON API mirroring the CLI verbs in `actions.ts`
+
+Same process, same OAuth state, same `.mcp.json`. Sessions are cached in
+memory and idle-evicted after five minutes; child stdio processes are reaped
+on `SIGINT`/`SIGTERM`.
+
+```sh
+mcp-inspector serve                 # http://127.0.0.1:8765, opens the browser
+mcp-inspector serve -p 4000
+mcp-inspector serve --no-open       # skip the browser launch
+mcp-inspector serve --no-ui         # API-only (handy when developing the UI with `pnpm dev:web`)
+```
+
+API surface (every route maps to one action):
+
+```text
+GET    /api/health
+GET    /api/servers
+GET    /api/servers/:name/discover
+GET    /api/servers/:name/resources
+GET    /api/servers/:name/resources/templates
+POST   /api/servers/:name/resources/read     {uri}
+GET    /api/servers/:name/tools
+POST   /api/servers/:name/tools/call         {name, arguments?}
+GET    /api/servers/:name/prompts
+POST   /api/servers/:name/prompts/get        {name, arguments?}
+POST   /api/servers/:name/complete           {refType, ref, argument, value?, context?}
+GET    /api/servers/:name/auth
+DELETE /api/servers/:name/auth
+POST   /api/servers/:name/disconnect
+```
+
+`:name` accepts either an alias from `.mcp.json` or a raw target (HTTP URL,
+or a quoted stdio command).
+
+---
+
 ## Project layout
 
 ```
-src/
-├── cli.ts        # commander entry point — wires every subcommand
-├── client.ts     # connect() — picks transport, runs OAuth flow with retry
-├── oauth.ts      # FileOAuthProvider + loopback callback server
-├── config.ts     # .mcp.json loader (cwd + home, with merging)
-├── paths.ts      # OAuth config-dir helpers
-├── target.ts     # parse "target" string into transport spec
-├── format.ts     # pretty-printers (resources, tools, prompts, …)
-├── actions.ts    # primitive actions used by both CLI and REPL
-└── repl.ts       # interactive readline REPL
+src/                  # CLI + REPL + web server (same TypeScript build)
+├── cli.ts            # commander entry point — wires every subcommand
+├── client.ts         # connect() — picks transport, runs OAuth flow with retry
+├── oauth.ts          # FileOAuthProvider + loopback callback server
+├── config.ts         # .mcp.json loader (cwd + home, with merging)
+├── paths.ts          # OAuth config-dir helpers
+├── target.ts         # parse "target" string into transport spec
+├── format.ts         # pretty-printers (resources, tools, prompts, …)
+├── actions.ts        # primitive actions used by CLI, REPL, and HTTP server
+├── repl.ts           # interactive readline REPL
+└── server.ts         # `mcp-inspector serve` — HTTP server hosting UI + JSON API
+
+web/                  # dashboard source (React 19 · Tailwind v4 · shadcn)
+├── index.html
+├── public/
+└── src/
+    ├── App.tsx
+    ├── components/   # header, nav-tabs, status-dot, code-block, ui/* …
+    ├── pages/        # overview, resources, tools, prompts, completions, auth, servers
+    ├── data/         # api client + types + fixture fallback
+    └── hooks/
+
+tsconfig.json         # CLI build (tsc → dist/*.js)
+vite.config.ts        # UI build (vite → dist/web/)
 ```
 
-The CLI and REPL both call into `actions.ts`, so they always behave identically.
+CLI, REPL, and HTTP server all call `actions.ts` and share the same OAuth
+state and `.mcp.json` resolution.
 
 ---
 
@@ -263,6 +338,11 @@ The CLI and REPL both call into `actions.ts`, so they always behave identically.
 
 ```sh
 pnpm dev -- discover "npx -y @modelcontextprotocol/server-everything stdio"
-pnpm typecheck
-pnpm build
+
+# Dashboard with HMR:
+pnpm dev -- serve --no-open --no-ui   # API on :8765 in one terminal
+pnpm dev:web                          # Vite dev server with /api proxy in another
+
+pnpm typecheck                        # tsc + tsc -p web/tsconfig.app.json
+pnpm build                            # tsc → dist/*.js  +  vite → dist/web/
 ```

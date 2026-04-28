@@ -491,6 +491,48 @@ function printServers(config: LoadedConfig, asJson: boolean) {
 }
 
 /* ------------------------------------------------------------------ */
+/* serve                                                               */
+/* ------------------------------------------------------------------ */
+
+program
+  .command("serve")
+  .description(
+    "Start the web dashboard. Hosts the bundled UI at /, the JSON API at /api/*.",
+  )
+  .option("-p, --port <port>", "port to bind", "8765")
+  .option("--host <host>", "interface to bind", "127.0.0.1")
+  .option("--no-open", "don't open the dashboard in the default browser")
+  .option("--no-ui", "expose the API only — skip serving the static UI")
+  .option("-q, --quiet", "suppress informational logs")
+  .action(async (_opts, cmd: Command) => {
+    const opts = cmd.opts() as {
+      port: string;
+      host: string;
+      open: boolean;
+      ui: boolean;
+      quiet?: boolean;
+    };
+    const port = Number(opts.port);
+    if (!Number.isFinite(port) || port < 0 || port > 65_535) {
+      throw new Error(`invalid port: ${opts.port}`);
+    }
+    const { startServer } = await import("./server.js");
+    const server = await startServer({
+      port,
+      host: opts.host,
+      noUi: !opts.ui,
+      ...(opts.quiet ? { quiet: true } : {}),
+    });
+
+    if (opts.open && opts.ui) {
+      const { default: openBrowser } = await import("open");
+      await openBrowser(server.url).catch(() => {
+        /* not fatal — link is already in stderr */
+      });
+    }
+  });
+
+/* ------------------------------------------------------------------ */
 /* main                                                                */
 /* ------------------------------------------------------------------ */
 
