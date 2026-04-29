@@ -33,6 +33,8 @@ export function ToolsPage() {
   const [query, setQuery] = React.useState("");
   const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
+  if (!server) return null;
+
   const tools = data?.tools ?? [];
 
   const filtered = React.useMemo(() => {

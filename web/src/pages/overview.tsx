@@ -43,6 +43,10 @@ export function OverviewPage() {
   const activity = useActivityStore((s) => s.entries);
   const activityForServer = activity.filter((a) => a.serverName === server?.name);
 
+  if (!server) {
+    return null;
+  }
+
   const tone =
     state === "connected"
       ? "success"

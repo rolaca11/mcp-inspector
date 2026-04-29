@@ -1,17 +1,11 @@
 import {
-  Bell,
-  HelpCircle,
   Loader2,
   Plug,
   Power,
-  RefreshCcw,
-  Search,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import { Logo } from "@/components/logo";
 import { ServerSelector } from "@/components/server-selector";
 import { SourceSelector } from "@/components/source-selector";
@@ -21,15 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { ConnectionState } from "@/stores/connection-store";
 import type { ApiState } from "@/stores/servers-store";
 import type { MCPServer } from "@/data/types";
@@ -121,7 +106,7 @@ export function Header({
 
         <div className="flex-1" />
 
-        {/* Right: API badge, search, help, notifications, avatar */}
+        {/* Right: API status badge */}
         <div className="flex items-center gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -158,79 +143,6 @@ export function Header({
                     : "Loading…"}
             </TooltipContent>
           </Tooltip>
-
-          <button
-            type="button"
-            className="hidden md:inline-flex h-9 items-center gap-2.5 rounded-md border border-border/60 bg-card/40 pl-3 pr-2 text-sm text-muted-foreground transition-colors hover:bg-card/70 cursor-pointer"
-          >
-            <Search className="size-3.5" />
-            <span>Search</span>
-            <span className="ml-6 inline-flex items-center gap-1">
-              <Kbd>⌘</Kbd>
-              <Kbd>K</Kbd>
-            </span>
-          </button>
-
-          <Button variant="ghost" size="sm" asChild className="hidden lg:inline-flex">
-            <a
-              href="https://modelcontextprotocol.io"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Docs
-            </a>
-          </Button>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Help">
-                <HelpCircle className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Help &amp; keyboard shortcuts
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Notifications">
-                <Bell className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Notifications</TooltipContent>
-          </Tooltip>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="ml-1 cursor-pointer rounded-full ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <Avatar>
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-400/40 to-blue-400/40 text-foreground">
-                    LS
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="flex flex-col items-start gap-0.5">
-                <span className="text-foreground text-sm normal-case font-medium">
-                  Local user
-                </span>
-                <span className="text-xs tracking-normal normal-case text-muted-foreground">
-                  loopback · 127.0.0.1
-                </span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onReloadServers}>
-                <RefreshCcw className="size-4" />
-                Reload .mcp.json
-                <DropdownMenuShortcut>R</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
     </header>

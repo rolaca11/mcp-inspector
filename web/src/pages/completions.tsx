@@ -48,6 +48,8 @@ interface CompleteState {
 export function CompletionsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
 
+  if (!server) return null;
+
   if (!data && state === "connecting") {
     return (
       <PageShell title="Completions">

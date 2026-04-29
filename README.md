@@ -1,4 +1,4 @@
-# mcp-inspector
+# @rolaca11/mcp-inspector
 
 A [Model Context Protocol](https://modelcontextprotocol.io) client with three
 front-ends backed by one set of primitives:
@@ -19,7 +19,32 @@ Built on the official [`@modelcontextprotocol/sdk`](https://www.npmjs.com/packag
 
 ## Install
 
+### From npm (recommended)
+
 ```sh
+npm install -g @rolaca11/mcp-inspector
+```
+
+Or with pnpm:
+
+```sh
+pnpm add -g @rolaca11/mcp-inspector
+```
+
+This gives you the `mcp-inspector` and `mcpi` commands globally.
+
+### One-off usage with npx
+
+```sh
+npx @rolaca11/mcp-inspector --help
+npx @rolaca11/mcp-inspector discover everything
+```
+
+### From source
+
+```sh
+git clone https://github.com/rolaca11/mcp-inspector.git
+cd mcp-inspector
 pnpm install      # one install — covers CLI and dashboard
 pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
 ```
@@ -30,7 +55,7 @@ pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
   `package.json#bin`.
 - `dist/web/` — the static dashboard bundle that `mcp-inspector serve` loads.
 
-To use globally:
+To use globally from source:
 
 ```sh
 pnpm link --global
@@ -45,7 +70,7 @@ node dist/cli.js --help
 pnpm dev -- --help
 ```
 
-Requires Node ≥ 18.
+Requires Node ≥ 20.19.0 or ≥ 22.12.0.
 
 ---
 

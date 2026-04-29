@@ -31,6 +31,8 @@ export function PromptsPage() {
   const [query, setQuery] = React.useState("");
   const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
+  if (!server) return null;
+
   const prompts = data?.prompts ?? [];
 
   const filtered = React.useMemo(() => {

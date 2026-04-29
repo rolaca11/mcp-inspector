@@ -40,6 +40,8 @@ export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
   const [query, setQuery] = React.useState("");
 
+  if (!server) return null;
+
   const resources = data?.resources ?? [];
   const templates = data?.resourceTemplates ?? [];
 
