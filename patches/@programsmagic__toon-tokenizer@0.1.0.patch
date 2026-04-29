@@ -1,0 +1,14 @@
+diff --git a/package.json b/package.json
+index 4bd28ac1ee7af479a81886d0aa2bde8b18ab9f7e..2aec11d95037cd188c37973ec5b2cc514538b523 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,8 @@
+     ".": {
+       "types": "./dist/index.d.ts",
+       "import": "./dist/index.js"
+-    }
++    },
++    "./dist/*": "./dist/*"
+   },
+   "keywords": [
+     "token-counting",
