@@ -104,14 +104,14 @@ export function ToolsPage() {
       }
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
+        <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
           <CardHeader>
             <CardTitle>Available tools</CardTitle>
             <Badge variant="muted" className="font-mono">
               {filtered.length}
             </Badge>
           </CardHeader>
-          <div className="divide-y divide-border/50 overflow-y-auto">
+          <div className="divide-y divide-border/50 overflow-y-auto min-h-0">
             {filtered.map((t) => (
               <ToolListRow
                 key={t.name}
@@ -145,8 +145,6 @@ function ToolListRow({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const requiredCount = tool.inputSchema.required?.length ?? 0;
-  const totalCount = Object.keys(tool.inputSchema.properties ?? {}).length;
   return (
     <button
       type="button"
@@ -164,9 +162,6 @@ function ToolListRow({
             {tool.description}
           </div>
         )}
-      </div>
-      <div className="text-right text-xs text-muted-foreground/80 font-mono tabular-nums">
-        {requiredCount}/{totalCount}
       </div>
     </button>
   );

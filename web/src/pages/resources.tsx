@@ -161,14 +161,14 @@ function StaticResourcesPanel({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
+      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
         <CardHeader>
           <CardTitle>Static resources</CardTitle>
           <Badge variant="muted" className="font-mono">
             {filtered.length}
           </Badge>
         </CardHeader>
-        <div className="divide-y divide-border/50 overflow-y-auto">
+        <div className="divide-y divide-border/50 overflow-y-auto min-h-0">
           {filtered.map((r) => (
             <ResourceListRow
               key={r.uri}
@@ -222,20 +222,6 @@ function ResourceListRow({
           </div>
         )}
       </div>
-      {(resource.mimeType || resource.size != null) && (
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {resource.mimeType && (
-            <Badge variant="muted" className="font-mono">
-              {resource.mimeType}
-            </Badge>
-          )}
-          {resource.size != null && (
-            <span className="text-xs text-muted-foreground/80 font-mono tabular-nums">
-              {formatBytes(resource.size)}
-            </span>
-          )}
-        </div>
-      )}
     </button>
   );
 }
@@ -400,14 +386,14 @@ function TemplatesPanel({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
+      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
         <CardHeader>
           <CardTitle>Resource templates</CardTitle>
           <Badge variant="muted" className="font-mono">
             {filtered.length}
           </Badge>
         </CardHeader>
-        <div className="divide-y divide-border/50 overflow-y-auto">
+        <div className="divide-y divide-border/50 overflow-y-auto min-h-0">
           {filtered.map((t) => (
             <TemplateListRow
               key={t.uriTemplate}
@@ -466,11 +452,6 @@ function TemplateListRow({
           </div>
         )}
       </div>
-      {variables.length > 0 && (
-        <Badge variant="muted" className="font-mono">
-          {variables.length} var{variables.length === 1 ? "" : "s"}
-        </Badge>
-      )}
     </button>
   );
 }
