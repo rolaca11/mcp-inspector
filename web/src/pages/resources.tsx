@@ -4,7 +4,6 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
-  Link2,
   Loader2,
   Search,
   Variable,
@@ -103,23 +102,11 @@ export function ResourcesPage() {
         </TabsContent>
 
         <TabsContent value="templates" className="mt-6">
-          {templates.length === 0 ? (
-            <Empty
-              icon={Variable}
-              title="No resource templates"
-              description="This server doesn't expose any URI-template resources."
-            />
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {templates.map((t) => (
-                <TemplateCard
-                  key={t.uriTemplate}
-                  serverName={server.name}
-                  template={t}
-                />
-              ))}
-            </div>
-          )}
+          <TemplatesPanel
+            serverName={server.name}
+            templates={templates}
+            query={query}
+          />
         </TabsContent>
       </Tabs>
     </PageShell>
@@ -171,15 +158,15 @@ function StaticResourcesPanel({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <Card className="overflow-hidden">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
         <CardHeader>
           <CardTitle>Static resources</CardTitle>
-          <CardDescription className="hidden md:block">
-            {filtered.length} of {resources.length}
-          </CardDescription>
+          <Badge variant="muted" className="font-mono">
+            {filtered.length}
+          </Badge>
         </CardHeader>
-        <div className="divide-y divide-border/50">
+        <div className="divide-y divide-border/50 overflow-y-auto">
           {filtered.map((r) => (
             <ResourceListRow
               key={r.uri}
@@ -190,13 +177,13 @@ function StaticResourcesPanel({
           ))}
           {filtered.length === 0 && (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-              No resources match “{query}”.
+              No resources match "{query}".
             </div>
           )}
         </div>
       </Card>
 
-      {selected && <ResourcePreview serverName={serverName} resource={selected} />}
+      {selected && <ResourcePreview key={selected.uri} serverName={serverName} resource={selected} />}
     </div>
   );
 }
@@ -219,30 +206,32 @@ function ResourceListRow({
         isActive ? "bg-accent/40" : "hover:bg-accent/20",
       )}
     >
-      <ResourceIcon mimeType={resource.mimeType} className="mt-0.5" />
+      <ResourceIcon mimeType={resource.mimeType} className="mt-1" />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2.5 mb-1 flex-wrap">
-          <span className="font-medium text-base">
-            {resource.title ?? resource.name}
-          </span>
+        <div className="font-mono text-base">
+          {resource.title ?? resource.name}
+        </div>
+        <div className="font-mono text-xs text-muted-foreground/90 truncate mt-0.5">
+          {resource.uri}
+        </div>
+        {resource.description && (
+          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            {resource.description}
+          </div>
+        )}
+      </div>
+      {(resource.mimeType || resource.size != null) && (
+        <div className="flex flex-col items-end gap-1 shrink-0">
           {resource.mimeType && (
             <Badge variant="muted" className="font-mono">
               {resource.mimeType}
             </Badge>
           )}
-        </div>
-        <div className="font-mono text-xs text-muted-foreground/90 truncate">
-          {resource.uri}
-        </div>
-        {resource.description && (
-          <div className="mt-1.5 text-sm text-muted-foreground line-clamp-1">
-            {resource.description}
-          </div>
-        )}
-      </div>
-      {resource.size != null && (
-        <div className="text-right text-xs text-muted-foreground/80 font-mono tabular-nums">
-          {formatBytes(resource.size)}
+          {resource.size != null && (
+            <span className="text-xs text-muted-foreground/80 font-mono tabular-nums">
+              {formatBytes(resource.size)}
+            </span>
+          )}
         </div>
       )}
     </button>
@@ -283,23 +272,22 @@ function ResourcePreview({
   }, [serverName, resource.uri]);
 
   return (
-    <Card className="lg:sticky lg:top-20 self-start">
-      <CardHeader>
-        <div className="flex flex-col gap-1 min-w-0">
-          <CardTitle>{resource.title ?? resource.name}</CardTitle>
-          <CardDescription className="font-mono truncate">
-            {resource.uri}
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void navigator.clipboard.writeText(resource.uri)}
-          >
-            <Link2 className="size-3.5" />
-            Copy URI
-          </Button>
+    <div className="space-y-5 min-w-0">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono">{resource.title ?? resource.name}</span>
+              {resource.mimeType && (
+                <Badge variant="muted" className="font-mono">
+                  {resource.mimeType}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="font-mono truncate">
+              {resource.uri}
+            </CardDescription>
+          </div>
           <Button variant="success" size="sm" onClick={onRead} disabled={reading}>
             {reading ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -308,37 +296,59 @@ function ResourcePreview({
             )}
             Read
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {resource.description && (
-          <p className="text-sm text-muted-foreground">{resource.description}</p>
-        )}
-        <div className="grid grid-cols-2 gap-4">
-          <KV label="MIME">
-            <span className="font-mono">{resource.mimeType ?? "—"}</span>
-          </KV>
-          <KV label="Size">
-            <span className="font-mono tabular-nums">
-              {resource.size != null ? formatBytes(resource.size) : "—"}
-            </span>
-          </KV>
-        </div>
-
-        {error && <ErrorRow message={error} />}
-
-        {!error && result && (
-          <ResourceContentsView contents={result.contents} readAt={readAt} tokenCount={result._tokenCount} />
-        )}
-
-        {!error && !result && !reading && (
-          <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-            Click <span className="font-medium text-foreground">Read</span> to
-            fetch this resource through the server.
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {resource.description && (
+            <p className="text-sm text-muted-foreground">{resource.description}</p>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <KV label="MIME">
+              <span className="font-mono">{resource.mimeType ?? "—"}</span>
+            </KV>
+            <KV label="Size">
+              <span className="font-mono tabular-nums">
+                {resource.size != null ? formatBytes(resource.size) : "—"}
+              </span>
+            </KV>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contents</CardTitle>
+          {reading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              reading…
+            </Badge>
+          ) : error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
+          ) : result ? (
+            <Badge variant="success">
+              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+              {readAt != null && ` · ${readAt}ms`}
+              {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null}
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <ErrorRow message={error} />
+          ) : result ? (
+            <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
+          ) : (
+            <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+              Click <span className="font-medium text-foreground">Read</span> to
+              fetch this resource through the server.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -346,7 +356,124 @@ function ResourcePreview({
 /* Templates                                                           */
 /* ------------------------------------------------------------------ */
 
-function TemplateCard({
+function TemplatesPanel({
+  serverName,
+  templates,
+  query,
+}: {
+  serverName: string;
+  templates: MCPResourceTemplate[];
+  query: string;
+}) {
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter(
+      (t) =>
+        t.uriTemplate.toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        t.title?.toLowerCase().includes(q),
+    );
+  }, [query, templates]);
+
+  const [selected, setSelected] = React.useState<MCPResourceTemplate | null>(
+    templates[0] ?? null,
+  );
+
+  React.useEffect(() => {
+    if (!selected || !templates.find((t) => t.uriTemplate === selected.uriTemplate)) {
+      setSelected(templates[0] ?? null);
+    }
+  }, [templates, selected]);
+
+  if (templates.length === 0) {
+    return (
+      <Empty
+        icon={Variable}
+        title="No resource templates"
+        description="This server doesn't expose any URI-template resources."
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
+        <CardHeader>
+          <CardTitle>Resource templates</CardTitle>
+          <Badge variant="muted" className="font-mono">
+            {filtered.length}
+          </Badge>
+        </CardHeader>
+        <div className="divide-y divide-border/50 overflow-y-auto">
+          {filtered.map((t) => (
+            <TemplateListRow
+              key={t.uriTemplate}
+              template={t}
+              isActive={t.uriTemplate === selected?.uriTemplate}
+              onSelect={() => setSelected(t)}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              No templates match "{query}".
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {selected && <TemplatePreview key={selected.uriTemplate} serverName={serverName} template={selected} />}
+    </div>
+  );
+}
+
+function TemplateListRow({
+  template,
+  isActive,
+  onSelect,
+}: {
+  template: MCPResourceTemplate;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const variables = React.useMemo(
+    () => extractTemplateVariables(template.uriTemplate),
+    [template.uriTemplate],
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
+        isActive ? "bg-accent/40" : "hover:bg-accent/20",
+      )}
+    >
+      <Variable className="size-4 text-muted-foreground mt-1" />
+      <div className="flex-1 min-w-0">
+        <div className="font-mono text-base">
+          {template.title ?? template.name}
+        </div>
+        <div className="font-mono text-xs text-muted-foreground/90 truncate mt-0.5">
+          {template.uriTemplate}
+        </div>
+        {template.description && (
+          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            {template.description}
+          </div>
+        )}
+      </div>
+      {variables.length > 0 && (
+        <Badge variant="muted" className="font-mono">
+          {variables.length} var{variables.length === 1 ? "" : "s"}
+        </Badge>
+      )}
+    </button>
+  );
+}
+
+function TemplatePreview({
   serverName,
   template,
 }: {
@@ -363,6 +490,13 @@ function TemplateCard({
   const [reading, setReading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [readAt, setReadAt] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    setValues({});
+    setResult(null);
+    setError(null);
+    setReadAt(null);
+  }, [template.uriTemplate]);
 
   const allFilled = variables.every((v) => values[v] && values[v]!.trim() !== "");
   const expanded = expandTemplate(template.uriTemplate, values);
@@ -385,64 +519,22 @@ function TemplateCard({
   }, [serverName, expanded, fullyExpanded]);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col gap-1 min-w-0">
-          <CardTitle className="flex items-center gap-2">
-            {template.title ?? template.name}
-            <Badge variant="info" className="font-mono">
-              <Variable className="size-3" />
-              template
-            </Badge>
-          </CardTitle>
-          {template.description && (
-            <CardDescription>{template.description}</CardDescription>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <CodeBlock copyable language="uri-template">
-          {template.uriTemplate}
-        </CodeBlock>
-
-        {variables.length > 0 ? (
-          <div className="space-y-3">
-            {variables.map((v) => (
-              <div key={v} className="space-y-1.5">
-                <Label className="flex items-center gap-2">
-                  <span className="font-mono normal-case text-foreground">
-                    {`{${v}}`}
-                  </span>
-                </Label>
-                <Input
-                  value={values[v] ?? ""}
-                  onChange={(e) =>
-                    setValues((s) => ({ ...s, [v]: e.target.value }))
-                  }
-                  className="font-mono"
-                  placeholder="value"
-                />
-              </div>
-            ))}
+    <div className="space-y-5 min-w-0">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono">{template.title ?? template.name}</span>
+              {template.mimeType && (
+                <Badge variant="muted" className="font-mono">
+                  {template.mimeType}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="font-mono truncate">
+              {template.uriTemplate}
+            </CardDescription>
           </div>
-        ) : (
-          <div className="text-xs text-muted-foreground">
-            This template has no variables to fill.
-          </div>
-        )}
-
-        {(allFilled || result || error) && (
-          <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
-              Resolved URI
-            </div>
-            <CodeBlock copyable={fullyExpanded} language="uri">
-              {expanded}
-            </CodeBlock>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
           <Button
             variant="success"
             size="sm"
@@ -456,14 +548,96 @@ function TemplateCard({
             )}
             Resolve &amp; read
           </Button>
-        </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {template.description && (
+            <p className="text-sm text-muted-foreground">{template.description}</p>
+          )}
+          {variables.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">
+              This template has no variables to fill.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {variables.map((v) => (
+                <div key={v} className="space-y-2">
+                  <Label className="flex items-center gap-2.5">
+                    <span className="font-mono normal-case text-foreground">
+                      {`{${v}}`}
+                    </span>
+                    <Badge variant="muted" className="font-mono">
+                      string
+                    </Badge>
+                  </Label>
+                  <Input
+                    value={values[v] ?? ""}
+                    onChange={(e) =>
+                      setValues((s) => ({ ...s, [v]: e.target.value }))
+                    }
+                    className="font-mono"
+                    placeholder="value"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {error && <ErrorRow message={error} />}
-        {!error && result && (
-          <ResourceContentsView contents={result.contents} readAt={readAt} tokenCount={result._tokenCount} />
-        )}
-      </CardContent>
-    </Card>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Resolved URI</CardTitle>
+            <CardDescription className="hidden md:block">
+              Expanded from template variables
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CodeBlock copyable={fullyExpanded} language="uri">
+              {expanded}
+            </CodeBlock>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Contents</CardTitle>
+            {reading ? (
+              <Badge variant="muted">
+                <Loader2 className="size-3 animate-spin" />
+                reading…
+              </Badge>
+            ) : error ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+              </Badge>
+            ) : result ? (
+              <Badge variant="success">
+                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+                {readAt != null && ` · ${readAt}ms`}
+                {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
+              </Badge>
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            {error ? (
+              <ErrorRow message={error} />
+            ) : result ? (
+              <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
+            ) : (
+              <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+                {fullyExpanded ? (
+                  <>Click <span className="font-medium text-foreground">Resolve &amp; read</span> to fetch this resource.</>
+                ) : (
+                  <>Fill in the variables above to resolve the template.</>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -513,9 +687,10 @@ function ResourceContentBlock({
     caption ? ` · ${caption}` : ""
   }`;
   if (content.text != null) {
+    const formatted = tryFormatJson(content.text, content.mimeType);
     return (
       <CodeBlock language={content.mimeType ?? "text/plain"} caption={meta}>
-        {content.text}
+        {formatted}
       </CodeBlock>
     );
   }
@@ -555,7 +730,7 @@ function ResourceIcon({
     : mimeType.startsWith("image/")
       ? ImageIcon
       : FileText;
-  return <Icon className={cn("size-3.5 text-muted-foreground", className)} />;
+  return <Icon className={cn("size-4 text-muted-foreground", className)} />;
 }
 
 function KV({ label, children }: { label: string; children: React.ReactNode }) {
@@ -611,6 +786,19 @@ function SkeletonCard() {
       </CardContent>
     </Card>
   );
+}
+
+function tryFormatJson(text: string, mimeType?: string): string {
+  const isJson =
+    mimeType === "application/json" ||
+    mimeType?.endsWith("+json") ||
+    (!mimeType && (text.trimStart().startsWith("{") || text.trimStart().startsWith("[")));
+  if (!isJson) return text;
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
 }
 
 function formatBytes(n?: number): string {
