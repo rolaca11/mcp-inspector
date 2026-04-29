@@ -1,5 +1,5 @@
 {
-  "name": "mcp-inspector",
+  "name": "@ropi/mcp-inspector",
   "version": "0.1.0",
   "description": "MCP client for discovering and exercising resources, tools, prompts, and completions over stdio or OAuth-protected HTTP. Ships with a CLI, an interactive REPL, and a web dashboard served by `mcp-inspector serve`.",
   "type": "module",
@@ -22,6 +22,9 @@
     "clean": "rm -rf dist web/node_modules/.vite",
     "prepublishOnly": "pnpm clean && pnpm build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.app.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
