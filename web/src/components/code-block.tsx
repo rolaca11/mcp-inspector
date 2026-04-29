@@ -29,6 +29,15 @@ export function CodeBlock({
     });
   }, [children]);
 
+  const isJson =
+    language === "application/json" ||
+    language?.endsWith("+json");
+
+  const highlighted = React.useMemo(
+    () => (isJson ? highlightJson(children) : null),
+    [isJson, children],
+  );
+
   return (
     <div className={cn("group rounded-lg border border-border/60 bg-card/40 overflow-hidden", className)}>
       {(caption || language || copyable) && (
@@ -59,8 +68,101 @@ export function CodeBlock({
         </div>
       )}
       <pre className="overflow-x-auto p-4 text-sm leading-relaxed font-mono text-foreground/90">
-        <code>{children}</code>
+        <code>{highlighted ?? children}</code>
       </pre>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Lightweight JSON syntax highlighting                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Regex-based tokeniser that splits a JSON string into typed spans.
+ * Handles strings (distinguishing keys from values), numbers, booleans,
+ * null, and structural punctuation. Falls back to plain text on
+ * anything unexpected.
+ */
+
+// One pattern to match every meaningful JSON token.
+// Order matters: strings must come before numbers so that "-1" inside
+// a string isn't partially matched as a number.
+const JSON_TOKEN =
+  /("(?:[^"\\]|\\.)*")\s*(:)|("(?:[^"\\]|\\.)*")|(-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|(true|false)|(null)|([{}[\]:,])/g;
+
+function highlightJson(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+
+  // Reset the regex (it's global, so lastIndex must be 0).
+  JSON_TOKEN.lastIndex = 0;
+
+  let m: RegExpExecArray | null;
+  while ((m = JSON_TOKEN.exec(text)) !== null) {
+    // Push any plain text between tokens (whitespace / newlines).
+    if (m.index > last) {
+      nodes.push(text.slice(last, m.index));
+    }
+
+    if (m[1] != null) {
+      // Property key  (string followed by colon)
+      nodes.push(
+        <span key={key++} className="text-info">
+          {m[1]}
+        </span>,
+      );
+      // The colon itself
+      nodes.push(
+        <span key={key++} className="text-muted-foreground">
+          {m[2]}
+        </span>,
+      );
+    } else if (m[3] != null) {
+      // String value
+      nodes.push(
+        <span key={key++} className="text-success">
+          {m[3]}
+        </span>,
+      );
+    } else if (m[4] != null) {
+      // Number
+      nodes.push(
+        <span key={key++} className="text-warning">
+          {m[4]}
+        </span>,
+      );
+    } else if (m[5] != null) {
+      // Boolean (true / false)
+      nodes.push(
+        <span key={key++} className="text-warning">
+          {m[5]}
+        </span>,
+      );
+    } else if (m[6] != null) {
+      // null
+      nodes.push(
+        <span key={key++} className="text-muted-foreground">
+          {m[6]}
+        </span>,
+      );
+    } else if (m[7] != null) {
+      // Structural: { } [ ] , :
+      nodes.push(
+        <span key={key++} className="text-muted-foreground">
+          {m[7]}
+        </span>,
+      );
+    }
+
+    last = m.index + m[0].length;
+  }
+
+  // Trailing text (shouldn't happen in well-formed JSON, but be safe).
+  if (last < text.length) {
+    nodes.push(text.slice(last));
+  }
+
+  return nodes;
 }
