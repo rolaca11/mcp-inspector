@@ -38,6 +38,7 @@ import { connect, type Session } from "./client.js";
 import { loadConfigSync, type LoadedConfig } from "./config.js";
 import { authFile } from "./paths.js";
 import { setLoadedConfig, parseTarget, targetId } from "./target.js";
+import { countResponseTokens } from "./tokens.js";
 
 /* ------------------------------------------------------------------ */
 /* Types and constants                                                 */
@@ -273,25 +274,32 @@ async function handleApi(
   try {
     const session = await ctx.sessions.acquire(name);
 
+    /** Send MCP result, enriching it with a token count. */
+    const sendWithTokens = (result: unknown) => {
+      const counted = countResponseTokens(result);
+      const tokenCount = counted.ok ? counted.tokens : null;
+      return send(200, { ...(result as Record<string, unknown>), _tokenCount: tokenCount });
+    };
+
     if ((sub === "discover" || sub === "") && method === "GET") {
-      return send(200, await actionDiscover(session));
+      return sendWithTokens(await actionDiscover(session));
     }
     if (sub === "resources" && method === "GET") {
       const r = await session.client.listResources();
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "resources/templates" && method === "GET") {
       const r = await session.client.listResourceTemplates();
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "resources/read" && method === "POST") {
       const { uri } = body as { uri?: string };
       if (typeof uri !== "string") return send(400, { error: "missing `uri`" });
       const r = await session.client.readResource({ uri });
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "tools" && method === "GET") {
-      return send(200, await session.client.listTools());
+      return sendWithTokens(await session.client.listTools());
     }
     if (sub === "tools/call" && method === "POST") {
       const { name: toolName, arguments: toolArgs } = body as {
@@ -304,10 +312,10 @@ async function handleApi(
         name: toolName,
         arguments: toolArgs ?? {},
       });
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "prompts" && method === "GET") {
-      return send(200, await session.client.listPrompts());
+      return sendWithTokens(await session.client.listPrompts());
     }
     if (sub === "prompts/get" && method === "POST") {
       const { name: promptName, arguments: promptArgs } = body as {
@@ -320,7 +328,7 @@ async function handleApi(
         name: promptName,
         arguments: promptArgs ?? {},
       });
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "complete" && method === "POST") {
       const {
@@ -357,7 +365,7 @@ async function handleApi(
         };
       }
       const r = await session.client.complete(params);
-      return send(200, r);
+      return sendWithTokens(r);
     }
     if (sub === "disconnect" && method === "POST") {
       await ctx.sessions.release(name, true);

@@ -101,7 +101,7 @@ export function ToolsPage() {
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)]">
           <CardHeader>
             <CardTitle>Available tools</CardTitle>
@@ -150,20 +150,20 @@ function ToolListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-3 px-5 py-3 text-left transition-colors cursor-pointer",
+        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
         isActive ? "bg-accent/40" : "hover:bg-accent/20",
       )}
     >
-      <Hammer className="size-3.5 text-muted-foreground mt-1" />
+      <Hammer className="size-4 text-muted-foreground mt-1" />
       <div className="flex-1 min-w-0">
-        <div className="font-mono text-sm">{tool.name}</div>
+        <div className="font-mono text-base">{tool.name}</div>
         {tool.description && (
-          <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
             {tool.description}
           </div>
         )}
       </div>
-      <div className="text-right text-[11px] text-muted-foreground/80 font-mono tabular-nums">
+      <div className="text-right text-xs text-muted-foreground/80 font-mono tabular-nums">
         {requiredCount}/{totalCount}
       </div>
     </button>
@@ -241,11 +241,11 @@ function ToolDetail({
   const canCall = !callState.loading && Object.keys(argsResult.errors).length === 0;
 
   return (
-    <div className="space-y-4 min-w-0">
+    <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1 min-w-0">
-            <CardTitle className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-2.5 flex-wrap">
               <span className="font-mono">{tool.name}</span>
               {tool.title && (
                 <span className="text-muted-foreground font-normal text-sm">
@@ -271,13 +271,13 @@ function ToolDetail({
             Call tool
           </Button>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-6">
           {!hasArgs ? (
-            <div className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">
               This tool takes no arguments.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {Object.entries(properties).map(([name, prop]) => (
                 <ArgField
                   key={name}
@@ -296,7 +296,7 @@ function ToolDetail({
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Arguments preview</CardTitle>
@@ -328,6 +328,7 @@ function ToolDetail({
               <Badge variant={callState.result.isError ? "destructive" : "success"}>
                 {callState.result.isError ? "isError" : "ok"}
                 {callState.durationMs != null && ` · ${callState.durationMs}ms`}
+                {callState.result._tokenCount != null && ` · ${callState.result._tokenCount.toLocaleString()} tokens`}
               </Badge>
             ) : null}
           </CardHeader>
@@ -362,23 +363,23 @@ function ArgField({
   const type = Array.isArray(prop.type) ? prop.type.join("|") : (prop.type ?? "any");
 
   return (
-    <div className="space-y-1.5">
-      <Label className="flex items-center gap-2">
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2.5">
         <span className="font-mono normal-case text-foreground">{name}</span>
         <Badge variant="muted" className="font-mono">
           {type}
         </Badge>
         {required && (
           <span className="inline-flex items-center text-warning">
-            <Asterisk className="size-3" />
-            <span className="text-[10px] uppercase tracking-wider">
+            <Asterisk className="size-3.5" />
+            <span className="text-[11px] uppercase tracking-wider">
               required
             </span>
           </span>
         )}
       </Label>
       {prop.description && (
-        <div className="text-xs text-muted-foreground/80">{prop.description}</div>
+        <div className="text-sm text-muted-foreground/80">{prop.description}</div>
       )}
       {prop.enum ? (
         <div className="flex flex-wrap gap-1.5">
@@ -388,7 +389,7 @@ function ArgField({
               type="button"
               onClick={() => onChange(String(opt))}
               className={cn(
-                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                 value === String(opt)
                   ? "border-success/40 bg-success/10 text-success"
                   : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
@@ -406,7 +407,7 @@ function ArgField({
               type="button"
               onClick={() => onChange(opt)}
               className={cn(
-                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                 value === opt
                   ? "border-success/40 bg-success/10 text-success"
                   : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
@@ -439,7 +440,7 @@ function ArgField({
         />
       )}
       {error && (
-        <div className="text-[11px] text-destructive">{error}</div>
+        <div className="text-xs text-destructive">{error}</div>
       )}
     </div>
   );
@@ -491,7 +492,7 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
   if (block.type === "image") {
     return (
       <div className="rounded-md border border-border/60 bg-card/30 p-3 space-y-2">
-        <div className="text-[11px] text-muted-foreground/80 font-mono">
+        <div className="text-xs text-muted-foreground/80 font-mono">
           image · {block.mimeType}
         </div>
         <img
@@ -505,7 +506,7 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
   if (block.type === "audio") {
     return (
       <div className="rounded-md border border-border/60 bg-card/30 p-3 space-y-2">
-        <div className="text-[11px] text-muted-foreground/80 font-mono">
+        <div className="text-xs text-muted-foreground/80 font-mono">
           audio · {block.mimeType}
         </div>
         <audio
@@ -520,7 +521,7 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
     const inner = block.resource;
     return (
       <div className="rounded-md border border-border/60 bg-card/30 p-3 space-y-2">
-        <div className="text-[11px] text-muted-foreground/80 font-mono">
+        <div className="text-xs text-muted-foreground/80 font-mono">
           embedded resource · {inner.uri}
         </div>
         {inner.text != null ? (
@@ -538,7 +539,7 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
   if (block.type === "resource_link") {
     return (
       <div className="rounded-md border border-border/60 bg-card/30 p-3 text-sm">
-        <span className="text-[11px] text-muted-foreground/80 font-mono">
+        <span className="text-xs text-muted-foreground/80 font-mono">
           link
         </span>
         <div className="font-mono mt-1 break-all">{block.uri}</div>

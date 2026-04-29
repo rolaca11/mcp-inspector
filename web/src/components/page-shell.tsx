@@ -22,27 +22,27 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto max-w-[1400px] px-6 py-10 flex flex-col gap-8",
+        "mx-auto max-w-[1800px] px-8 py-12 flex flex-col gap-10",
         className,
       )}
     >
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3 min-w-0">
-          <h1 className="text-2xl font-semibold leading-none tracking-tight text-balance">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-4 min-w-0">
+          <h1 className="text-3xl font-semibold leading-none tracking-tight text-balance">
             {title}
           </h1>
           {description && (
-            <p className="text-sm text-muted-foreground max-w-2xl text-balance leading-relaxed">
+            <p className="text-base text-muted-foreground max-w-2xl text-balance leading-relaxed">
               {description}
             </p>
           )}
           {meta && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-3 text-sm text-muted-foreground">
               {meta}
             </div>
           )}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
       </div>
       {children}
     </div>
@@ -57,8 +57,8 @@ export function MetaItem({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      {Icon && <Icon className="size-3.5 text-muted-foreground/70" />}
+    <span className="inline-flex items-center gap-2">
+      {Icon && <Icon className="size-4 text-muted-foreground/70" />}
       {children}
     </span>
   );

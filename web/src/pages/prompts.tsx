@@ -99,7 +99,7 @@ export function PromptsPage() {
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Prompts</CardTitle>
@@ -146,15 +146,15 @@ function PromptListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-3 px-5 py-3 text-left transition-colors cursor-pointer",
+        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
         isActive ? "bg-accent/40" : "hover:bg-accent/20",
       )}
     >
-      <MessageSquare className="size-3.5 text-muted-foreground mt-1" />
+      <MessageSquare className="size-4 text-muted-foreground mt-1" />
       <div className="flex-1 min-w-0">
-        <div className="font-mono text-sm">{prompt.name}</div>
+        <div className="font-mono text-base">{prompt.name}</div>
         {prompt.description && (
-          <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
             {prompt.description}
           </div>
         )}
@@ -227,11 +227,11 @@ function PromptDetail({
   }, [serverName, prompt, values]);
 
   return (
-    <div className="space-y-4 min-w-0">
+    <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1 min-w-0">
-            <CardTitle className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-2.5 flex-wrap">
               <span className="font-mono">{prompt.name}</span>
               {prompt.title && (
                 <span className="font-normal text-sm text-muted-foreground">
@@ -257,15 +257,15 @@ function PromptDetail({
             Get prompt
           </Button>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-6">
           {!prompt.arguments?.length ? (
-            <div className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">
               This prompt takes no arguments.
             </div>
           ) : (
             prompt.arguments.map((arg) => (
-              <div key={arg.name} className="space-y-1.5">
-                <Label className="flex items-center gap-2">
+              <div key={arg.name} className="space-y-2">
+                <Label className="flex items-center gap-2.5">
                   <span className="font-mono normal-case text-foreground">
                     {arg.name}
                   </span>
@@ -276,7 +276,7 @@ function PromptDetail({
                   )}
                 </Label>
                 {arg.description && (
-                  <div className="text-xs text-muted-foreground/80">
+                  <div className="text-sm text-muted-foreground/80">
                     {arg.description}
                   </div>
                 )}
@@ -289,7 +289,7 @@ function PromptDetail({
                   placeholder="value"
                 />
                 {errors[arg.name] && (
-                  <div className="text-[11px] text-destructive">
+                  <div className="text-xs text-destructive">
                     {errors[arg.name]}
                   </div>
                 )}
@@ -317,6 +317,7 @@ function PromptDetail({
               {state.result.messages.length} message
               {state.result.messages.length === 1 ? "" : "s"}
               {state.durationMs != null && ` · ${state.durationMs}ms`}
+              {state.result._tokenCount != null && ` · ${state.result._tokenCount.toLocaleString()} tokens`}
             </Badge>
           ) : null}
         </CardHeader>
@@ -352,7 +353,7 @@ function PromptResultView({ result }: { result: GetPromptResult }) {
           key={i}
           className="rounded-md border border-border/60 bg-card/30 overflow-hidden"
         >
-          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5 text-[11px] font-mono">
+          <div className="flex items-center gap-2.5 border-b border-border/60 px-4 py-2 text-xs font-mono">
             <Badge
               variant={msg.role === "user" ? "info" : "success"}
               className="font-mono"
@@ -363,7 +364,7 @@ function PromptResultView({ result }: { result: GetPromptResult }) {
               {msg.content.type}
             </span>
           </div>
-          <div className="p-3">
+          <div className="p-4">
             {msg.content.type === "text" ? (
               <pre className="text-sm font-mono whitespace-pre-wrap">
                 {msg.content.text}

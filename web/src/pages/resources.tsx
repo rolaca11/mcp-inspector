@@ -94,7 +94,7 @@ export function ResourcesPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="static" className="mt-5">
+        <TabsContent value="static" className="mt-6">
           <StaticResourcesPanel
             serverName={server.name}
             resources={resources}
@@ -102,7 +102,7 @@ export function ResourcesPage() {
           />
         </TabsContent>
 
-        <TabsContent value="templates" className="mt-5">
+        <TabsContent value="templates" className="mt-6">
           {templates.length === 0 ? (
             <Empty
               icon={Variable}
@@ -110,7 +110,7 @@ export function ResourcesPage() {
               description="This server doesn't expose any URI-template resources."
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               {templates.map((t) => (
                 <TemplateCard
                   key={t.uriTemplate}
@@ -171,7 +171,7 @@ function StaticResourcesPanel({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Static resources</CardTitle>
@@ -215,14 +215,14 @@ function ResourceListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-3 px-5 py-3 text-left transition-colors cursor-pointer",
+        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
         isActive ? "bg-accent/40" : "hover:bg-accent/20",
       )}
     >
       <ResourceIcon mimeType={resource.mimeType} className="mt-0.5" />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <span className="font-medium text-sm">
+        <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+          <span className="font-medium text-base">
             {resource.title ?? resource.name}
           </span>
           {resource.mimeType && (
@@ -231,17 +231,17 @@ function ResourceListRow({
             </Badge>
           )}
         </div>
-        <div className="font-mono text-[11px] text-muted-foreground/90 truncate">
+        <div className="font-mono text-xs text-muted-foreground/90 truncate">
           {resource.uri}
         </div>
         {resource.description && (
-          <div className="mt-1 text-xs text-muted-foreground line-clamp-1">
+          <div className="mt-1.5 text-sm text-muted-foreground line-clamp-1">
             {resource.description}
           </div>
         )}
       </div>
       {resource.size != null && (
-        <div className="text-right text-[11px] text-muted-foreground/80 font-mono tabular-nums">
+        <div className="text-right text-xs text-muted-foreground/80 font-mono tabular-nums">
           {formatBytes(resource.size)}
         </div>
       )}
@@ -310,11 +310,11 @@ function ResourcePreview({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {resource.description && (
           <p className="text-sm text-muted-foreground">{resource.description}</p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <KV label="MIME">
             <span className="font-mono">{resource.mimeType ?? "—"}</span>
           </KV>
@@ -328,7 +328,7 @@ function ResourcePreview({
         {error && <ErrorRow message={error} />}
 
         {!error && result && (
-          <ResourceContentsView contents={result.contents} readAt={readAt} />
+          <ResourceContentsView contents={result.contents} readAt={readAt} tokenCount={result._tokenCount} />
         )}
 
         {!error && !result && !reading && (
@@ -433,7 +433,7 @@ function TemplateCard({
 
         {(allFilled || result || error) && (
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
               Resolved URI
             </div>
             <CodeBlock copyable={fullyExpanded} language="uri">
@@ -460,7 +460,7 @@ function TemplateCard({
 
         {error && <ErrorRow message={error} />}
         {!error && result && (
-          <ResourceContentsView contents={result.contents} readAt={readAt} />
+          <ResourceContentsView contents={result.contents} readAt={readAt} tokenCount={result._tokenCount} />
         )}
       </CardContent>
     </Card>
@@ -474,9 +474,11 @@ function TemplateCard({
 function ResourceContentsView({
   contents,
   readAt,
+  tokenCount,
 }: {
   contents: ResourceContents[];
   readAt: number | null;
+  tokenCount?: number | null;
 }) {
   if (contents.length === 0) {
     return (
@@ -485,11 +487,15 @@ function ResourceContentsView({
       </div>
     );
   }
+  const captionParts: string[] = [];
+  if (readAt != null) captionParts.push(`read in ${readAt}ms`);
+  if (tokenCount != null) captionParts.push(`${tokenCount.toLocaleString()} tokens`);
+  const caption = captionParts.length > 0 ? captionParts.join(" · ") : undefined;
   return (
     <div className="space-y-3">
       {contents.map((c, i) => (
         <ResourceContentBlock key={i} content={c} caption={
-          i === 0 && readAt != null ? `read in ${readAt}ms` : undefined
+          i === 0 ? caption : undefined
         } />
       ))}
     </div>
@@ -554,11 +560,11 @@ function ResourceIcon({
 
 function KV({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-border/50 bg-card/40 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1">
+    <div className="rounded-md border border-border/50 bg-card/40 px-4 py-3">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-1.5">
         {label}
       </div>
-      <div className="text-sm">{children}</div>
+      <div className="text-base">{children}</div>
     </div>
   );
 }

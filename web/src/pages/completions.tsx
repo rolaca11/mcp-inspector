@@ -193,7 +193,7 @@ function CompletionsPlayground({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <Card>
         <CardHeader>
           <CardTitle>Completion request</CardTitle>
@@ -202,7 +202,7 @@ function CompletionsPlayground({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Reference type</Label>
             <div className="grid grid-cols-2 gap-2">
               <RefButton
@@ -222,7 +222,7 @@ function CompletionsPlayground({
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>
               {refType === "prompt" ? "Prompt name" : "Resource template"}
             </Label>
@@ -238,7 +238,7 @@ function CompletionsPlayground({
                     type="button"
                     onClick={() => setRefId(r.id)}
                     className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                      "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                       refId === r.id
                         ? "border-info/40 bg-info/10 text-info"
                         : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
@@ -251,7 +251,7 @@ function CompletionsPlayground({
             )}
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Argument</Label>
             {currentRef && currentRef.args.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
@@ -261,7 +261,7 @@ function CompletionsPlayground({
                     type="button"
                     onClick={() => setArgument(a)}
                     className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                      "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                       argument === a
                         ? "border-success/40 bg-success/10 text-success"
                         : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
@@ -278,7 +278,7 @@ function CompletionsPlayground({
             )}
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Partial value</Label>
             <Input
               value={value}
@@ -372,7 +372,7 @@ function CompletionsPlayground({
         </CardContent>
       </Card>
 
-      <div className="space-y-4 min-w-0">
+      <div className="space-y-5 min-w-0">
         <Card>
           <CardHeader>
             <CardTitle>Results</CardTitle>
@@ -411,7 +411,7 @@ function CompletionsPlayground({
                     key={`${r}-${i}`}
                     type="button"
                     onClick={() => setValue(r)}
-                    className="flex w-full items-center gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2 text-left transition-colors hover:bg-accent/40 cursor-pointer"
+                    className="flex w-full items-center gap-4 rounded-md border border-border/40 bg-card/30 px-4 py-3 text-left transition-colors hover:bg-accent/40 cursor-pointer"
                   >
                     <Sparkles className="size-3.5 text-info shrink-0" />
                     <span className="font-mono text-sm flex-1 break-all">
@@ -492,7 +492,7 @@ function RefButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "rounded-md border px-3 py-2 text-sm font-mono transition-colors cursor-pointer",
+        "rounded-md border px-4 py-2.5 text-base font-mono transition-colors cursor-pointer",
         disabled && "opacity-40 cursor-not-allowed",
         active
           ? "border-foreground/40 bg-card/70 text-foreground"

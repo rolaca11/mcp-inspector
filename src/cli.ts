@@ -29,6 +29,7 @@ interface GlobalOpts {
   quiet?: boolean;
   scope?: string;
   clientName?: string;
+  countTokens?: boolean;
 }
 
 function attachGlobal(cmd: Command): Command {
@@ -42,6 +43,10 @@ function attachGlobal(cmd: Command): Command {
     .option(
       "--client-name <name>",
       "OAuth client name advertised during dynamic client registration",
+    )
+    .option(
+      "--count-tokens",
+      "count response tokens via the claude-tokenizer API",
     );
 }
 
@@ -52,7 +57,7 @@ function attachGlobal(cmd: Command): Command {
 function withSession(
   fn: (
     session: Awaited<ReturnType<typeof connect>>,
-    args: { format: { json: boolean } },
+    args: { format: { json: boolean; countTokens: boolean } },
   ) => Promise<void>,
 ) {
   return async (target: string, ..._rest: unknown[]) => {
@@ -65,7 +70,7 @@ function withSession(
       ...(opts.quiet ? { quiet: true } : {}),
     });
     try {
-      await fn(session, { format: { json: !!opts.json } });
+      await fn(session, { format: { json: !!opts.json, countTokens: !!opts.countTokens } });
     } finally {
       await session.close();
     }
@@ -180,7 +185,7 @@ attachGlobal(
         ...(opts.quiet ? { quiet: true } : {}),
       });
       try {
-        await actions.readResource(session, uri, { json: !!opts.json });
+        await actions.readResource(session, uri, { json: !!opts.json, countTokens: !!opts.countTokens });
       } finally {
         await session.close();
       }
@@ -233,7 +238,7 @@ attachGlobal(
           await actions.callTool(
             session,
             { name, arguments: args },
-            { json: !!opts.json },
+            { json: !!opts.json, countTokens: !!opts.countTokens },
           );
         } finally {
           await session.close();
@@ -284,7 +289,7 @@ attachGlobal(
           ...(opts.quiet ? { quiet: true } : {}),
         });
         try {
-          await actions.getPrompt(session, name, stringified, { json: !!opts.json });
+          await actions.getPrompt(session, name, stringified, { json: !!opts.json, countTokens: !!opts.countTokens });
         } finally {
           await session.close();
         }
@@ -345,7 +350,7 @@ attachGlobal(
             value: opts.value ?? "",
             ...(context ? { context } : {}),
           },
-          { json: !!opts.json },
+          { json: !!opts.json, countTokens: !!opts.countTokens },
         );
       } finally {
         await session.close();
@@ -397,7 +402,7 @@ attachGlobal(
     .action(async (target: string, _opts, cmd: Command) => {
       const opts = collectOpts(cmd);
       const spec = parseTarget(target);
-      await actions.authLogout(spec, { json: !!opts.json });
+      await actions.authLogout(spec, { json: !!opts.json, countTokens: !!opts.countTokens });
     }),
 );
 
@@ -409,7 +414,7 @@ attachGlobal(
     .action(async (target: string, _opts, cmd: Command) => {
       const opts = collectOpts(cmd);
       const spec = parseTarget(target);
-      await actions.authStatus(spec, { json: !!opts.json });
+      await actions.authStatus(spec, { json: !!opts.json, countTokens: !!opts.countTokens });
     }),
 );
 

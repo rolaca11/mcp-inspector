@@ -22,6 +22,8 @@ export interface ActivityEntry {
   detail?: string;
   outcome: "ok" | "error" | "pending";
   durationMs?: number;
+  /** Token count from the Anthropic Token Counting API (when available). */
+  tokenCount?: number | null;
   error?: string;
   at: string;
 }
@@ -38,7 +40,7 @@ class ActivityLog {
 
   start(input: Omit<ActivityEntry, "id" | "outcome" | "at" | "durationMs">): {
     id: string;
-    finish(detail?: string): void;
+    finish(detail?: string, tokenCount?: number | null): void;
     fail(error: string): void;
   } {
     const entry: ActivityEntry = {
@@ -51,11 +53,12 @@ class ActivityLog {
     const startedAt = performance.now();
     return {
       id: entry.id,
-      finish: (detail) => {
+      finish: (detail, tokenCount) => {
         this.#patch(entry.id, {
           outcome: "ok",
           durationMs: Math.round(performance.now() - startedAt),
           ...(detail != null ? { detail } : {}),
+          ...(tokenCount != null ? { tokenCount } : {}),
         });
       },
       fail: (error) => {

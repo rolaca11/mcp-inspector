@@ -117,14 +117,14 @@ export function ServersPage({
                   type="button"
                   onClick={() => onSelect(s)}
                   className={cn(
-                    "flex w-full items-start gap-4 px-5 py-4 text-left transition-colors cursor-pointer",
+                    "flex w-full items-start gap-5 px-6 py-5 text-left transition-colors cursor-pointer",
                     isActive ? "bg-accent/40" : "hover:bg-accent/20",
                   )}
                 >
                   <StatusDot tone={tone} pulse={isActive && (connection === "connected" || connection === "connecting")} className="mt-2" />
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{s.name}</span>
+                  <div className="flex-1 min-w-0 space-y-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="text-base font-medium">{s.name}</span>
                       {isActive && data?.server?.title && (
                         <span className="text-sm text-muted-foreground">
                           · {data.server.title}
@@ -140,10 +140,10 @@ export function ServersPage({
                         </Badge>
                       )}
                     </div>
-                    <div className="font-mono text-[12px] text-muted-foreground truncate">
+                    <div className="font-mono text-sm text-muted-foreground truncate">
                       {s.target}
                     </div>
-                    <div className="text-[11px] text-muted-foreground/80">
+                    <div className="text-xs text-muted-foreground/80">
                       {statusLabel}
                     </div>
                   </div>

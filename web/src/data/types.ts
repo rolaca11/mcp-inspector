@@ -133,6 +133,8 @@ export interface ToolResult {
   isError?: boolean;
   content: ContentBlock[];
   structuredContent?: unknown;
+  /** Token count from the Anthropic Token Counting API (when available). */
+  _tokenCount?: number | null;
 }
 
 export interface ResourceContents {
@@ -144,6 +146,8 @@ export interface ResourceContents {
 
 export interface ReadResourceResult {
   contents: ResourceContents[];
+  /** Token count from the Anthropic Token Counting API (when available). */
+  _tokenCount?: number | null;
 }
 
 export interface PromptMessage {
@@ -154,6 +158,8 @@ export interface PromptMessage {
 export interface GetPromptResult {
   description?: string;
   messages: PromptMessage[];
+  /** Token count from the Anthropic Token Counting API (when available). */
+  _tokenCount?: number | null;
 }
 
 export interface CompleteResult {
@@ -162,6 +168,8 @@ export interface CompleteResult {
     total?: number;
     hasMore?: boolean;
   };
+  /** Token count from the Anthropic Token Counting API (when available). */
+  _tokenCount?: number | null;
 }
 
 export interface DiscoverResult {
@@ -171,6 +179,8 @@ export interface DiscoverResult {
   resourceTemplates: MCPResourceTemplate[];
   tools: MCPTool[];
   prompts: MCPPrompt[];
+  /** Token count from the Anthropic Token Counting API (when available). */
+  _tokenCount?: number | null;
 }
 
 /* ------------------------------------------------------------------ */

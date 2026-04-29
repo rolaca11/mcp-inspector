@@ -129,11 +129,11 @@ export function OverviewPage() {
     >
       {state === "error" && (
         <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="flex items-start gap-3 py-4">
+          <CardContent className="flex items-start gap-4 py-5">
             <AlertCircle className="size-5 text-destructive mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="font-medium">Couldn't connect to this server</div>
-              <div className="text-sm text-muted-foreground mt-0.5 break-all">
+              <div className="text-base font-medium">Couldn't connect to this server</div>
+              <div className="text-sm text-muted-foreground mt-1 break-all">
                 {error}
               </div>
             </div>
@@ -149,7 +149,7 @@ export function OverviewPage() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         <StatCard
           icon={FileBox}
           label="Resources"
@@ -199,7 +199,7 @@ export function OverviewPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex flex-col gap-1">
@@ -240,7 +240,7 @@ export function OverviewPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
                 Target
               </div>
               <CodeBlock copyable language={server.transport}>
@@ -263,10 +263,10 @@ export function OverviewPage() {
             )}
             <Separator />
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
                 Loaded from
               </div>
-              <div className="font-mono text-[11px] text-muted-foreground/90 truncate">
+              <div className="font-mono text-xs text-muted-foreground/90 truncate">
                 {server.source}
               </div>
             </div>
@@ -336,26 +336,26 @@ function StatCard({
   return (
     <button type="button" onClick={onClick} className="text-left">
       <Card className="transition-[border-color,background-color] hover:border-border hover:bg-card/70 cursor-pointer">
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
               {label}
             </span>
             <span
               className={cn(
-                "grid place-items-center rounded-md p-1.5",
+                "grid place-items-center rounded-md p-2",
                 accentBg,
               )}
             >
-              <Icon className="size-3.5" />
+              <Icon className="size-4" />
             </span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-semibold tracking-tight tabular-nums">
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-4xl font-semibold tracking-tight tabular-nums">
               {loading ? <span className="text-muted-foreground/50">…</span> : value}
             </span>
             {subtitle && !loading && (
-              <span className="text-xs text-muted-foreground/80">
+              <span className="text-sm text-muted-foreground/80">
                 {subtitle}
               </span>
             )}
@@ -423,12 +423,12 @@ function CapabilityRow({
   meta: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2">
+    <div className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-card/30 px-4 py-3">
       <div className="flex items-center gap-3">
         <StatusDot tone={enabled ? "success" : "muted"} />
         <span className="font-mono text-sm">{name}</span>
       </div>
-      <span className="text-xs text-muted-foreground/80">{meta}</span>
+      <span className="text-sm text-muted-foreground/80">{meta}</span>
     </div>
   );
 }
@@ -444,10 +444,10 @@ function KvList({
 }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
         {label}
       </div>
-      <div className="space-y-1 font-mono text-xs">
+      <div className="space-y-1.5 font-mono text-sm">
         {entries.map(([k, v]) => (
           <div key={k} className="flex items-baseline gap-2">
             <span className="text-muted-foreground/70">
@@ -468,13 +468,13 @@ function SkeletonRows() {
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="flex items-center justify-between rounded-md border border-border/40 bg-card/30 px-3 py-2"
+          className="flex items-center justify-between rounded-md border border-border/40 bg-card/30 px-4 py-3"
         >
           <div className="flex items-center gap-3">
-            <span className="size-2 rounded-full bg-muted" />
-            <span className="h-3 w-16 rounded bg-muted/60 animate-pulse" />
+            <span className="size-2.5 rounded-full bg-muted" />
+            <span className="h-3.5 w-20 rounded bg-muted/60 animate-pulse" />
           </div>
-          <span className="h-3 w-24 rounded bg-muted/40 animate-pulse" />
+          <span className="h-3.5 w-28 rounded bg-muted/40 animate-pulse" />
         </div>
       ))}
     </>
@@ -505,9 +505,9 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       : entry.detail ?? "";
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
+    <div className="flex items-center gap-4 px-6 py-4">
       <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
-      <Badge variant="muted" className="font-mono w-[80px] justify-center">
+      <Badge variant="muted" className="font-mono w-[90px] justify-center">
         {kindLabel}
       </Badge>
       <span className="font-mono text-sm truncate flex-1 min-w-0">
@@ -515,7 +515,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       </span>
       <span
         className={cn(
-          "font-mono text-[11px] truncate hidden md:block max-w-[28rem]",
+          "font-mono text-xs truncate hidden md:block max-w-[28rem]",
           entry.outcome === "error"
             ? "text-destructive/90"
             : "text-muted-foreground/80",
@@ -523,14 +523,19 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       >
         {detail}
       </span>
-      <span className="font-mono text-[11px] text-muted-foreground/80 tabular-nums w-14 text-right">
+      {entry.tokenCount != null && (
+        <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-[6rem] text-right hidden lg:block">
+          {entry.tokenCount.toLocaleString()} tok
+        </span>
+      )}
+      <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-16 text-right">
         {entry.durationMs == null
           ? "…"
           : entry.durationMs >= 1000
             ? `${(entry.durationMs / 1000).toFixed(2)}s`
             : `${entry.durationMs}ms`}
       </span>
-      <span className="text-[11px] text-muted-foreground/70 w-20 text-right">
+      <span className="text-xs text-muted-foreground/70 w-22 text-right">
         {formatRelativeTime(entry.at)}
       </span>
     </div>

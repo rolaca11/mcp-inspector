@@ -19,11 +19,26 @@ import {
   printResourceTemplates,
   printResources,
   printToolResult,
+  printTokenCount,
   printTools,
   type FormatOptions,
 } from "./format.js";
 import { authFile } from "./paths.js";
 import { targetId, type TargetSpec } from "./target.js";
+import { countResponseTokens } from "./tokens.js";
+
+/**
+ * Shared helper: count tokens for a payload and either print JSON
+ * (`{ _tokenCount }`) or the human-readable line + warning.
+ */
+function emitTokenCount(payload: unknown, opts: FormatOptions): void {
+  const result = countResponseTokens(payload);
+  if (opts.json) {
+    printJson({ _tokenCount: result.ok ? result.tokens : null, ...(result.ok ? {} : { _tokenCountError: result.error }) });
+  } else {
+    printTokenCount(result);
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Discover                                                            */
@@ -72,6 +87,10 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
   printTools(tools.tools, opts);
   console.log();
   printPrompts(prompts.prompts, opts);
+  if (opts.countTokens) {
+    const payload = { resources, templates, tools, prompts };
+    emitTokenCount(payload, opts);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -79,13 +98,15 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
 /* ------------------------------------------------------------------ */
 
 export async function listResources(session: Session, opts: FormatOptions = {}) {
-  const { resources } = await session.client.listResources();
-  printResources(resources, opts);
+  const result = await session.client.listResources();
+  printResources(result.resources, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 export async function listResourceTemplates(session: Session, opts: FormatOptions = {}) {
-  const { resourceTemplates } = await session.client.listResourceTemplates();
-  printResourceTemplates(resourceTemplates, opts);
+  const result = await session.client.listResourceTemplates();
+  printResourceTemplates(result.resourceTemplates, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 export async function readResource(
@@ -95,6 +116,7 @@ export async function readResource(
 ) {
   const result = await session.client.readResource({ uri });
   printResourceContents(result.contents, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,8 +124,9 @@ export async function readResource(
 /* ------------------------------------------------------------------ */
 
 export async function listTools(session: Session, opts: FormatOptions = {}) {
-  const { tools } = await session.client.listTools();
-  printTools(tools, opts);
+  const result = await session.client.listTools();
+  printTools(result.tools, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 export interface CallToolArgs {
@@ -121,6 +144,7 @@ export async function callTool(
     arguments: args.arguments ?? {},
   });
   printToolResult(result as Parameters<typeof printToolResult>[0], opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 /* ------------------------------------------------------------------ */
@@ -128,8 +152,9 @@ export async function callTool(
 /* ------------------------------------------------------------------ */
 
 export async function listPrompts(session: Session, opts: FormatOptions = {}) {
-  const { prompts } = await session.client.listPrompts();
-  printPrompts(prompts, opts);
+  const result = await session.client.listPrompts();
+  printPrompts(result.prompts, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 export async function getPrompt(
@@ -140,6 +165,7 @@ export async function getPrompt(
 ) {
   const result = await session.client.getPrompt({ name, arguments: args });
   printPromptResult(result as Parameters<typeof printPromptResult>[0], opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 /* ------------------------------------------------------------------ */
@@ -181,6 +207,7 @@ export async function complete(
   }
   const result = await session.client.complete(params);
   printCompletions(result, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }
 
 /* ------------------------------------------------------------------ */

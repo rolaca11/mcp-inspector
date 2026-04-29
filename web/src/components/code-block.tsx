@@ -32,7 +32,7 @@ export function CodeBlock({
   return (
     <div className={cn("group rounded-lg border border-border/60 bg-card/40 overflow-hidden", className)}>
       {(caption || language || copyable) && (
-        <div className="flex items-center justify-between border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground/80 font-mono">
+        <div className="flex items-center justify-between border-b border-border/60 px-4 py-2 text-xs text-muted-foreground/80 font-mono">
           <span className="truncate">
             {caption ?? language ?? ""}
           </span>
@@ -58,7 +58,7 @@ export function CodeBlock({
           )}
         </div>
       )}
-      <pre className="overflow-x-auto p-3 text-[12.5px] leading-relaxed font-mono text-foreground/90">
+      <pre className="overflow-x-auto p-4 text-sm leading-relaxed font-mono text-foreground/90">
         <code>{children}</code>
       </pre>
     </div>

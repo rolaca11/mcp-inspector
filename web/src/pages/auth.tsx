@@ -95,13 +95,13 @@ export function AuthPage() {
     >
       {!isHttp && (
         <Card>
-          <CardContent className="flex items-center gap-4 py-8">
-            <span className="grid place-items-center size-10 rounded-full bg-muted/40 text-muted-foreground">
-              <ShieldOff className="size-5" />
+          <CardContent className="flex items-center gap-5 py-10">
+            <span className="grid place-items-center size-12 rounded-full bg-muted/40 text-muted-foreground">
+              <ShieldOff className="size-6" />
             </span>
             <div>
-              <div className="font-medium">No auth required</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-base font-medium">No auth required</div>
+              <div className="text-sm text-muted-foreground mt-1">
                 <span className="font-mono">{server.name}</span> uses the
                 <span className="mx-1 font-mono">stdio</span>
                 transport. The child process inherits this CLI&apos;s
@@ -114,11 +114,11 @@ export function AuthPage() {
 
       {isHttp && error && (
         <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="flex items-start gap-3 py-4">
+          <CardContent className="flex items-start gap-4 py-5">
             <AlertCircle className="size-5 text-destructive mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="font-medium">Couldn't read auth state</div>
-              <div className="text-sm text-muted-foreground mt-0.5 break-all">
+              <div className="text-base font-medium">Couldn't read auth state</div>
+              <div className="text-sm text-muted-foreground mt-1 break-all">
                 {error}
               </div>
             </div>
@@ -127,7 +127,7 @@ export function AuthPage() {
       )}
 
       {isHttp && (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <Card>
             <CardHeader>
               <CardTitle>Status</CardTitle>
@@ -199,13 +199,13 @@ export function AuthPage() {
                 <>
                   <Separator />
                   <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mb-1.5">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-1.5">
                       Token store
                     </div>
                     <CodeBlock copyable={false} language="path">
                       {status.file}
                     </CodeBlock>
-                    <div className="mt-1.5 text-[11px] text-muted-foreground/70">
+                    <div className="mt-1.5 text-xs text-muted-foreground/70">
                       Created with mode <span className="font-mono">0600</span>.
                     </div>
                   </div>
@@ -266,9 +266,9 @@ export function AuthPage() {
               {OAUTH_STEPS.map((step, idx) => (
                 <div
                   key={step.title}
-                  className="flex items-start gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2.5"
+                  className="flex items-start gap-4 rounded-md border border-border/40 bg-card/30 px-4 py-3"
                 >
-                  <span className="grid size-5 mt-0.5 place-items-center rounded-full bg-foreground/10 text-[11px] font-mono tabular-nums">
+                  <span className="grid size-5 mt-0.5 place-items-center rounded-full bg-foreground/10 text-xs font-mono tabular-nums">
                     {idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -286,7 +286,7 @@ export function AuthPage() {
                   </div>
                 </div>
               ))}
-              <div className="flex items-center gap-2 rounded-md border border-border/40 bg-card/30 px-3 py-2.5">
+              <div className="flex items-center gap-3 rounded-md border border-border/40 bg-card/30 px-4 py-3">
                 <ArrowRight className="size-3.5 text-muted-foreground" />
                 <span className="font-mono text-xs text-muted-foreground">
                   Tokens persist at{" "}
@@ -313,7 +313,7 @@ function Row({
   text: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2">
+    <div className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-card/30 px-4 py-3">
       <div className="flex items-center gap-3 text-sm">
         {ok != null && <StatusDot tone={ok ? "success" : "muted"} />}
         <span className="text-muted-foreground">{label}</span>

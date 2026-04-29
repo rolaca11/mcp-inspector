@@ -82,7 +82,12 @@ async function tracked<T>(
   });
   try {
     const result = await fn();
-    tx.finish(summarize ? summarize(result) : payload);
+    // Extract _tokenCount from the response if available.
+    const tokenCount =
+      result != null && typeof result === "object" && "_tokenCount" in result
+        ? (result as { _tokenCount?: number | null })._tokenCount
+        : undefined;
+    tx.finish(summarize ? summarize(result) : payload, tokenCount);
     return result;
   } catch (e) {
     tx.fail((e as Error).message);

@@ -86,11 +86,11 @@ export function Header({
 
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-6">
+      <div className="mx-auto flex h-[4.5rem] max-w-[1800px] items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-4 min-w-0">
           <Logo />
-          <nav className="flex items-center gap-1 text-muted-foreground/70 text-sm">
+          <nav className="flex items-center gap-1.5 text-muted-foreground/70 text-base">
             <SourceSelector
               sources={sources}
               activePath={active.source}
@@ -104,7 +104,7 @@ export function Header({
               activeConnection={connection}
             />
             <span aria-hidden className="select-none px-0.5">/</span>
-            <span className="font-mono text-[11px] truncate max-w-[18rem] text-foreground/70">
+            <span className="font-mono text-xs truncate max-w-[18rem] text-foreground/70">
               {active.transport === "stdio"
                 ? active.target
                 : active.target.replace(/^https?:\/\//, "")}
@@ -122,7 +122,7 @@ export function Header({
         <div className="flex-1" />
 
         {/* Right: API badge, search, help, notifications, avatar */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -161,7 +161,7 @@ export function Header({
 
           <button
             type="button"
-            className="hidden md:inline-flex h-8 items-center gap-2 rounded-md border border-border/60 bg-card/40 pl-2.5 pr-1.5 text-sm text-muted-foreground transition-colors hover:bg-card/70 cursor-pointer"
+            className="hidden md:inline-flex h-9 items-center gap-2.5 rounded-md border border-border/60 bg-card/40 pl-3 pr-2 text-sm text-muted-foreground transition-colors hover:bg-card/70 cursor-pointer"
           >
             <Search className="size-3.5" />
             <span>Search</span>
@@ -219,7 +219,7 @@ export function Header({
                 <span className="text-foreground text-sm normal-case font-medium">
                   Local user
                 </span>
-                <span className="text-[11px] tracking-normal normal-case text-muted-foreground">
+                <span className="text-xs tracking-normal normal-case text-muted-foreground">
                   loopback · 127.0.0.1
                 </span>
               </DropdownMenuLabel>

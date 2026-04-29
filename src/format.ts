@@ -11,6 +11,8 @@ export interface FormatOptions {
   json?: boolean;
   /** Force colored output even when stdout is not a TTY. */
   color?: boolean;
+  /** Count tokens via the Anthropic Token Counting API. */
+  countTokens?: boolean;
 }
 
 export function shouldUseColor(opts: FormatOptions): boolean {
@@ -328,5 +330,23 @@ export function printCompletions(result: CompleteResult, opts: FormatOptions = {
   console.log(pc.bold(`Completions (${totalStr})${moreStr}:`));
   for (const v of values) {
     console.log(`  ${v}`);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Token count                                                         */
+/* ------------------------------------------------------------------ */
+
+import type { TokenCountResult } from "./tokens.js";
+
+export function printTokenCount(result: TokenCountResult): void {
+  if (result.ok) {
+    console.log();
+    console.log(pc.dim(`Tokens: ${pc.bold(result.tokens.toLocaleString())}`));
+  } else {
+    console.log();
+    console.log(
+      pc.yellow(`warning: token counting failed: ${result.error}`),
+    );
   }
 }

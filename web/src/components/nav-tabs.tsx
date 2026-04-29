@@ -50,7 +50,7 @@ export function NavTabs({ serverName, counts }: NavTabsProps) {
 
   return (
     <div className="border-b border-border/60 bg-background/40">
-      <div className="mx-auto flex max-w-[1400px] items-end gap-2 px-6">
+      <div className="mx-auto flex max-w-[1800px] items-end gap-3 px-8">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const count = counts?.[item.key];
@@ -60,7 +60,7 @@ export function NavTabs({ serverName, counts }: NavTabsProps) {
               to={`${prefix}/${item.path}`}
               className={({ isActive }) =>
                 cn(
-                  "group relative inline-flex items-center gap-2 px-4 py-3.5 text-sm font-medium transition-colors cursor-pointer",
+                  "group relative inline-flex items-center gap-2.5 px-5 py-4 text-base font-medium transition-colors cursor-pointer",
                   isActive
                     ? "text-foreground"
                     : "text-muted-foreground/80 hover:text-foreground",
@@ -71,7 +71,7 @@ export function NavTabs({ serverName, counts }: NavTabsProps) {
                 <>
                   <Icon
                     className={cn(
-                      "size-3.5 transition-colors",
+                      "size-4 transition-colors",
                       isActive
                         ? "text-foreground"
                         : "text-muted-foreground/60 group-hover:text-muted-foreground",
@@ -81,7 +81,7 @@ export function NavTabs({ serverName, counts }: NavTabsProps) {
                   {typeof count === "number" && (
                     <span
                       className={cn(
-                        "ml-0.5 rounded-md px-1.5 py-0.5 text-[11px] tabular-nums leading-none font-mono",
+                        "ml-1 rounded-md px-2 py-0.5 text-xs tabular-nums leading-none font-mono",
                         isActive
                           ? "bg-foreground/10 text-foreground"
                           : "bg-muted/50 text-muted-foreground/80",
