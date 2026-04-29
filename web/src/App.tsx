@@ -15,12 +15,8 @@ import { Header } from "@/components/header";
 import { NavTabs, type NavKey } from "@/components/nav-tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import {
-  ServerProvider,
-  useServer,
-  type ConnectionState,
-} from "@/contexts/server-context";
-import { useServers } from "@/hooks/use-servers";
+import { useServersStore, type ApiState } from "@/stores/servers-store";
+import { useConnectionStore, type ConnectionState } from "@/stores/connection-store";
 import type { MCPServer } from "@/data/types";
 
 import { OverviewPage } from "@/pages/overview";
@@ -49,7 +45,11 @@ export function useServerLayout(): ServerLayoutContext {
 }
 
 export default function App() {
-  const { servers, state: apiState, reload: reloadServers, error } = useServers();
+  const { servers, apiState, error, fetchServers } = useServersStore();
+
+  React.useEffect(() => {
+    void fetchServers();
+  }, [fetchServers]);
 
   if (apiState === "loading" && servers.length === 0) {
     return (
@@ -66,7 +66,7 @@ export default function App() {
           <NoServersScreen
             apiState={apiState}
             error={error}
-            onRetry={reloadServers}
+            onRetry={fetchServers}
           />
         </div>
       </TooltipProvider>
@@ -81,13 +81,7 @@ export default function App() {
         <Route path="/" element={<Navigate to={fallback} replace />} />
         <Route
           path=":serverName"
-          element={
-            <ServerLayout
-              servers={servers}
-              apiState={apiState}
-              reloadServers={reloadServers}
-            />
-          }
+          element={<ServerLayout />}
         >
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
@@ -104,18 +98,20 @@ export default function App() {
   );
 }
 
-interface ServerLayoutProps {
-  servers: MCPServer[];
-  apiState: ReturnType<typeof useServers>["state"];
-  reloadServers: () => void;
-}
-
-function ServerLayout({ servers, apiState, reloadServers }: ServerLayoutProps) {
+function ServerLayout() {
   const { serverName } = useParams<{ serverName: string }>();
+  const { servers, apiState, fetchServers } = useServersStore();
+  const setServer = useConnectionStore((s) => s.setServer);
+
   const active = React.useMemo(
     () => servers.find((s) => s.name === serverName) ?? null,
     [servers, serverName],
   );
+
+  // Sync the active server into the connection store.
+  React.useEffect(() => {
+    if (active) setServer(active);
+  }, [active, setServer]);
 
   if (!active) {
     return (
@@ -127,21 +123,19 @@ function ServerLayout({ servers, apiState, reloadServers }: ServerLayoutProps) {
   }
 
   return (
-    <ServerProvider key={active.name} server={active}>
-      <ServerShell
-        servers={servers}
-        active={active}
-        apiState={apiState}
-        reloadServers={reloadServers}
-      />
-    </ServerProvider>
+    <ServerShell
+      servers={servers}
+      active={active}
+      apiState={apiState}
+      reloadServers={fetchServers}
+    />
   );
 }
 
 interface ServerShellProps {
   servers: MCPServer[];
   active: MCPServer;
-  apiState: ReturnType<typeof useServers>["state"];
+  apiState: ApiState;
   reloadServers: () => void;
 }
 
@@ -151,7 +145,7 @@ function ServerShell({
   apiState,
   reloadServers,
 }: ServerShellProps) {
-  const { data, state, rediscover, disconnect } = useServer();
+  const { data, connectionState, rediscover, disconnect } = useConnectionStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -175,7 +169,7 @@ function ServerShell({
   const outletContext: ServerLayoutContext = {
     servers,
     active,
-    connection: state,
+    connection: connectionState,
     switchToServer,
   };
 
@@ -186,7 +180,7 @@ function ServerShell({
         active={active}
         onSelect={switchToServer}
         apiState={apiState}
-        connection={state}
+        connection={connectionState}
         onConnect={rediscover}
         onDisconnect={disconnect}
         onReloadServers={reloadServers}
@@ -219,7 +213,7 @@ function NoServersScreen({
   error,
   onRetry,
 }: {
-  apiState: ReturnType<typeof useServers>["state"];
+  apiState: ApiState;
   error?: string;
   onRetry: () => void;
 }) {

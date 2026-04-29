@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import {
   extractTemplateVariables,
@@ -46,7 +46,7 @@ interface CompleteState {
 }
 
 export function CompletionsPage() {
-  const { server, data, state } = useServer();
+  const { server, data, connectionState: state } = useConnectionStore();
 
   if (!data && state === "connecting") {
     return (
@@ -85,7 +85,7 @@ export function CompletionsPage() {
       description="Ask the server to autocomplete an argument value. Useful for cascading dropdowns where one argument depends on another."
     >
       <CompletionsPlayground
-        serverName={server.name}
+        serverName={server!.name}
         prompts={data.prompts}
         templates={data.resourceTemplates}
       />

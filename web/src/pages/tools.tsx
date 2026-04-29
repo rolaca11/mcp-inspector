@@ -23,13 +23,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 export function ToolsPage() {
-  const { server, data, state } = useServer();
+  const { server, data, connectionState: state } = useConnectionStore();
   const [query, setQuery] = React.useState("");
   const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
@@ -126,7 +126,7 @@ export function ToolsPage() {
           </div>
         </Card>
 
-        {selected && <ToolDetail key={selected.name} serverName={server.name} tool={selected} />}
+        {selected && <ToolDetail key={selected.name} serverName={server!.name} tool={selected} />}
       </div>
     </PageShell>
   );

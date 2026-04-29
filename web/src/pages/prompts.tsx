@@ -21,13 +21,13 @@ import { Label } from "@/components/ui/label";
 import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import type { GetPromptResult, MCPPrompt } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 export function PromptsPage() {
-  const { server, data, state } = useServer();
+  const { server, data, connectionState: state } = useConnectionStore();
   const [query, setQuery] = React.useState("");
   const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
@@ -122,7 +122,7 @@ export function PromptsPage() {
         {selected && (
           <PromptDetail
             key={selected.name}
-            serverName={server.name}
+            serverName={server!.name}
             prompt={selected}
           />
         )}

@@ -24,13 +24,13 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { StatusDot } from "@/components/status-dot";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import type { AuthStatus } from "@/data/types";
 
 export function AuthPage() {
-  const { server, rediscover } = useServer();
-  const isHttp = server.transport !== "stdio";
+  const { server, rediscover } = useConnectionStore();
+  const isHttp = server!.transport !== "stdio";
 
   const [status, setStatus] = React.useState<AuthStatus | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -42,14 +42,14 @@ export function AuthPage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await api.authStatus(server.name);
+      const r = await api.authStatus(server!.name);
       setStatus(r);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [isHttp, server.name]);
+  }, [isHttp, server!.name]);
 
   React.useEffect(() => {
     void load();
@@ -59,14 +59,14 @@ export function AuthPage() {
     setBusy("logout");
     setError(null);
     try {
-      await api.authLogout(server.name);
+      await api.authLogout(server!.name);
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
     } finally {
       setBusy(null);
     }
-  }, [server.name, load]);
+  }, [server!.name, load]);
 
   const onReauth = React.useCallback(async () => {
     setBusy("reauth");
@@ -74,7 +74,7 @@ export function AuthPage() {
     try {
       // Drop credentials, then trigger a discover so the server reconnects
       // (which will run the OAuth flow if the transport demands it).
-      await api.authLogout(server.name);
+      await api.authLogout(server!.name);
       await rediscover();
       await load();
     } catch (e) {
@@ -82,7 +82,7 @@ export function AuthPage() {
     } finally {
       setBusy(null);
     }
-  }, [server.name, rediscover, load]);
+  }, [server!.name, rediscover, load]);
 
   return (
     <PageShell
@@ -102,7 +102,7 @@ export function AuthPage() {
             <div>
               <div className="text-base font-medium">No auth required</div>
               <div className="text-sm text-muted-foreground mt-1">
-                <span className="font-mono">{server.name}</span> uses the
+                <span className="font-mono">{server!.name}</span> uses the
                 <span className="mx-1 font-mono">stdio</span>
                 transport. The child process inherits this CLI&apos;s
                 environment.

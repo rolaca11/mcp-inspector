@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { StatusDot } from "@/components/status-dot";
 import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import type { ConnectionState } from "@/contexts/server-context";
+import type { ConnectionState } from "@/stores/connection-store";
 import { cn } from "@/lib/utils";
 import type { MCPServer } from "@/data/types";
 

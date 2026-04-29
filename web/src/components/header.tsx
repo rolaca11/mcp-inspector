@@ -30,8 +30,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ConnectionState } from "@/contexts/server-context";
-import type { ApiState } from "@/hooks/use-servers";
+import type { ConnectionState } from "@/stores/connection-store";
+import type { ApiState } from "@/stores/servers-store";
 import type { MCPServer } from "@/data/types";
 
 interface HeaderProps {

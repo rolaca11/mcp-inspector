@@ -14,8 +14,7 @@ import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { StatusDot } from "@/components/status-dot";
 import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import type { ConnectionState } from "@/contexts/server-context";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore, type ConnectionState } from "@/stores/connection-store";
 import type { MCPServer } from "@/data/types";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
@@ -41,7 +40,7 @@ export function ServersPage({
   onSelect,
   connection,
 }: ServersPageProps) {
-  const { data, lastDiscoveredAt } = useServer();
+  const { data, lastDiscoveredAt } = useConnectionStore();
 
   const sources = Array.from(
     servers.reduce((map, s) => {

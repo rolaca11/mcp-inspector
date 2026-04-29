@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
-import { useServer } from "@/contexts/server-context";
+import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import {
   expandTemplate,
@@ -37,7 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export function ResourcesPage() {
-  const { server, data, state } = useServer();
+  const { server, data, connectionState: state } = useConnectionStore();
   const [query, setQuery] = React.useState("");
 
   const resources = data?.resources ?? [];
@@ -95,7 +95,7 @@ export function ResourcesPage() {
 
         <TabsContent value="static" className="mt-6">
           <StaticResourcesPanel
-            serverName={server.name}
+            serverName={server!.name}
             resources={resources}
             query={query}
           />
@@ -103,7 +103,7 @@ export function ResourcesPage() {
 
         <TabsContent value="templates" className="mt-6">
           <TemplatesPanel
-            serverName={server.name}
+            serverName={server!.name}
             templates={templates}
             query={query}
           />
@@ -498,7 +498,6 @@ function TemplatePreview({
     setReadAt(null);
   }, [template.uriTemplate]);
 
-  const allFilled = variables.every((v) => values[v] && values[v]!.trim() !== "");
   const expanded = expandTemplate(template.uriTemplate, values);
   const fullyExpanded = !/\{[^}]+\}/.test(expanded);
 
@@ -756,7 +755,7 @@ function Loading() {
 }
 
 function NotConnected() {
-  const { rediscover, state } = useServer();
+  const { rediscover, connectionState: state } = useConnectionStore();
   return (
     <PageShell title="Resources">
       <Empty

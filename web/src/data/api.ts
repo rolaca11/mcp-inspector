@@ -4,7 +4,7 @@
  * activity feed shows the real history of what was sent.
  */
 
-import { activityLog, type ActivityKind } from "./activity";
+import { useActivityStore, type ActivityKind } from "@/stores/activity-store";
 import type {
   AuthStatus,
   CompleteResult,
@@ -74,7 +74,7 @@ async function tracked<T>(
   fn: () => Promise<T>,
   summarize?: (result: T) => string,
 ): Promise<T> {
-  const tx = activityLog.start({
+  const tx = useActivityStore.getState().start({
     kind,
     serverName,
     target,

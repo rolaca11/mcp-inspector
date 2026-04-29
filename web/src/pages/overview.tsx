@@ -29,9 +29,8 @@ import { Empty } from "@/components/empty";
 import { MetaItem, PageShell } from "@/components/page-shell";
 import { StatusDot } from "@/components/status-dot";
 import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import { useServer } from "@/contexts/server-context";
-import { useActivity } from "@/hooks/use-activity";
-import type { ActivityEntry } from "@/data/activity";
+import { useConnectionStore } from "@/stores/connection-store";
+import { useActivityStore, type ActivityEntry } from "@/stores/activity-store";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
 export function OverviewPage() {
@@ -39,10 +38,10 @@ export function OverviewPage() {
   const { serverName } = useParams<{ serverName: string }>();
   const goTo = (sub: string) =>
     navigate(`/${encodeURIComponent(serverName!)}/${sub}`);
-  const { server, data, state, error, lastDiscoveredAt, rediscover } =
-    useServer();
-  const activity = useActivity();
-  const activityForServer = activity.filter((a) => a.serverName === server.name);
+  const { server, data, connectionState: state, error, lastDiscoveredAt, rediscover } =
+    useConnectionStore();
+  const activity = useActivityStore((s) => s.entries);
+  const activityForServer = activity.filter((a) => a.serverName === server?.name);
 
   const tone =
     state === "connected"
@@ -64,10 +63,10 @@ export function OverviewPage() {
     <PageShell
       title={
         <span className="flex items-center gap-3 flex-wrap">
-          {data?.server?.title ?? data?.server?.name ?? server.name}
+          {data?.server?.title ?? data?.server?.name ?? server!.name}
           <span className="font-mono text-base text-muted-foreground/70">·</span>
           <span className="font-mono text-base text-muted-foreground/80">
-            {server.name}
+            {server!.name}
           </span>
         </span>
       }
@@ -87,14 +86,14 @@ export function OverviewPage() {
           </MetaItem>
           <MetaItem icon={GitBranch}>
             <Badge variant="muted" className="font-mono">
-              <TransportIcon transport={server.transport} />
-              {transportLabel(server.transport)}
+              <TransportIcon transport={server!.transport} />
+              {transportLabel(server!.transport)}
             </Badge>
           </MetaItem>
           {data?.server?.version && (
             <MetaItem icon={Layers}>
               <span className="font-mono text-foreground/70">
-                {data.server.name}@{data.server.version}
+                {data.server?.name}@{data.server?.version}
               </span>
             </MetaItem>
           )}
@@ -235,7 +234,7 @@ export function OverviewPage() {
           <CardHeader>
             <CardTitle>Connection</CardTitle>
             <Badge variant="muted" className="font-mono">
-              {transportLabel(server.transport)}
+              {transportLabel(server!.transport)}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -243,21 +242,21 @@ export function OverviewPage() {
               <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-2">
                 Target
               </div>
-              <CodeBlock copyable language={server.transport}>
-                {server.target}
+              <CodeBlock copyable language={server!.transport}>
+                {server!.target}
               </CodeBlock>
             </div>
-            {server.env && Object.keys(server.env).length > 0 && (
+            {server!.env && Object.keys(server!.env).length > 0 && (
               <KvList
                 label="Environment"
-                entries={Object.entries(server.env)}
+                entries={Object.entries(server!.env)}
                 separator="="
               />
             )}
-            {server.headers && Object.keys(server.headers).length > 0 && (
+            {server!.headers && Object.keys(server!.headers).length > 0 && (
               <KvList
                 label="Headers"
-                entries={Object.entries(server.headers)}
+                entries={Object.entries(server!.headers)}
                 separator=":"
               />
             )}
@@ -267,7 +266,7 @@ export function OverviewPage() {
                 Loaded from
               </div>
               <div className="font-mono text-xs text-muted-foreground/90 truncate">
-                {server.source}
+                {server!.source}
               </div>
             </div>
           </CardContent>
