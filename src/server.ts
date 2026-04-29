@@ -46,8 +46,12 @@ import { countResponseTokens } from "./tokens.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** dist/web sits next to dist/cli.js after `vite build`. */
+/**
+ * dist/web sits next to dist/cli.js after `vite build`. When running from
+ * source via `tsx`, __dirname is `src/` so we also check `../dist/web`.
+ */
 const DEFAULT_STATIC_DIR = path.resolve(__dirname, "./web");
+const DEV_STATIC_DIR = path.resolve(__dirname, "../dist/web");
 
 /** Drop idle sessions after this many ms of inactivity. */
 const SESSION_IDLE_MS = 5 * 60 * 1000;
@@ -81,6 +85,8 @@ export interface ServeOptions {
   noUi?: boolean;
   /** Override the dist/web directory (e.g. for tests). */
   staticDir?: string;
+  /** Extra `.mcp.json` file(s) to load (highest precedence). */
+  configFile?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -99,12 +105,16 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
   // Load .mcp.json once at boot. Subsequent reloads happen on every request
   // so the UI sees edits without restarting the server (cheap — both files
   // are typically <1 KB).
-  const initial = loadConfigSync();
+  const configOpts = opts.configFile
+    ? { extraFiles: [opts.configFile] }
+    : {};
+  const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 
   const sessions = new SessionPool();
 
-  const staticDir = opts.staticDir ?? DEFAULT_STATIC_DIR;
+  const staticDir = opts.staticDir
+    ?? (await dirExists(DEFAULT_STATIC_DIR) ? DEFAULT_STATIC_DIR : DEV_STATIC_DIR);
   const staticAvailable = !opts.noUi && (await dirExists(staticDir));
 
   const server = http.createServer((req, res) =>
@@ -219,6 +229,9 @@ async function handleApi(
   const method = req.method ?? "GET";
   const send = (status: number, body: unknown) =>
     sendJson(res, status, body);
+  const configOpts = ctx.opts.configFile
+    ? { extraFiles: [ctx.opts.configFile] }
+    : {};
 
   // /api/health
   if (urlPath === "/api/health" && method === "GET") {
@@ -227,7 +240,7 @@ async function handleApi(
 
   // /api/servers
   if (urlPath === "/api/servers" && method === "GET") {
-    const config = loadConfigSync();
+    const config = loadConfigSync(configOpts);
     setLoadedConfig(config);
     return send(200, summarizeServers(config));
   }
@@ -240,7 +253,7 @@ async function handleApi(
   const sub = match[2] ?? "";
 
   // Reload config on every request so .mcp.json edits are picked up live.
-  const config = loadConfigSync();
+  const config = loadConfigSync(configOpts);
   setLoadedConfig(config);
 
   const entry = config.servers.get(name);

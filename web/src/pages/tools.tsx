@@ -24,6 +24,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
@@ -193,15 +194,20 @@ function ToolDetail({
     return init;
   }, [properties]);
 
-  const [values, setValues] = React.useState<Record<string, string>>(initial);
+  // Persist argument values in Zustand so they survive navigation.
+  const { getArgs, setArg } = useToolArgsStore();
+  const cached = getArgs(serverName, tool.name);
+  const values = cached ?? initial;
+
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [callState, setCallState] = React.useState<CallState>({ loading: false });
 
+  // When the tool's schema changes (different tool selected while mounted),
+  // reset errors and call state but keep cached args.
   React.useEffect(() => {
-    setValues(initial);
     setErrors({});
     setCallState({ loading: false });
-  }, [initial]);
+  }, [tool.name]);
 
   const argsResult = React.useMemo(
     () => coerceArguments(values, properties, required),
@@ -283,7 +289,7 @@ function ToolDetail({
                   required={required.has(name)}
                   value={values[name] ?? ""}
                   onChange={(v) =>
-                    setValues((s) => ({ ...s, [name]: v }))
+                    setArg(serverName, tool.name, name, v)
                   }
                   error={errors[name]}
                 />

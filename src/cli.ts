@@ -13,6 +13,7 @@
  *   - a quoted stdio command (e.g. "npx -y @modelcontextprotocol/server-everything").
  */
 
+import path from "node:path";
 import { Command, Option } from "commander";
 import pc from "picocolors";
 
@@ -506,6 +507,7 @@ program
   )
   .option("-p, --port <port>", "port to bind", "8765")
   .option("--host <host>", "interface to bind", "127.0.0.1")
+  .option("-c, --config <path>", "path to an .mcp.json file (loaded with highest precedence)")
   .option("--no-open", "don't open the dashboard in the default browser")
   .option("--no-ui", "expose the API only — skip serving the static UI")
   .option("-q, --quiet", "suppress informational logs")
@@ -513,6 +515,7 @@ program
     const opts = cmd.opts() as {
       port: string;
       host: string;
+      config?: string;
       open: boolean;
       ui: boolean;
       quiet?: boolean;
@@ -521,12 +524,16 @@ program
     if (!Number.isFinite(port) || port < 0 || port > 65_535) {
       throw new Error(`invalid port: ${opts.port}`);
     }
+    const configFile = opts.config
+      ? path.resolve(opts.config)
+      : undefined;
     const { startServer } = await import("./server.js");
     const server = await startServer({
       port,
       host: opts.host,
       noUi: !opts.ui,
       ...(opts.quiet ? { quiet: true } : {}),
+      ...(configFile ? { configFile } : {}),
     });
 
     if (opts.open && opts.ui) {

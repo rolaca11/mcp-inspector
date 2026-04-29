@@ -56,25 +56,27 @@ export function AuthPage() {
   }, [load]);
 
   const onLogout = React.useCallback(async () => {
+    if (!server) return;
     setBusy("logout");
     setError(null);
     try {
-      await api.authLogout(server?.name);
+      await api.authLogout(server.name);
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
     } finally {
       setBusy(null);
     }
-  }, [server?.name, load]);
+  }, [server, load]);
 
   const onReauth = React.useCallback(async () => {
+    if (!server) return;
     setBusy("reauth");
     setError(null);
     try {
       // Drop credentials, then trigger a discover so the server reconnects
       // (which will run the OAuth flow if the transport demands it).
-      await api.authLogout(server?.name);
+      await api.authLogout(server.name);
       await rediscover();
       await load();
     } catch (e) {
@@ -82,7 +84,7 @@ export function AuthPage() {
     } finally {
       setBusy(null);
     }
-  }, [server?.name, rediscover, load]);
+  }, [server, rediscover, load]);
 
   return (
     <PageShell

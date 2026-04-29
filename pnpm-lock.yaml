@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@programsmagic/toon-tokenizer@0.1.0':
-    hash: da8c2e3f4a6d694591ba91690368e8d11d725965451d5ed26ac856db9584340d
+    hash: 3fda649b4b59fa9459e60d0f15c7a6f3f30ea3ae005d87b4735a548575704095
     path: patches/@programsmagic__toon-tokenizer@0.1.0.patch
 
 importers:
@@ -18,7 +18,7 @@ importers:
         version: 1.29.0(zod@4.3.6)
       '@programsmagic/toon-tokenizer':
         specifier: ^0.1.0
-        version: 0.1.0(patch_hash=da8c2e3f4a6d694591ba91690368e8d11d725965451d5ed26ac856db9584340d)(openapi-types@12.1.3)
+        version: 0.1.0(patch_hash=3fda649b4b59fa9459e60d0f15c7a6f3f30ea3ae005d87b4735a548575704095)(openapi-types@12.1.3)
       commander:
         specifier: ^14.0.3
         version: 14.0.3
@@ -2053,7 +2053,7 @@ snapshots:
     transitivePeerDependencies:
       - openapi-types
 
-  '@programsmagic/toon-tokenizer@0.1.0(patch_hash=da8c2e3f4a6d694591ba91690368e8d11d725965451d5ed26ac856db9584340d)(openapi-types@12.1.3)':
+  '@programsmagic/toon-tokenizer@0.1.0(patch_hash=3fda649b4b59fa9459e60d0f15c7a6f3f30ea3ae005d87b4735a548575704095)(openapi-types@12.1.3)':
     dependencies:
       '@programsmagic/toon-converter': 0.1.0(openapi-types@12.1.3)
       '@programsmagic/toon-format': 0.1.0(openapi-types@12.1.3)

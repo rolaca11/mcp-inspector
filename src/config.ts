@@ -74,16 +74,19 @@ export interface LoadConfigOptions {
   cwd?: string;
   /** Override `os.homedir()` (testing). */
   home?: string;
+  /** Extra `.mcp.json` files to load (highest precedence — appended last). */
+  extraFiles?: string[];
 }
 
 export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
   const cwd = opts.cwd ?? process.cwd();
   const home = opts.home ?? os.homedir();
 
-  // Order matters: home first, then cwd, so cwd wins on duplicates.
+  // Order matters: home first, then cwd, then extras — last wins on duplicates.
   const candidates = [
     path.join(home, ".mcp.json"),
     path.join(cwd, ".mcp.json"),
+    ...(opts.extraFiles ?? []),
   ];
 
   const servers = new Map<string, { config: ServerConfig; source: string }>();

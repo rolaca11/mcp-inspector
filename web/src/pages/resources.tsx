@@ -25,6 +25,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
 import {
   expandTemplate,
@@ -424,11 +425,6 @@ function TemplateListRow({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const variables = React.useMemo(
-    () => extractTemplateVariables(template.uriTemplate),
-    [template.uriTemplate],
-  );
-
   return (
     <button
       type="button"
@@ -468,14 +464,16 @@ function TemplatePreview({
     [template.uriTemplate],
   );
 
-  const [values, setValues] = React.useState<Record<string, string>>({});
+  // Persist template variable values in Zustand so they survive navigation.
+  const { getArgs, setArg } = useToolArgsStore();
+  const values = getArgs(serverName, template.uriTemplate) ?? {};
+
   const [result, setResult] = React.useState<ReadResourceResult | null>(null);
   const [reading, setReading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [readAt, setReadAt] = React.useState<number | null>(null);
 
   React.useEffect(() => {
-    setValues({});
     setResult(null);
     setError(null);
     setReadAt(null);
@@ -554,7 +552,7 @@ function TemplatePreview({
                   <Input
                     value={values[v] ?? ""}
                     onChange={(e) =>
-                      setValues((s) => ({ ...s, [v]: e.target.value }))
+                      setArg(serverName, template.uriTemplate, v, e.target.value)
                     }
                     className="font-mono"
                     placeholder="value"
