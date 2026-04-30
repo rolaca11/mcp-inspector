@@ -33,6 +33,12 @@ export interface ConnectOptions {
   scope?: string;
   /** Suppress informational stderr logging during auth. */
   quiet?: boolean;
+  /**
+   * Custom redirect handler. When provided, this replaces the default
+   * `openInBrowser()` call so the caller can e.g. send the URL to a web
+   * client instead of launching the OS default browser.
+   */
+  onRedirect?: (url: URL) => void | Promise<void>;
 }
 
 export interface Session {
@@ -171,7 +177,11 @@ async function connectHttp(
       openedAuthUrl = url;
       log("opening browser:", pc.cyan(url.toString()));
       try {
-        await openInBrowser(url);
+        if (opts.onRedirect) {
+          await opts.onRedirect(url);
+        } else {
+          await openInBrowser(url);
+        }
       } catch (e) {
         log(pc.yellow("could not auto-open browser; visit the URL above manually"));
       }

@@ -10,6 +10,8 @@ import {
   useParams,
 } from "react-router-dom";
 
+import { ExternalLink } from "lucide-react";
+
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { NavTabs, type NavKey } from "@/components/nav-tabs";
@@ -145,7 +147,8 @@ function ServerShell({
   apiState,
   reloadServers,
 }: ServerShellProps) {
-  const { data, connectionState, rediscover, disconnect } = useConnectionStore();
+  const { data, connectionState, pendingAuthUrl, rediscover, disconnect } =
+    useConnectionStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -186,6 +189,25 @@ function ServerShell({
         onReloadServers={reloadServers}
       />
       <NavTabs serverName={active.name} counts={counts} />
+
+      {pendingAuthUrl && (
+        <div className="border-b border-blue-500/30 bg-blue-500/10 px-8 py-3">
+          <div className="mx-auto flex max-w-[1800px] items-center gap-3 text-sm">
+            <span className="text-blue-400">
+              OAuth authorization required —
+            </span>
+            <a
+              href={pendingAuthUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
+            >
+              <ExternalLink className="size-3.5" />
+              Open authorization page
+            </a>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1">
         <Outlet context={outletContext} />

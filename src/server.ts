@@ -21,6 +21,7 @@
  *   POST   /api/servers/:name/complete           { refType, ref, argument, value?, context? }
  *   GET    /api/servers/:name/auth               → on-disk OAuth status
  *   DELETE /api/servers/:name/auth               → logout
+ *   GET    /api/servers/:name/auth-url           → pending OAuth redirect URL (consumed on read)
  *   POST   /api/servers/:name/disconnect
  *
  * Sessions are cached for `SESSION_IDLE_MS` after their last use. They are
@@ -39,6 +40,18 @@ import { loadConfigSync, type LoadedConfig } from "./config.js";
 import { authFile } from "./paths.js";
 import { setLoadedConfig, parseTarget, targetId } from "./target.js";
 import { countResponseTokens } from "./tokens.js";
+
+/* ------------------------------------------------------------------ */
+/* Pending auth URLs (serve-mode: sent to the web UI instead of        */
+/* launching the OS default browser)                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * When the OAuth flow fires `onRedirect` during serve mode we stash the
+ * URL here keyed by server name. The frontend polls
+ * `GET /api/servers/:name/auth-url` and opens it in a new browser tab.
+ */
+const pendingAuthUrls = new Map<string, string>();
 
 /* ------------------------------------------------------------------ */
 /* Types and constants                                                 */
@@ -270,6 +283,13 @@ async function handleApi(
       return send(200, removed);
     }
     return send(405, { error: "method not allowed" });
+  }
+
+  // ---- auth-url: pending OAuth authorization URL for the web UI ----
+  if (sub === "auth-url" && method === "GET") {
+    const url = pendingAuthUrls.get(name) ?? null;
+    if (url) pendingAuthUrls.delete(name);
+    return send(200, { url });
   }
 
   // ---- session-bound routes ----
@@ -578,7 +598,11 @@ class SessionPool {
     if (entry.session) return entry.session;
     if (entry.pending) return entry.pending;
 
-    entry.pending = connect(name)
+    entry.pending = connect(name, {
+      onRedirect: (url) => {
+        pendingAuthUrls.set(name, url.toString());
+      },
+    })
       .then((s) => {
         entry!.session = s;
         entry!.pending = null;

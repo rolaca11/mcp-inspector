@@ -27,6 +27,8 @@ interface ConnectionStoreState {
   error?: string;
   lastDiscoveredAt?: string;
   loading: boolean;
+  /** URL the user needs to visit to complete OAuth — shown as a clickable link. */
+  pendingAuthUrl: string | null;
 
   setServer(server: MCPServer): void;
   rediscover(): Promise<void>;
@@ -39,6 +41,35 @@ interface ConnectionStoreState {
  * not trigger re-renders.
  */
 let inFlight: AbortController | null = null;
+
+/**
+ * While a discover/connect is in-flight, poll the server for a pending
+ * OAuth authorization URL. When one appears, store it in the Zustand state
+ * so the UI can render a clickable link (direct `window.open` from a timer
+ * gets blocked by the browser's popup blocker).
+ */
+function startAuthUrlPolling(
+  serverName: string,
+  signal: AbortSignal,
+  set: (partial: Partial<ConnectionStoreState>) => void,
+): () => void {
+  const id = setInterval(async () => {
+    if (signal.aborted) {
+      clearInterval(id);
+      return;
+    }
+    try {
+      const { url } = await api.authUrl(serverName);
+      if (url) {
+        set({ pendingAuthUrl: url });
+      }
+    } catch {
+      /* non-fatal — server may not be ready yet */
+    }
+  }, 500);
+
+  return () => clearInterval(id);
+}
 
 async function runDiscover(
   serverName: string,
@@ -54,7 +85,10 @@ async function runDiscover(
   inFlight = ctrl;
 
   if (!silent) set({ connectionState: "connecting" });
-  set({ error: undefined });
+  set({ error: undefined, pendingAuthUrl: null });
+
+  // Poll for pending OAuth auth URLs while the discover call is in-flight.
+  const stopPolling = startAuthUrlPolling(serverName, ctrl.signal, set);
 
   try {
     const r = await api.discover(serverName, ctrl.signal);
@@ -64,6 +98,7 @@ async function runDiscover(
       lastDiscoveredAt: new Date().toISOString(),
       connectionState: "connected",
       loading: false,
+      pendingAuthUrl: null,
     });
   } catch (e) {
     if (ctrl.signal.aborted) return;
@@ -73,6 +108,7 @@ async function runDiscover(
         connectionState: "error",
         data: null,
         loading: false,
+        pendingAuthUrl: null,
       });
     } else {
       // Network failure (API not reachable, no `serve` running).
@@ -81,8 +117,11 @@ async function runDiscover(
         connectionState: "disconnected",
         data: null,
         loading: false,
+        pendingAuthUrl: null,
       });
     }
+  } finally {
+    stopPolling();
   }
 }
 
@@ -93,6 +132,7 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
   error: undefined,
   lastDiscoveredAt: undefined,
   loading: false,
+  pendingAuthUrl: null,
 
   setServer(server: MCPServer) {
     const current = useConnectionStore.getState().server;
@@ -110,6 +150,7 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
       error: undefined,
       lastDiscoveredAt: undefined,
       loading: true,
+      pendingAuthUrl: null,
     });
     void runDiscover(server.name, true, set);
   },
@@ -133,6 +174,7 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
       data: null,
       connectionState: "disconnected",
       error: undefined,
+      pendingAuthUrl: null,
     });
   },
 }));

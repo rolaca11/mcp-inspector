@@ -212,19 +212,32 @@ export async function startLoopbackCallback(
     }
   });
 
-  await new Promise<void>((resolve, reject) => {
-    const onErr = (e: Error) => {
-      server.removeListener("listening", onListen);
-      reject(e);
-    };
-    const onListen = () => {
-      server.removeListener("error", onErr);
-      resolve();
-    };
-    server.once("error", onErr);
-    server.once("listening", onListen);
-    server.listen(preferredPort ?? 0, "127.0.0.1");
-  });
+  const DEFAULT_PORT = 31234;
+  const portToTry = preferredPort ?? DEFAULT_PORT;
+
+  /** Try to bind to `port`; resolves `true` on success, `false` on EADDRINUSE. */
+  const tryListen = (port: number): Promise<boolean> =>
+    new Promise((resolve, reject) => {
+      const onErr = (e: NodeJS.ErrnoException) => {
+        server.removeListener("listening", onListen);
+        if (e.code === "EADDRINUSE") return resolve(false);
+        reject(e);
+      };
+      const onListen = () => {
+        server.removeListener("error", onErr);
+        resolve(true);
+      };
+      server.once("error", onErr);
+      server.once("listening", onListen);
+      server.listen(port, "127.0.0.1");
+    });
+
+  if (!(await tryListen(portToTry))) {
+    // Preferred port is busy — fall back to a random available port.
+    await tryListen(0).then((ok) => {
+      if (!ok) throw new Error("Could not bind loopback callback server to any port");
+    });
+  }
 
   const addr = server.address() as AddressInfo;
   const redirectUrl = `http://127.0.0.1:${addr.port}/callback`;

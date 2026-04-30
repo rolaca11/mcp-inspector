@@ -236,6 +236,16 @@ export const api = {
     return call(`/servers/${encodeURIComponent(name)}/auth`);
   },
 
+  /**
+   * Poll for a pending OAuth authorization URL. The server stashes it when
+   * the OAuth flow fires `onRedirect` so the web UI can open it in a new
+   * tab instead of the OS default browser. Returns `{ url: null }` when
+   * there is nothing pending; the URL is consumed (cleared) on read.
+   */
+  authUrl(name: string): Promise<{ url: string | null }> {
+    return call(`/servers/${encodeURIComponent(name)}/auth-url`);
+  },
+
   authLogout(name: string): Promise<{ removed: boolean; file: string }> {
     return tracked(
       name,
