@@ -507,7 +507,7 @@ program
   )
   .option("-p, --port <port>", "port to bind", "8765")
   .option("--host <host>", "interface to bind", "127.0.0.1")
-  .option("-c, --config <path>", "path to an .mcp.json file (loaded with highest precedence)")
+  .option("-c, --config <path>", "path to an .mcp.json file (repeatable, loaded with highest precedence)", (v: string, prev: string[]) => prev.concat([v]), [] as string[])
   .option("--no-open", "don't open the dashboard in the default browser")
   .option("--no-ui", "expose the API only — skip serving the static UI")
   .option("-q, --quiet", "suppress informational logs")
@@ -515,7 +515,7 @@ program
     const opts = cmd.opts() as {
       port: string;
       host: string;
-      config?: string;
+      config: string[];
       open: boolean;
       ui: boolean;
       quiet?: boolean;
@@ -524,9 +524,8 @@ program
     if (!Number.isFinite(port) || port < 0 || port > 65_535) {
       throw new Error(`invalid port: ${opts.port}`);
     }
-    const configFile = opts.config
-      ? path.resolve(opts.config)
-      : undefined;
+    const configFiles = opts.config.map((p) => path.resolve(p));
+    const configFile = configFiles.length > 0 ? configFiles : undefined;
     const { startServer } = await import("./server.js");
     const server = await startServer({
       port,

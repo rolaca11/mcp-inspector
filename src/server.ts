@@ -86,7 +86,7 @@ export interface ServeOptions {
   /** Override the dist/web directory (e.g. for tests). */
   staticDir?: string;
   /** Extra `.mcp.json` file(s) to load (highest precedence). */
-  configFile?: string;
+  configFile?: string | string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -105,9 +105,8 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
   // Load .mcp.json once at boot. Subsequent reloads happen on every request
   // so the UI sees edits without restarting the server (cheap — both files
   // are typically <1 KB).
-  const configOpts = opts.configFile
-    ? { extraFiles: [opts.configFile] }
-    : {};
+  const extraFiles = Array.isArray(opts.configFile) ? opts.configFile : opts.configFile ? [opts.configFile] : [];
+  const configOpts = extraFiles.length > 0 ? { extraFiles } : {};
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 
@@ -229,9 +228,8 @@ async function handleApi(
   const method = req.method ?? "GET";
   const send = (status: number, body: unknown) =>
     sendJson(res, status, body);
-  const configOpts = ctx.opts.configFile
-    ? { extraFiles: [ctx.opts.configFile] }
-    : {};
+  const extraFiles = Array.isArray(ctx.opts.configFile) ? ctx.opts.configFile : ctx.opts.configFile ? [ctx.opts.configFile] : [];
+  const configOpts = extraFiles.length > 0 ? { extraFiles } : {};
 
   // /api/health
   if (urlPath === "/api/health" && method === "GET") {
