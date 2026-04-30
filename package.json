@@ -38,6 +38,10 @@
     "inspector",
     "dashboard"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolaca11/mcp-inspector.git"
+  },
   "license": "MIT",
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
