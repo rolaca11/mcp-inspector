@@ -25,6 +25,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
@@ -237,6 +238,13 @@ function ResourceListRow({
   );
 }
 
+interface ReadState {
+  result?: ReadResourceResult;
+  error?: string;
+  errorResponse?: Record<string, unknown>;
+  readAt?: number;
+}
+
 function ResourcePreview({
   serverName,
   resource,
@@ -244,35 +252,33 @@ function ResourcePreview({
   serverName: string;
   resource: MCPResource;
 }) {
-  const [result, setResult] = React.useState<ReadResourceResult | null>(null);
+  const resultStore = useResultStore();
   const [reading, setReading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [errorResponse, setErrorResponse] = React.useState<Record<string, unknown> | undefined>();
-  const [readAt, setReadAt] = React.useState<number | null>(null);
 
-  React.useEffect(() => {
-    setResult(null);
-    setError(null);
-    setErrorResponse(undefined);
-    setReadAt(null);
-  }, [resource.uri]);
+  const cached = resultStore.get<ReadState>(serverName, "resource", resource.uri);
+  const result = cached?.result ?? null;
+  const error = cached?.error ?? null;
+  const errorResponse = cached?.errorResponse;
+  const readAt = cached?.readAt ?? null;
 
   const onRead = React.useCallback(async () => {
     setReading(true);
-    setError(null);
-    setErrorResponse(undefined);
     try {
       const t0 = performance.now();
       const r = await api.readResource(serverName, { uri: resource.uri });
-      setResult(r);
-      setReadAt(Math.round(performance.now() - t0));
+      resultStore.set(serverName, "resource", resource.uri, {
+        result: r,
+        readAt: Math.round(performance.now() - t0),
+      } satisfies ReadState);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : (e as Error).message);
-      setErrorResponse(e instanceof ApiError ? e.responseBody : undefined);
+      resultStore.set(serverName, "resource", resource.uri, {
+        error: e instanceof ApiError ? e.message : (e as Error).message,
+        errorResponse: e instanceof ApiError ? e.responseBody : undefined,
+      } satisfies ReadState);
     } finally {
       setReading(false);
     }
-  }, [serverName, resource.uri]);
+  }, [serverName, resource.uri, resultStore]);
 
   return (
     <div className="space-y-5 min-w-0">
@@ -482,20 +488,16 @@ function TemplatePreview({
 
   // Persist template variable values in Zustand so they survive navigation.
   const { getArgs, setArg } = useToolArgsStore();
+  const resultStore = useResultStore();
   const values = getArgs(serverName, template.uriTemplate) ?? {};
 
-  const [result, setResult] = React.useState<ReadResourceResult | null>(null);
   const [reading, setReading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [errorResponse, setErrorResponse] = React.useState<Record<string, unknown> | undefined>();
-  const [readAt, setReadAt] = React.useState<number | null>(null);
 
-  React.useEffect(() => {
-    setResult(null);
-    setError(null);
-    setErrorResponse(undefined);
-    setReadAt(null);
-  }, [template.uriTemplate]);
+  const cached = resultStore.get<ReadState>(serverName, "template", template.uriTemplate);
+  const result = cached?.result ?? null;
+  const error = cached?.error ?? null;
+  const errorResponse = cached?.errorResponse;
+  const readAt = cached?.readAt ?? null;
 
   const expanded = expandTemplate(template.uriTemplate, values);
   const fullyExpanded = !/\{[^}]+\}/.test(expanded);
@@ -503,20 +505,22 @@ function TemplatePreview({
   const onRead = React.useCallback(async () => {
     if (!fullyExpanded) return;
     setReading(true);
-    setError(null);
-    setErrorResponse(undefined);
     try {
       const t0 = performance.now();
       const r = await api.readResource(serverName, { uri: expanded });
-      setResult(r);
-      setReadAt(Math.round(performance.now() - t0));
+      resultStore.set(serverName, "template", template.uriTemplate, {
+        result: r,
+        readAt: Math.round(performance.now() - t0),
+      } satisfies ReadState);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : (e as Error).message);
-      setErrorResponse(e instanceof ApiError ? e.responseBody : undefined);
+      resultStore.set(serverName, "template", template.uriTemplate, {
+        error: e instanceof ApiError ? e.message : (e as Error).message,
+        errorResponse: e instanceof ApiError ? e.responseBody : undefined,
+      } satisfies ReadState);
     } finally {
       setReading(false);
     }
-  }, [serverName, expanded, fullyExpanded]);
+  }, [serverName, expanded, fullyExpanded, resultStore, template.uriTemplate]);
 
   return (
     <div className="space-y-5 min-w-0">

@@ -22,6 +22,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { api, ApiError } from "@/data/api";
 import type { GetPromptResult, MCPPrompt } from "@/data/types";
@@ -192,14 +193,17 @@ function PromptDetail({
   serverName: string;
   prompt: MCPPrompt;
 }) {
+  const resultStore = useResultStore();
   const [values, setValues] = React.useState<Record<string, string>>({});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [state, setState] = React.useState<GetState>({ loading: false });
+  const [loading, setLoading] = React.useState(false);
+
+  const cachedResult = resultStore.get<GetState>(serverName, "prompt", prompt.name);
+  const state: GetState = loading ? { loading: true } : (cachedResult ?? { loading: false });
 
   React.useEffect(() => {
     setValues({});
     setErrors({});
-    setState({ loading: false });
   }, [prompt.name]);
 
   const onGet = React.useCallback(async () => {
@@ -212,7 +216,7 @@ function PromptDetail({
       return;
     }
     setErrors({});
-    setState({ loading: true });
+    setLoading(true);
     try {
       const t0 = performance.now();
       const stringified: Record<string, string> = {};
@@ -223,19 +227,23 @@ function PromptDetail({
         name: prompt.name,
         arguments: stringified,
       });
-      setState({
+      const settled: GetState = {
         loading: false,
         result: r,
         durationMs: Math.round(performance.now() - t0),
-      });
+      };
+      resultStore.set(serverName, "prompt", prompt.name, settled);
     } catch (e) {
-      setState({
+      const settled: GetState = {
         loading: false,
         error: e instanceof ApiError ? e.message : (e as Error).message,
         errorResponse: e instanceof ApiError ? e.responseBody : undefined,
-      });
+      };
+      resultStore.set(serverName, "prompt", prompt.name, settled);
+    } finally {
+      setLoading(false);
     }
-  }, [serverName, prompt, values]);
+  }, [serverName, prompt, values, resultStore]);
 
   return (
     <div className="space-y-5 min-w-0">

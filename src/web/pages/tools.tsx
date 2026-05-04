@@ -24,6 +24,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
@@ -208,15 +209,12 @@ function ToolDetail({
   const cached = getArgs(serverName, tool.name);
   const values = cached ?? initial;
 
+  const resultStore = useResultStore();
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [callState, setCallState] = React.useState<CallState>({ loading: false });
+  const [loading, setLoading] = React.useState(false);
 
-  // When the tool's schema changes (different tool selected while mounted),
-  // reset errors and call state but keep cached args.
-  React.useEffect(() => {
-    setErrors({});
-    setCallState({ loading: false });
-  }, [tool.name]);
+  const cachedResult = resultStore.get<CallState>(serverName, "tool", tool.name);
+  const callState: CallState = loading ? { loading: true } : (cachedResult ?? { loading: false });
 
   const argsResult = React.useMemo(
     () => coerceArguments(values, properties, required),
@@ -229,26 +227,30 @@ function ToolDetail({
       return;
     }
     setErrors({});
-    setCallState({ loading: true });
+    setLoading(true);
     try {
       const t0 = performance.now();
       const result = await api.callTool(serverName, {
         name: tool.name,
         arguments: argsResult.value,
       });
-      setCallState({
+      const settled: CallState = {
         loading: false,
         result,
         durationMs: Math.round(performance.now() - t0),
-      });
+      };
+      resultStore.set(serverName, "tool", tool.name, settled);
     } catch (e) {
-      setCallState({
+      const settled: CallState = {
         loading: false,
         error: e instanceof ApiError ? e.message : (e as Error).message,
         errorResponse: e instanceof ApiError ? e.responseBody : undefined,
-      });
+      };
+      resultStore.set(serverName, "tool", tool.name, settled);
+    } finally {
+      setLoading(false);
     }
-  }, [serverName, tool.name, argsResult]);
+  }, [serverName, tool.name, argsResult, resultStore]);
 
   const hasArgs = Object.keys(properties).length > 0;
   const canCall = !callState.loading && Object.keys(argsResult.errors).length === 0;
