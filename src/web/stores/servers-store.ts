@@ -35,6 +35,7 @@ export const useServersStore = create<ServersState>((set) => ({
         servers: r.servers.map<MCPServer>((s) => ({
           name: s.name,
           source: s.source,
+          sourceLabel: s.sourceLabel ?? "global",
           transport: s.transport,
           target: s.target,
           ...(s.args ? { args: s.args } : {}),

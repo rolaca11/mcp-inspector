@@ -438,12 +438,12 @@ program
 function printServers(config: LoadedConfig, asJson: boolean) {
   if (asJson) {
     const out = {
-      sources: config.sources.map((s) => s.path),
+      sources: config.sources.map((s) => ({ path: s.path, label: s.label })),
       errors: config.errors,
       servers: Object.fromEntries(
-        Array.from(config.servers.entries()).map(([name, { config: c, source }]) => [
+        Array.from(config.servers.entries()).map(([name, { config: c, source, label }]) => [
           name,
-          { ...c, _source: source },
+          { ...c, _source: source, _label: label },
         ]),
       ),
     };
@@ -452,14 +452,14 @@ function printServers(config: LoadedConfig, asJson: boolean) {
   }
 
   if (config.sources.length === 0) {
-    console.log(pc.dim("No .mcp.json files found in cwd or home directory."));
+    console.log(pc.dim("No config files found."));
     if (config.errors.length === 0) return;
   }
   if (config.sources.length > 0) {
     console.log(pc.bold("Loaded files (in precedence order, last wins):"));
     for (const s of config.sources) {
       const count = Object.keys(s.servers).length;
-      console.log(`  ${s.path} ${pc.dim(`(${count} server${count === 1 ? "" : "s"})`)}`);
+      console.log(`  ${s.path} ${pc.dim(`(${s.label}, ${count} server${count === 1 ? "" : "s"})`)}`);
     }
     console.log();
   }
@@ -481,7 +481,7 @@ function printServers(config: LoadedConfig, asJson: boolean) {
   console.log(pc.bold(`Named servers (${entries.length}):`));
   // Compute padding for the name column.
   const nameWidth = Math.max(...entries.map(([n]) => n.length), 4);
-  for (const [name, { config: cfg, source }] of entries) {
+  for (const [name, { config: cfg, source, label }] of entries) {
     const padded = name.padEnd(nameWidth);
     if ("url" in cfg) {
       const kind = cfg.type ?? "http";
@@ -492,7 +492,7 @@ function printServers(config: LoadedConfig, asJson: boolean) {
         `  ${pc.cyan(padded)}  ${cfg.command}${argsStr ? " " + argsStr : ""}  ${pc.dim("[stdio]")}`,
       );
     }
-    console.log(`  ${" ".repeat(nameWidth)}  ${pc.dim(`from ${source}`)}`);
+    console.log(`  ${" ".repeat(nameWidth)}  ${pc.dim(`from ${source} (${label})`)}`);
   }
 }
 

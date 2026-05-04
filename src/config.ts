@@ -1,11 +1,12 @@
 /**
- * Reads `.mcp.json` configuration files so users can address MCP servers by
+ * Reads MCP server configuration files so users can address MCP servers by
  * short names (e.g. `mcp-inspector connect everything`) rather than always
  * supplying a URL or a shell command.
  *
- * Two locations are read, in this precedence order (last wins on conflicts):
- *   1. `~/.mcp.json`            — user-global config
- *   2. `<cwd>/.mcp.json`        — project-local config
+ * Locations are read in this precedence order (last wins on conflicts):
+ *   1. `~/.claude.json`         — Claude Code user config (mcpServers key)
+ *   2. `~/.mcp.json`            — user-global config
+ *   3. `<cwd>/.mcp.json`        — project-local config
  *
  * The file format follows the de-facto convention used by Claude Desktop,
  * Claude Code and other MCP clients:
@@ -48,9 +49,12 @@ export type HttpServerConfig = {
 
 export type ServerConfig = StdioServerConfig | HttpServerConfig;
 
+export type SourceLabel = "global" | "project" | "--config";
+
 export interface ConfigSource {
   /** Absolute path to the file that was read. */
   path: string;
+  label: SourceLabel;
   /** Servers declared in just this file (after validation). */
   servers: Record<string, ServerConfig>;
 }
@@ -62,7 +66,7 @@ export interface ConfigError {
 
 export interface LoadedConfig {
   /** Resolved name → config + provenance. CWD overrides home on conflicts. */
-  servers: Map<string, { config: ServerConfig; source: string }>;
+  servers: Map<string, { config: ServerConfig; source: string; label: SourceLabel }>;
   /** Files actually read in load order (lowest precedence first). */
   sources: ConfigSource[];
   /** Files that existed but failed to parse / validate. */
@@ -82,20 +86,22 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
   const cwd = opts.cwd ?? process.cwd();
   const home = opts.home ?? os.homedir();
 
-  // Order matters: home first, then cwd, then extras — last wins on duplicates.
-  const candidates = [
-    path.join(home, ".mcp.json"),
-    path.join(cwd, ".mcp.json"),
-    ...(opts.extraFiles ?? []),
+  // Order matters: lowest precedence first, last wins on duplicates.
+  // ~/.claude.json (global) → ~/.mcp.json (global) → <cwd>/.mcp.json (project) → --config extras
+  const candidates: Array<{ file: string; label: SourceLabel }> = [
+    { file: path.join(home, ".claude.json"), label: "global" },
+    { file: path.join(home, ".mcp.json"), label: "global" },
+    { file: path.join(cwd, ".mcp.json"), label: "project" },
+    ...(opts.extraFiles ?? []).map((f) => ({ file: f, label: "--config" as const })),
   ];
 
-  const servers = new Map<string, { config: ServerConfig; source: string }>();
+  const servers = new Map<string, { config: ServerConfig; source: string; label: SourceLabel }>();
   const sources: ConfigSource[] = [];
   const errors: ConfigError[] = [];
 
   // Avoid double-reading the same file when cwd === home.
   const seen = new Set<string>();
-  for (const file of candidates) {
+  for (const { file, label } of candidates) {
     const resolved = path.resolve(file);
     if (seen.has(resolved)) continue;
     seen.add(resolved);
@@ -128,7 +134,7 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
     const mcpServers = (parsed as { mcpServers?: unknown }).mcpServers;
     if (mcpServers === undefined) {
       // File exists but declares no servers — that's not an error.
-      sources.push({ path: resolved, servers: {} });
+      sources.push({ path: resolved, label, servers: {} });
       continue;
     }
     if (!isObject(mcpServers)) {
@@ -147,9 +153,9 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
         continue;
       }
       collected[name] = cfg;
-      servers.set(name, { config: cfg, source: resolved });
+      servers.set(name, { config: cfg, source: resolved, label });
     }
-    sources.push({ path: resolved, servers: collected });
+    sources.push({ path: resolved, label, servers: collected });
   }
 
   return { servers, sources, errors };

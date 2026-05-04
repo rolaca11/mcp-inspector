@@ -6,12 +6,15 @@
 
 export type Transport = "stdio" | "http" | "sse" | "streamable-http";
 
+export type SourceLabel = "global" | "project" | "--config";
+
 export interface MCPServer {
   /** Slug used in `.mcp.json#/mcpServers/<name>`. */
   name: string;
   title?: string;
   /** Where this entry was loaded from on disk. */
   source: string;
+  sourceLabel: SourceLabel;
   transport: Transport;
   /** stdio command (joined argv) or HTTP URL. */
   target: string;

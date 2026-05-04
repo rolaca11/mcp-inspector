@@ -12,8 +12,14 @@ interface ConfigSource {
   /** absolute path */
   path: string;
   serverCount: number;
-  origin: "home" | "cwd";
+  label: string;
 }
+
+const SOURCE_LABELS: Record<string, string> = {
+  global: "Global",
+  project: "Project",
+  "--config": "--config",
+};
 
 interface SourceSelectorProps {
   sources: ConfigSource[];
@@ -37,7 +43,7 @@ export function SourceSelector({
         >
           <FolderTree className="size-3.5 text-muted-foreground" />
           <span className="font-medium leading-none">
-            {active?.origin === "home" ? "~/.mcp.json" : "project"}
+            {active?.label ?? "config"}
           </span>
           <ChevronsUpDown className="size-3 text-muted-foreground/70 group-hover:text-muted-foreground" />
         </button>
@@ -56,7 +62,7 @@ export function SourceSelector({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-foreground">
-                    {source.origin === "home" ? "User-global" : "Project-local"}
+                    {SOURCE_LABELS[source.label] ?? source.label}
                   </span>
                   <span className="text-[10px] text-muted-foreground/80">
                     {source.serverCount} server{source.serverCount === 1 ? "" : "s"}

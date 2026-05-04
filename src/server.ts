@@ -466,14 +466,16 @@ function summarizeServers(config: LoadedConfig) {
   return {
     sources: config.sources.map((s) => ({
       path: s.path,
+      label: s.label,
       serverCount: Object.keys(s.servers).length,
     })),
     errors: config.errors,
-    servers: Array.from(config.servers.entries()).map(([name, { config: cfg, source }]) => {
+    servers: Array.from(config.servers.entries()).map(([name, { config: cfg, source, label }]) => {
       const isHttp = "url" in cfg;
       return {
         name,
         source,
+        sourceLabel: label,
         transport: (cfg.type ??
           (isHttp ? "http" : "stdio")) as
           | "stdio"

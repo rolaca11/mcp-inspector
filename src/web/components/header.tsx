@@ -57,16 +57,16 @@ export function Header({
   onDisconnect,
   onReloadServers,
 }: HeaderProps) {
-  const grouped = new Map<string, number>();
+  const grouped = new Map<string, { count: number; label: string }>();
   for (const s of servers) {
-    grouped.set(s.source, (grouped.get(s.source) ?? 0) + 1);
+    const entry = grouped.get(s.source) ?? { count: 0, label: s.sourceLabel };
+    entry.count++;
+    grouped.set(s.source, entry);
   }
-  const sources = Array.from(grouped.entries()).map(([path, count]) => ({
+  const sources = Array.from(grouped.entries()).map(([path, { count, label }]) => ({
     path,
     serverCount: count,
-    origin: path.includes("/.mcp.json") && !path.includes("code/")
-      ? ("home" as const)
-      : ("cwd" as const),
+    label,
   }));
 
   return (
