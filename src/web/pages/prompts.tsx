@@ -22,18 +22,31 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useSelectionStore } from "@/stores/selection-store";
 import { api, ApiError } from "@/data/api";
 import type { GetPromptResult, MCPPrompt } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 export function PromptsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
+  const selectionStore = useSelectionStore();
   const [query, setQuery] = React.useState("");
-  const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
   if (!server) return null;
 
   const prompts = data?.prompts ?? [];
+
+  const storedName = selectionStore.get(server.name, "prompts");
+  const selectedName = storedName && prompts.find((p) => p.name === storedName)
+    ? storedName
+    : (prompts[0]?.name ?? null);
+
+  const setSelectedName = React.useCallback(
+    (name: string) => {
+      selectionStore.set(server.name, "prompts", name);
+    },
+    [server, selectionStore],
+  );
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -45,12 +58,6 @@ export function PromptsPage() {
         p.description?.toLowerCase().includes(q),
     );
   }, [query, prompts]);
-
-  React.useEffect(() => {
-    if (!selectedName || !prompts.find((p) => p.name === selectedName)) {
-      setSelectedName(prompts[0]?.name ?? null);
-    }
-  }, [prompts, selectedName]);
 
   const selected = prompts.find((p) => p.name === selectedName) ?? null;
 

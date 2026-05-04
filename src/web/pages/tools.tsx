@@ -24,6 +24,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useSelectionStore } from "@/stores/selection-store";
 import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
@@ -31,10 +32,22 @@ import { cn } from "@/lib/utils";
 
 export function ToolsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
+  const selectionStore = useSelectionStore();
   const [query, setQuery] = React.useState("");
-  const [selectedName, setSelectedName] = React.useState<string | null>(null);
 
   const tools = data?.tools ?? [];
+
+  const storedName = server ? selectionStore.get(server.name, "tools") : undefined;
+  const selectedName = storedName && tools.find((t) => t.name === storedName)
+    ? storedName
+    : (tools[0]?.name ?? null);
+
+  const setSelectedName = React.useCallback(
+    (name: string) => {
+      if (server) selectionStore.set(server.name, "tools", name);
+    },
+    [server, selectionStore],
+  );
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,12 +59,6 @@ export function ToolsPage() {
         t.description?.toLowerCase().includes(q),
     );
   }, [query, tools]);
-
-  React.useEffect(() => {
-    if (!selectedName || !tools.find((t) => t.name === selectedName)) {
-      setSelectedName(tools[0]?.name ?? null);
-    }
-  }, [tools, selectedName]);
 
   const selected = tools.find((t) => t.name === selectedName) ?? null;
 

@@ -25,6 +25,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useSelectionStore } from "@/stores/selection-store";
 import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
 import {
@@ -39,6 +40,7 @@ import { cn } from "@/lib/utils";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
+  const selectionStore = useSelectionStore();
   const [query, setQuery] = React.useState("");
 
   if (!server) return null;
@@ -80,7 +82,13 @@ export function ResourcesPage() {
         </div>
       }
     >
-      <Tabs defaultValue={resources.length > 0 ? "static" : "templates"}>
+      <Tabs
+        value={
+          selectionStore.get(server!.name, "resources-tab") ??
+          (resources.length > 0 ? "static" : "templates")
+        }
+        onValueChange={(v) => selectionStore.set(server!.name, "resources-tab", v)}
+      >
         <TabsList>
           <TabsTrigger value="static">
             Static
@@ -129,6 +137,8 @@ function StaticResourcesPanel({
   resources: MCPResource[];
   query: string;
 }) {
+  const selectionStore = useSelectionStore();
+
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return resources;
@@ -140,15 +150,15 @@ function StaticResourcesPanel({
     );
   }, [query, resources]);
 
-  const [selected, setSelected] = React.useState<MCPResource | null>(
-    resources[0] ?? null,
-  );
+  const storedUri = selectionStore.get(serverName, "resources-static");
+  const selected = (storedUri && resources.find((r) => r.uri === storedUri)) ?? resources[0] ?? null;
 
-  React.useEffect(() => {
-    if (!selected || !resources.find((r) => r.uri === selected.uri)) {
-      setSelected(resources[0] ?? null);
-    }
-  }, [resources, selected]);
+  const setSelected = React.useCallback(
+    (r: MCPResource) => {
+      selectionStore.set(serverName, "resources-static", r.uri);
+    },
+    [serverName, selectionStore],
+  );
 
   if (resources.length === 0) {
     return (
@@ -358,6 +368,8 @@ function TemplatesPanel({
   templates: MCPResourceTemplate[];
   query: string;
 }) {
+  const selectionStore = useSelectionStore();
+
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return templates;
@@ -369,15 +381,15 @@ function TemplatesPanel({
     );
   }, [query, templates]);
 
-  const [selected, setSelected] = React.useState<MCPResourceTemplate | null>(
-    templates[0] ?? null,
-  );
+  const storedUri = selectionStore.get(serverName, "resources-templates");
+  const selected = (storedUri && templates.find((t) => t.uriTemplate === storedUri)) ?? templates[0] ?? null;
 
-  React.useEffect(() => {
-    if (!selected || !templates.find((t) => t.uriTemplate === selected.uriTemplate)) {
-      setSelected(templates[0] ?? null);
-    }
-  }, [templates, selected]);
+  const setSelected = React.useCallback(
+    (t: MCPResourceTemplate) => {
+      selectionStore.set(serverName, "resources-templates", t.uriTemplate);
+    },
+    [serverName, selectionStore],
+  );
 
   if (templates.length === 0) {
     return (
