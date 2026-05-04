@@ -237,17 +237,20 @@ function ResourcePreview({
   const [result, setResult] = React.useState<ReadResourceResult | null>(null);
   const [reading, setReading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [errorResponse, setErrorResponse] = React.useState<Record<string, unknown> | undefined>();
   const [readAt, setReadAt] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     setResult(null);
     setError(null);
+    setErrorResponse(undefined);
     setReadAt(null);
   }, [resource.uri]);
 
   const onRead = React.useCallback(async () => {
     setReading(true);
     setError(null);
+    setErrorResponse(undefined);
     try {
       const t0 = performance.now();
       const r = await api.readResource(serverName, { uri: resource.uri });
@@ -255,6 +258,7 @@ function ResourcePreview({
       setReadAt(Math.round(performance.now() - t0));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
+      setErrorResponse(e instanceof ApiError ? e.responseBody : undefined);
     } finally {
       setReading(false);
     }
@@ -326,7 +330,7 @@ function ResourcePreview({
         </CardHeader>
         <CardContent>
           {error ? (
-            <ErrorRow message={error} />
+            <ErrorRow message={error} errorResponse={errorResponse} />
           ) : result ? (
             <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
           ) : (
@@ -471,11 +475,13 @@ function TemplatePreview({
   const [result, setResult] = React.useState<ReadResourceResult | null>(null);
   const [reading, setReading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [errorResponse, setErrorResponse] = React.useState<Record<string, unknown> | undefined>();
   const [readAt, setReadAt] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     setResult(null);
     setError(null);
+    setErrorResponse(undefined);
     setReadAt(null);
   }, [template.uriTemplate]);
 
@@ -486,6 +492,7 @@ function TemplatePreview({
     if (!fullyExpanded) return;
     setReading(true);
     setError(null);
+    setErrorResponse(undefined);
     try {
       const t0 = performance.now();
       const r = await api.readResource(serverName, { uri: expanded });
@@ -493,6 +500,7 @@ function TemplatePreview({
       setReadAt(Math.round(performance.now() - t0));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
+      setErrorResponse(e instanceof ApiError ? e.responseBody : undefined);
     } finally {
       setReading(false);
     }
@@ -602,7 +610,7 @@ function TemplatePreview({
           </CardHeader>
           <CardContent>
             {error ? (
-              <ErrorRow message={error} />
+              <ErrorRow message={error} errorResponse={errorResponse} />
             ) : result ? (
               <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
             ) : (
@@ -689,11 +697,24 @@ function ResourceContentBlock({
   );
 }
 
-function ErrorRow({ message }: { message: string }) {
+function ErrorRow({
+  message,
+  errorResponse,
+}: {
+  message: string;
+  errorResponse?: Record<string, unknown>;
+}) {
   return (
-    <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-      <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-      <span className="break-all">{message}</span>
+    <div className="space-y-2">
+      <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+        <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
+        <span className="break-all">{message}</span>
+      </div>
+      {errorResponse && (
+        <CodeBlock language="application/json" caption="error response">
+          {JSON.stringify(errorResponse, null, 2)}
+        </CodeBlock>
+      )}
     </div>
   );
 }

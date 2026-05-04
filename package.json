@@ -15,13 +15,13 @@
     "build": "pnpm build:cli && pnpm build:web",
     "build:cli": "tsc",
     "build:web": "vite build",
-    "dev": "tsx src/cli.ts",
-    "dev:web": "vite",
+    "dev:cli": "tsx src/cli.ts",
+    "dev:ui": "vite",
     "serve": "node dist/cli.js serve",
     "start": "node dist/cli.js",
-    "clean": "rm -rf dist web/node_modules/.vite",
+    "clean": "rm -rf dist",
     "prepublishOnly": "pnpm clean && pnpm build",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.app.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.web.app.json"
   },
   "publishConfig": {
     "access": "public"

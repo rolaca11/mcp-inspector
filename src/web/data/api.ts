@@ -19,9 +19,16 @@ const BASE = "/api";
 
 class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** The full JSON body returned by the server (e.g. `{ error, requestBody }`). */
+  responseBody?: Record<string, unknown>;
+  constructor(
+    status: number,
+    message: string,
+    responseBody?: Record<string, unknown>,
+  ) {
     super(message);
     this.status = status;
+    this.responseBody = responseBody;
     this.name = "ApiError";
   }
 }
@@ -50,13 +57,15 @@ async function call<T>(path: string, init?: CallInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, opts);
   if (!r.ok) {
     let msg = r.statusText;
+    let responseBody: Record<string, unknown> | undefined;
     try {
-      const body = (await r.json()) as { error?: string };
-      if (body?.error) msg = body.error;
+      const body = (await r.json()) as Record<string, unknown>;
+      responseBody = body;
+      if (typeof body?.error === "string") msg = body.error;
     } catch {
       /* ignore */
     }
-    throw new ApiError(r.status, msg);
+    throw new ApiError(r.status, msg, responseBody);
   }
   if (r.status === 204) return undefined as T;
   return (await r.json()) as T;

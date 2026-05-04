@@ -174,6 +174,7 @@ interface GetState {
   loading: boolean;
   result?: GetPromptResult;
   error?: string;
+  errorResponse?: Record<string, unknown>;
   durationMs?: number;
 }
 
@@ -224,6 +225,7 @@ function PromptDetail({
       setState({
         loading: false,
         error: e instanceof ApiError ? e.message : (e as Error).message,
+        errorResponse: e instanceof ApiError ? e.responseBody : undefined,
       });
     }
   }, [serverName, prompt, values]);
@@ -325,9 +327,16 @@ function PromptDetail({
         </CardHeader>
         <CardContent>
           {state.error ? (
-            <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-              <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-              <span className="break-all">{state.error}</span>
+            <div className="space-y-2">
+              <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+                <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
+                <span className="break-all">{state.error}</span>
+              </div>
+              {state.errorResponse && (
+                <CodeBlock language="application/json" caption="error response">
+                  {JSON.stringify(state.errorResponse, null, 2)}
+                </CodeBlock>
+              )}
             </div>
           ) : state.result ? (
             <PromptResultView result={state.result} />

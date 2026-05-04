@@ -302,6 +302,12 @@ async function handleApi(
     return send(400, { error: (body as { __error: string }).__error });
   }
 
+  const hasBody = typeof body === "object" && body !== null && Object.keys(body).length > 0;
+
+  /** Like `send`, but attaches the parsed request body on error responses. */
+  const sendErr = (status: number, payload: { error: string }) =>
+    send(status, hasBody ? { ...payload, requestBody: body } : payload);
+
   try {
     const session = await ctx.sessions.acquire(name);
 
@@ -325,7 +331,7 @@ async function handleApi(
     }
     if (sub === "resources/read" && method === "POST") {
       const { uri } = body as { uri?: string };
-      if (typeof uri !== "string") return send(400, { error: "missing `uri`" });
+      if (typeof uri !== "string") return sendErr(400, { error: "missing `uri`" });
       const r = await session.client.readResource({ uri });
       return sendWithTokens(r);
     }
@@ -338,7 +344,7 @@ async function handleApi(
         arguments?: Record<string, unknown>;
       };
       if (typeof toolName !== "string")
-        return send(400, { error: "missing `name`" });
+        return sendErr(400, { error: "missing `name`" });
       const r = await session.client.callTool({
         name: toolName,
         arguments: toolArgs ?? {},
@@ -354,7 +360,7 @@ async function handleApi(
         arguments?: Record<string, string>;
       };
       if (typeof promptName !== "string")
-        return send(400, { error: "missing `name`" });
+        return sendErr(400, { error: "missing `name`" });
       const r = await session.client.getPrompt({
         name: promptName,
         arguments: promptArgs ?? {},
@@ -376,11 +382,11 @@ async function handleApi(
         context?: Record<string, string>;
       };
       if (refType !== "prompt" && refType !== "resource")
-        return send(400, { error: "refType must be 'prompt' or 'resource'" });
+        return sendErr(400, { error: "refType must be 'prompt' or 'resource'" });
       if (typeof ref !== "string")
-        return send(400, { error: "missing `ref`" });
+        return sendErr(400, { error: "missing `ref`" });
       if (typeof argument !== "string")
-        return send(400, { error: "missing `argument`" });
+        return sendErr(400, { error: "missing `argument`" });
 
       const refObj =
         refType === "prompt"
@@ -403,9 +409,9 @@ async function handleApi(
       return send(200, { ok: true });
     }
 
-    return send(404, { error: `unknown route: ${method} ${urlPath}` });
+    return sendErr(404, { error: `unknown route: ${method} ${urlPath}` });
   } catch (e) {
-    return send(500, { error: (e as Error).message });
+    return sendErr(500, { error: (e as Error).message });
   }
 }
 

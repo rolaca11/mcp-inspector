@@ -19,8 +19,8 @@
     "noUncheckedSideEffectImports": true,
     "verbatimModuleSyntax": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/web/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src/web"]
 }
