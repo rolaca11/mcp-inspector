@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeBlock } from "@/components/code-block";
+import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -563,26 +564,36 @@ function TemplatePreview({
             </div>
           ) : (
             <div className="space-y-5">
-              {variables.map((v) => (
-                <div key={v} className="space-y-2">
-                  <Label className="flex items-center gap-2.5">
-                    <span className="font-mono normal-case text-foreground">
-                      {`{${v}}`}
-                    </span>
-                    <Badge variant="muted" className="font-mono">
-                      string
-                    </Badge>
-                  </Label>
-                  <Input
-                    value={values[v] ?? ""}
-                    onChange={(e) =>
-                      setArg(serverName, template.uriTemplate, v, e.target.value)
-                    }
-                    className="font-mono"
-                    placeholder="value"
-                  />
-                </div>
-              ))}
+              {variables.map((v) => {
+                const context: Record<string, string> = {};
+                for (const other of variables) {
+                  if (other !== v && values[other]) context[other] = values[other]!;
+                }
+                return (
+                  <div key={v} className="space-y-2">
+                    <Label className="flex items-center gap-2.5">
+                      <span className="font-mono normal-case text-foreground">
+                        {`{${v}}`}
+                      </span>
+                      <Badge variant="muted" className="font-mono">
+                        string
+                      </Badge>
+                    </Label>
+                    <CompletableInput
+                      serverName={serverName}
+                      refType="resource"
+                      ref={template.uriTemplate}
+                      argument={v}
+                      value={values[v] ?? ""}
+                      onChange={(val) =>
+                        setArg(serverName, template.uriTemplate, v, val)
+                      }
+                      context={context}
+                      placeholder="value"
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

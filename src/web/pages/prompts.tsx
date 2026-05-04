@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CodeBlock } from "@/components/code-block";
+import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -282,38 +283,49 @@ function PromptDetail({
               This prompt takes no arguments.
             </div>
           ) : (
-            prompt.arguments.map((arg) => (
-              <div key={arg.name} className="space-y-2">
-                <Label className="flex items-center gap-2.5">
-                  <span className="font-mono normal-case text-foreground">
-                    {arg.name}
-                  </span>
-                  {arg.required && (
-                    <Badge variant="warning" className="font-mono">
-                      required
-                    </Badge>
+            prompt.arguments.map((arg) => {
+              const context: Record<string, string> = {};
+              for (const other of prompt.arguments ?? []) {
+                if (other.name !== arg.name && values[other.name])
+                  context[other.name] = values[other.name]!;
+              }
+              return (
+                <div key={arg.name} className="space-y-2">
+                  <Label className="flex items-center gap-2.5">
+                    <span className="font-mono normal-case text-foreground">
+                      {arg.name}
+                    </span>
+                    {arg.required && (
+                      <Badge variant="warning" className="font-mono">
+                        required
+                      </Badge>
+                    )}
+                  </Label>
+                  {arg.description && (
+                    <div className="text-sm text-muted-foreground/80">
+                      {arg.description}
+                    </div>
                   )}
-                </Label>
-                {arg.description && (
-                  <div className="text-sm text-muted-foreground/80">
-                    {arg.description}
-                  </div>
-                )}
-                <Input
-                  value={values[arg.name] ?? ""}
-                  onChange={(e) =>
-                    setValues((s) => ({ ...s, [arg.name]: e.target.value }))
-                  }
-                  className="font-mono"
-                  placeholder="value"
-                />
-                {errors[arg.name] && (
-                  <div className="text-xs text-destructive">
-                    {errors[arg.name]}
-                  </div>
-                )}
-              </div>
-            ))
+                  <CompletableInput
+                    serverName={serverName}
+                    refType="prompt"
+                    ref={prompt.name}
+                    argument={arg.name}
+                    value={values[arg.name] ?? ""}
+                    onChange={(val) =>
+                      setValues((s) => ({ ...s, [arg.name]: val }))
+                    }
+                    context={context}
+                    placeholder="value"
+                  />
+                  {errors[arg.name] && (
+                    <div className="text-xs text-destructive">
+                      {errors[arg.name]}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </CardContent>
       </Card>
