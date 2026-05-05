@@ -6,7 +6,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/logo";
 import { ServerSelector } from "@/components/server-selector";
 import { SourceSelector } from "@/components/source-selector";
 import { StatusDot } from "@/components/status-dot";
@@ -28,6 +27,7 @@ interface HeaderProps {
   onConnect: () => void;
   onDisconnect: () => void;
   onReloadServers: () => void;
+  children?: React.ReactNode;
 }
 
 const API_STATE_TONE: Record<
@@ -56,6 +56,7 @@ export function Header({
   onConnect,
   onDisconnect,
   onReloadServers,
+  children,
 }: HeaderProps) {
   const grouped = new Map<string, { count: number; label: string }>();
   for (const s of servers) {
@@ -70,11 +71,10 @@ export function Header({
   }));
 
   return (
-    <header className="border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
+    <header className="border-b border-border/60 bg-chrome sticky top-0 z-40">
       <div className="mx-auto flex h-[4.5rem] max-w-[1800px] items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-4 min-w-0">
-          <Logo />
           <nav className="flex items-center gap-1.5 text-muted-foreground/70 text-base">
             <SourceSelector
               sources={sources}
@@ -145,6 +145,7 @@ export function Header({
           </Tooltip>
         </div>
       </div>
+      {children}
     </header>
   );
 }

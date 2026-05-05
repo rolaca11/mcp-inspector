@@ -49,7 +49,7 @@ export function NavTabs({ serverName, counts }: NavTabsProps) {
   const prefix = `/${encodeURIComponent(serverName)}`;
 
   return (
-    <div className="border-b border-border/60 bg-background/40">
+    <div className="border-b border-border/60 bg-chrome/80">
       <div className="mx-auto flex max-w-[1800px] items-end gap-3 px-8">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

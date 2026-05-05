@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border/60 bg-background/40">
+    <footer className="mt-24 border-t border-border/60 bg-chrome/40">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-3 px-8 py-8 text-sm text-muted-foreground/70 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="font-mono">mcp-inspector</span>

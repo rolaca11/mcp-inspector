@@ -111,7 +111,7 @@ export function ToolsPage() {
       }
     >
       <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
+        <div className="lg:sticky lg:top-40 self-start max-h-[calc(100vh-7rem)] flex flex-col">
           <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
             {filtered.map((t) => (
               <ToolListRow
@@ -151,9 +151,9 @@ function ToolListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
+        "w-full rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer truncate",
         isActive
-          ? "bg-accent text-foreground"
+          ? "bg-accent text-foreground font-medium"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

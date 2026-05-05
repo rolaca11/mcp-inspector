@@ -187,8 +187,9 @@ function ServerShell({
         onConnect={rediscover}
         onDisconnect={disconnect}
         onReloadServers={reloadServers}
-      />
-      <NavTabs serverName={active.name} counts={counts} />
+      >
+        <NavTabs serverName={active.name} counts={counts} />
+      </Header>
 
       {pendingAuthUrl && (
         <div className="border-b border-blue-500/30 bg-blue-500/10 px-8 py-3">
