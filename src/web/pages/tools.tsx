@@ -264,20 +264,27 @@ function ToolDetail({
               This tool takes no arguments.
             </div>
           ) : (
-            <div className="space-y-5">
-              {Object.entries(properties).map(([name, prop]) => (
-                <ArgField
-                  key={name}
-                  name={name}
-                  prop={prop}
-                  required={required.has(name)}
-                  value={values[name] ?? ""}
-                  onChange={(v) =>
-                    setArg(serverName, tool.name, name, v)
-                  }
-                  error={errors[name]}
-                />
-              ))}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-5">
+                {Object.entries(properties).map(([name, prop]) => (
+                  <ArgField
+                    key={name}
+                    name={name}
+                    prop={prop}
+                    required={required.has(name)}
+                    value={values[name] ?? ""}
+                    onChange={(v) =>
+                      setArg(serverName, tool.name, name, v)
+                    }
+                    error={errors[name]}
+                  />
+                ))}
+              </div>
+              <div>
+                <CodeBlock language="application/json" caption="--args">
+                  {JSON.stringify(argsResult.value, null, 2)}
+                </CodeBlock>
+              </div>
             </div>
           )}
           <Button
@@ -295,47 +302,31 @@ function ToolDetail({
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Arguments preview</CardTitle>
-            <CardDescription className="hidden md:block">
-              Wire payload sent to <code className="font-mono">tools/call</code>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CodeBlock language="application/json" caption="--args">
-              {JSON.stringify(argsResult.value, null, 2)}
-            </CodeBlock>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Result</CardTitle>
-            {callState.loading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                running…
-              </Badge>
-            ) : callState.error ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : callState.result ? (
-              <Badge variant={callState.result.isError ? "destructive" : "success"}>
-                {callState.result.isError ? "isError" : "ok"}
-                {callState.durationMs != null && ` · ${callState.durationMs}ms`}
-                {callState.result._tokenCount != null && ` · ${callState.result._tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            <ToolResultView state={callState} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Result</CardTitle>
+          {callState.loading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              running…
+            </Badge>
+          ) : callState.error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
+          ) : callState.result ? (
+            <Badge variant={callState.result.isError ? "destructive" : "success"}>
+              {callState.result.isError ? "isError" : "ok"}
+              {callState.durationMs != null && ` · ${callState.durationMs}ms`}
+              {callState.result._tokenCount != null && ` · ${callState.result._tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null}
+        </CardHeader>
+        <CardContent>
+          <ToolResultView state={callState} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
