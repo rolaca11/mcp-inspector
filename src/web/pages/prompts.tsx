@@ -111,14 +111,9 @@ export function PromptsPage() {
       }
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle>Prompts</CardTitle>
-            <Badge variant="muted" className="font-mono">
-              {filtered.length}
-            </Badge>
-          </CardHeader>
-          <div className="divide-y divide-border/50">
+        <div className="self-start">
+          <h2 className="text-lg font-semibold px-3 mb-2">Prompts</h2>
+          <div className="flex flex-col gap-1 px-1">
             {filtered.map((p) => (
               <PromptListRow
                 key={p.name}
@@ -128,7 +123,7 @@ export function PromptsPage() {
               />
             ))}
           </div>
-        </Card>
+        </div>
 
         {selected && (
           <PromptDetail
@@ -151,30 +146,18 @@ function PromptListRow({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const argCount = prompt.arguments?.length ?? 0;
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
-        isActive ? "bg-accent/40" : "hover:bg-accent/20",
+        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
+        isActive
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <MessageSquare className="size-4 text-muted-foreground mt-1" />
-      <div className="flex-1 min-w-0">
-        <div className="font-mono text-base">{prompt.name}</div>
-        {prompt.description && (
-          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {prompt.description}
-          </div>
-        )}
-      </div>
-      {argCount > 0 && (
-        <Badge variant="muted" className="font-mono">
-          {argCount} arg{argCount === 1 ? "" : "s"}
-        </Badge>
-      )}
+      {prompt.name}
     </button>
   );
 }

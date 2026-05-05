@@ -113,14 +113,9 @@ export function ToolsPage() {
       }
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <Card className="overflow-hidden lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
-          <CardHeader>
-            <CardTitle>Available tools</CardTitle>
-            <Badge variant="muted" className="font-mono">
-              {filtered.length}
-            </Badge>
-          </CardHeader>
-          <div className="divide-y divide-border/50 overflow-y-auto min-h-0">
+        <div className="lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
+          <h2 className="text-lg font-semibold px-3 mb-2">Available tools</h2>
+          <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
             {filtered.map((t) => (
               <ToolListRow
                 key={t.name}
@@ -130,12 +125,12 @@ export function ToolsPage() {
               />
             ))}
             {filtered.length === 0 && (
-              <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              <div className="px-3 py-10 text-center text-sm text-muted-foreground">
                 No tools match.
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
         {selected && <ToolDetail key={selected.name} serverName={server!.name} tool={selected} />}
       </div>
@@ -159,19 +154,13 @@ function ToolListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors cursor-pointer",
-        isActive ? "bg-accent/40" : "hover:bg-accent/20",
+        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
+        isActive
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Hammer className="size-4 text-muted-foreground mt-1" />
-      <div className="flex-1 min-w-0">
-        <div className="font-mono text-base">{tool.name}</div>
-        {tool.description && (
-          <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {tool.description}
-          </div>
-        )}
-      </div>
+      {tool.name}
     </button>
   );
 }
