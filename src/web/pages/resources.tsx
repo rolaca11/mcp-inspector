@@ -71,7 +71,7 @@ export function ResourcesPage() {
   return (
     <PageShell
       title="Resources"
-      description="Static resources and parameterized templates exposed by this MCP server."
+
       actions={
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />

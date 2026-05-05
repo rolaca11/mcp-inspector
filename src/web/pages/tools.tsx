@@ -99,7 +99,6 @@ export function ToolsPage() {
   return (
     <PageShell
       title="Tools"
-      description="Functions exposed by the server. Each tool advertises a JSON-Schema for its arguments and is invoked through the `tools/call` request."
       actions={
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
@@ -114,7 +113,6 @@ export function ToolsPage() {
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
-          <h2 className="text-lg font-semibold px-3 mb-2">Available tools</h2>
           <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
             {filtered.map((t) => (
               <ToolListRow
@@ -160,7 +158,7 @@ function ToolListRow({
           : "text-muted-foreground hover:text-foreground",
       )}
     >
-      {tool.name}
+      {tool.title ?? tool.name}
     </button>
   );
 }
@@ -248,34 +246,19 @@ function ToolDetail({
     <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <CardTitle className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono">{tool.name}</span>
-              {tool.title && (
-                <span className="text-muted-foreground font-normal text-sm">
-                  · {tool.title}
-                </span>
-              )}
-            </CardTitle>
-            {tool.description && (
-              <CardDescription>{tool.description}</CardDescription>
+          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+            <span>{tool.title ?? tool.name}</span>
+            {tool.title && (
+              <span className="text-muted-foreground font-normal text-sm font-mono">
+                · {tool.name}
+              </span>
             )}
-          </div>
-          <Button
-            variant="success"
-            size="sm"
-            onClick={onCall}
-            disabled={!canCall}
-          >
-            {callState.loading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Play className="size-3.5" />
-            )}
-            Call tool
-          </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {tool.description && (
+            <p className="text-sm text-muted-foreground">{tool.description}</p>
+          )}
           {!hasArgs ? (
             <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">
               This tool takes no arguments.
@@ -297,6 +280,18 @@ function ToolDetail({
               ))}
             </div>
           )}
+          <Button
+            variant="success"
+            onClick={onCall}
+            disabled={!canCall}
+          >
+            {callState.loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Play className="size-4" />
+            )}
+            Call tool
+          </Button>
         </CardContent>
       </Card>
 
