@@ -151,9 +151,9 @@ function ToolListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
+        "w-full rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer truncate",
         isActive
-          ? "bg-accent text-foreground"
+          ? "bg-accent text-foreground font-semibold"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

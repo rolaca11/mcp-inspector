@@ -70,7 +70,7 @@ export function Header({
   }));
 
   return (
-    <header className="border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
+    <header className="border-b border-border/60 bg-chrome/80 backdrop-blur supports-[backdrop-filter]:bg-chrome/60 sticky top-0 z-40">
       <div className="mx-auto flex h-[4.5rem] max-w-[1800px] items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-4 min-w-0">
