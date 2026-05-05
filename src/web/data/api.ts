@@ -114,6 +114,7 @@ export interface ServersListResponse {
   servers: Array<{
     name: string;
     source: string;
+    sourceLabel?: string;
     transport: Transport;
     target: string;
     args?: string[];

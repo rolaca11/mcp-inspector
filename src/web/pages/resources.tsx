@@ -3,10 +3,8 @@ import {
   AlertCircle,
   Eye,
   FileText,
-  Image as ImageIcon,
   Loader2,
   Search,
-  Variable,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +40,6 @@ import { cn } from "@/lib/utils";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
-  const selectionStore = useSelectionStore();
   const [query, setQuery] = React.useState("");
 
   if (!server) return null;
@@ -147,7 +144,7 @@ function CombinedResourcesPanel({
   }, [query, resources, templates]);
 
   const storedKey = selectionStore.get(serverName, "resources-selected");
-  const selected = (storedKey && items.find((i) => itemKey(i) === storedKey)) ?? items[0] ?? null;
+  const selected = (storedKey ? items.find((i) => itemKey(i) === storedKey) : undefined) ?? items[0] ?? null;
 
   const setSelected = React.useCallback(
     (item: ListItem) => {
@@ -584,21 +581,6 @@ function ErrorRow({
       )}
     </div>
   );
-}
-
-function ResourceIcon({
-  mimeType,
-  className,
-}: {
-  mimeType?: string;
-  className?: string;
-}) {
-  const Icon = !mimeType
-    ? FileText
-    : mimeType.startsWith("image/")
-      ? ImageIcon
-      : FileText;
-  return <Icon className={cn("size-4 text-muted-foreground", className)} />;
 }
 
 function KV({ label, children }: { label: string; children: React.ReactNode }) {

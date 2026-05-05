@@ -77,7 +77,7 @@ export function CompletableInput({
     [hasCompletions, serverName, refType, refId, argument, context],
   );
 
-  const timerRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
