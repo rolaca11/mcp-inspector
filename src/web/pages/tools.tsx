@@ -110,7 +110,7 @@ export function ToolsPage() {
         </div>
       }
     >
-      <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-40 self-start max-h-[calc(100vh-7rem)] flex flex-col">
           <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
             {filtered.map((t) => (
@@ -381,7 +381,7 @@ function ArgField({
                 "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                 value === String(opt)
                   ? "border-success/40 bg-success/10 text-success"
-                  : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
               )}
             >
               {String(opt)}
@@ -399,7 +399,7 @@ function ArgField({
                 "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
                 value === opt
                   ? "border-success/40 bg-success/10 text-success"
-                  : "border-border/60 bg-card/40 text-muted-foreground hover:bg-accent/40",
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
               )}
             >
               {opt}

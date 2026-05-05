@@ -156,7 +156,7 @@ function CombinedResourcesPanel({
   );
 
   return (
-    <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
       <div className="lg:sticky lg:top-40 self-start max-h-[calc(100vh-7rem)] flex flex-col">
         <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
           {items.map((item) => (

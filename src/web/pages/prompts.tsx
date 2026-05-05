@@ -110,7 +110,7 @@ export function PromptsPage() {
         </div>
       }
     >
-      <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <div className="self-start">
 
           <div className="flex flex-col gap-1 px-1">

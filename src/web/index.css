@@ -8,26 +8,27 @@
 /* ------------------------------------------------------------------ */
 
 :root {
-  --background: oklch(0.17 0.0027 75.56);
+  --hue: 250;
+  --background: oklch(0.17 0.0027 var(--hue));
   --chrome: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
 
-  --card: oklch(0.195 0.008 75.56);
+  --card: oklch(0.21 0.008 var(--hue));
   --card-foreground: oklch(0.985 0 0);
 
-  --popover: oklch(0.28 0.012 75.56);
+  --popover: oklch(0.28 0.012 var(--hue));
   --popover-foreground: oklch(0.985 0 0);
 
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.18 0 0);
 
-  --secondary: oklch(0.33 0.014 75.56);
+  --secondary: oklch(0.33 0.014 var(--hue));
   --secondary-foreground: oklch(0.97 0 0);
 
-  --muted: oklch(0.31 0.01 75.56);
-  --muted-foreground: oklch(0.65 0.012 75.56);
+  --muted: oklch(0.31 0.01 var(--hue));
+  --muted-foreground: oklch(0.65 0.012 var(--hue));
 
-  --accent: oklch(0.35 0.016 75.56);
+  --accent: oklch(0.35 0.016 var(--hue));
   --accent-foreground: oklch(0.985 0 0);
 
   --destructive: oklch(0.65 0.21 24);
@@ -42,9 +43,9 @@
   --info: oklch(0.78 0.13 240);
   --info-foreground: oklch(0.18 0 0);
 
-  --border: oklch(0.35 0.012 75.56 / 0.8);
-  --input: oklch(0.37 0.014 75.56);
-  --ring: oklch(0.6 0.02 75.56);
+  --border: oklch(0.35 0.012 var(--hue) / 0.8);
+  --input: oklch(0.37 0.014 var(--hue));
+  --ring: oklch(0.6 0.02 var(--hue));
 
   --chart-1: oklch(0.78 0.16 158);
   --chart-2: oklch(0.78 0.13 240);
@@ -54,14 +55,14 @@
 
   --radius: 0.625rem;
 
-  --sidebar: oklch(0.25 0.008 75.56);
+  --sidebar: oklch(0.25 0.008 var(--hue));
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.78 0.16 75.56);
+  --sidebar-primary: oklch(0.78 0.16 var(--hue));
   --sidebar-primary-foreground: oklch(0.18 0 0);
-  --sidebar-accent: oklch(0.33 0.014 75.56);
+  --sidebar-accent: oklch(0.33 0.014 var(--hue));
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.35 0.012 75.56 / 0.8);
-  --sidebar-ring: oklch(0.6 0.02 75.56);
+  --sidebar-border: oklch(0.35 0.012 var(--hue) / 0.8);
+  --sidebar-ring: oklch(0.6 0.02 var(--hue));
 }
 
 @theme inline {
@@ -146,7 +147,7 @@
   body {
     background: radial-gradient(
         1200px 600px at 50% -200px,
-        oklch(0.30 0.04 75.56 / 0.35),
+        oklch(0.30 0.04 var(--hue) / 0.35),
         transparent 60%
       ),
       var(--background);
@@ -156,7 +157,7 @@
   }
 
   ::selection {
-    background: oklch(0.78 0.16 75.56 / 0.35);
+    background: oklch(0.78 0.16 var(--hue) / 0.35);
   }
 
   /* Subtle scrollbars */
