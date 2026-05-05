@@ -1,6 +1,8 @@
 import * as React from "react";
 import {
   AlertCircle,
+  Check,
+  Copy,
   Eye,
   FileText,
   Loader2,
@@ -421,36 +423,28 @@ function TemplatePreview({
               })}
             </div>
           )}
-          <Button
-            variant="success"
-            onClick={onRead}
-            disabled={!fullyExpanded || reading}
-          >
-            {reading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Eye className="size-4" />
-            )}
-            Resolve &amp; read
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="success"
+              onClick={onRead}
+              disabled={!fullyExpanded || reading}
+            >
+              {reading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+              Resolve &amp; read
+            </Button>
+            <code className="min-w-0 truncate text-sm font-mono text-muted-foreground">
+              {expanded}
+            </code>
+            {fullyExpanded && <CopyUriButton text={expanded} />}
+          </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Resolved URI</CardTitle>
-            <CardDescription className="hidden md:block">
-              Expanded from template variables
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CodeBlock copyable={fullyExpanded} language="uri">
-              {expanded}
-            </CodeBlock>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-5">
         <Card>
           <CardHeader>
             <CardTitle>Contents</CardTitle>
@@ -496,6 +490,25 @@ function TemplatePreview({
 /* ------------------------------------------------------------------ */
 /* Bits                                                                */
 /* ------------------------------------------------------------------ */
+
+function CopyUriButton({ text }: { text: string }) {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        });
+      }}
+      className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+      aria-label="Copy URI"
+    >
+      {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+    </button>
+  );
+}
 
 function ResourceContentsView({
   contents,
