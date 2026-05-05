@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { CodeBlock } from "@/components/code-block";
 import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
@@ -71,7 +71,6 @@ export function ResourcesPage() {
   return (
     <PageShell
       title="Resources"
-
       actions={
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
@@ -84,108 +83,99 @@ export function ResourcesPage() {
         </div>
       }
     >
-      <Tabs
-        value={
-          selectionStore.get(server!.name, "resources-tab") ??
-          (resources.length > 0 ? "static" : "templates")
-        }
-        onValueChange={(v) => selectionStore.set(server!.name, "resources-tab", v)}
-      >
-        <TabsList>
-          <TabsTrigger value="static">
-            Static
-            <Badge variant="muted" className="ml-1.5 font-mono">
-              {resources.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="templates">
-            Templates
-            <Badge variant="muted" className="ml-1.5 font-mono">
-              {templates.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="static" className="mt-6">
-          <StaticResourcesPanel
-            serverName={server!.name}
-            resources={resources}
-            query={query}
-          />
-        </TabsContent>
-
-        <TabsContent value="templates" className="mt-6">
-          <TemplatesPanel
-            serverName={server!.name}
-            templates={templates}
-            query={query}
-          />
-        </TabsContent>
-      </Tabs>
+      <CombinedResourcesPanel
+        serverName={server!.name}
+        resources={resources}
+        templates={templates}
+        query={query}
+      />
     </PageShell>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Static                                                              */
+/* Combined resources + templates                                      */
 /* ------------------------------------------------------------------ */
 
-function StaticResourcesPanel({
+type ListItem =
+  | { kind: "static"; resource: MCPResource }
+  | { kind: "template"; template: MCPResourceTemplate };
+
+function itemKey(item: ListItem) {
+  return item.kind === "static" ? item.resource.uri : item.template.uriTemplate;
+}
+
+function itemLabel(item: ListItem) {
+  if (item.kind === "static") return item.resource.title ?? item.resource.name;
+  return item.template.title ?? item.template.name;
+}
+
+function CombinedResourcesPanel({
   serverName,
   resources,
+  templates,
   query,
 }: {
   serverName: string;
   resources: MCPResource[];
+  templates: MCPResourceTemplate[];
   query: string;
 }) {
   const selectionStore = useSelectionStore();
 
-  const filtered = React.useMemo(() => {
+  const items = React.useMemo<ListItem[]>(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return resources;
-    return resources.filter(
-      (r) =>
-        r.uri.toLowerCase().includes(q) ||
-        r.name.toLowerCase().includes(q) ||
-        r.title?.toLowerCase().includes(q),
-    );
-  }, [query, resources]);
+    const statics: ListItem[] = resources
+      .filter(
+        (r) =>
+          !q ||
+          r.uri.toLowerCase().includes(q) ||
+          r.name.toLowerCase().includes(q) ||
+          r.title?.toLowerCase().includes(q),
+      )
+      .map((resource) => ({ kind: "static", resource }));
+    const tmpls: ListItem[] = templates
+      .filter(
+        (t) =>
+          !q ||
+          t.uriTemplate.toLowerCase().includes(q) ||
+          t.name.toLowerCase().includes(q) ||
+          t.title?.toLowerCase().includes(q),
+      )
+      .map((template) => ({ kind: "template", template }));
+    return [...statics, ...tmpls];
+  }, [query, resources, templates]);
 
-  const storedUri = selectionStore.get(serverName, "resources-static");
-  const selected = (storedUri && resources.find((r) => r.uri === storedUri)) ?? resources[0] ?? null;
+  const storedKey = selectionStore.get(serverName, "resources-selected");
+  const selected = (storedKey && items.find((i) => itemKey(i) === storedKey)) ?? items[0] ?? null;
 
   const setSelected = React.useCallback(
-    (r: MCPResource) => {
-      selectionStore.set(serverName, "resources-static", r.uri);
+    (item: ListItem) => {
+      selectionStore.set(serverName, "resources-selected", itemKey(item));
     },
     [serverName, selectionStore],
   );
 
-  if (resources.length === 0) {
-    return (
-      <Empty
-        icon={FileText}
-        title="No static resources"
-        description="This server only exposes templated resources. Switch to the Templates tab."
-      />
-    );
-  }
-
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+    <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
       <div className="lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
-        <h2 className="text-lg font-semibold px-3 mb-2">Static resources</h2>
         <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
-          {filtered.map((r) => (
-            <ResourceListRow
-              key={r.uri}
-              resource={r}
-              isActive={r.uri === selected?.uri}
-              onSelect={() => setSelected(r)}
-            />
+          {items.map((item) => (
+            <button
+              key={itemKey(item)}
+              type="button"
+              onClick={() => setSelected(item)}
+              className={cn(
+                "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
+                itemKey(item) === (selected ? itemKey(selected) : null)
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {itemLabel(item)}
+            </button>
           ))}
-          {filtered.length === 0 && (
+          {items.length === 0 && (
             <div className="px-3 py-10 text-center text-sm text-muted-foreground">
               No resources match "{query}".
             </div>
@@ -193,33 +183,13 @@ function StaticResourcesPanel({
         </div>
       </div>
 
-      {selected && <ResourcePreview key={selected.uri} serverName={serverName} resource={selected} />}
-    </div>
-  );
-}
-
-function ResourceListRow({
-  resource,
-  isActive,
-  onSelect,
-}: {
-  resource: MCPResource;
-  isActive: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
-        isActive
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:text-foreground",
+      {selected?.kind === "static" && (
+        <ResourcePreview key={selected.resource.uri} serverName={serverName} resource={selected.resource} />
       )}
-    >
-      {resource.title ?? resource.name}
-    </button>
+      {selected?.kind === "template" && (
+        <TemplatePreview key={selected.template.uriTemplate} serverName={serverName} template={selected.template} />
+      )}
+    </div>
   );
 }
 
@@ -282,14 +252,6 @@ function ResourcePreview({
               {resource.uri}
             </CardDescription>
           </div>
-          <Button variant="success" size="sm" onClick={onRead} disabled={reading}>
-            {reading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Eye className="size-3.5" />
-            )}
-            Read
-          </Button>
         </CardHeader>
         <CardContent className="space-y-6">
           {resource.description && (
@@ -305,6 +267,14 @@ function ResourcePreview({
               </span>
             </KV>
           </div>
+          <Button variant="success" onClick={onRead} disabled={reading}>
+            {reading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+            Read
+          </Button>
         </CardContent>
       </Card>
 
@@ -343,103 +313,6 @@ function ResourcePreview({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Templates                                                           */
-/* ------------------------------------------------------------------ */
-
-function TemplatesPanel({
-  serverName,
-  templates,
-  query,
-}: {
-  serverName: string;
-  templates: MCPResourceTemplate[];
-  query: string;
-}) {
-  const selectionStore = useSelectionStore();
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter(
-      (t) =>
-        t.uriTemplate.toLowerCase().includes(q) ||
-        t.name.toLowerCase().includes(q) ||
-        t.title?.toLowerCase().includes(q),
-    );
-  }, [query, templates]);
-
-  const storedUri = selectionStore.get(serverName, "resources-templates");
-  const selected = (storedUri && templates.find((t) => t.uriTemplate === storedUri)) ?? templates[0] ?? null;
-
-  const setSelected = React.useCallback(
-    (t: MCPResourceTemplate) => {
-      selectionStore.set(serverName, "resources-templates", t.uriTemplate);
-    },
-    [serverName, selectionStore],
-  );
-
-  if (templates.length === 0) {
-    return (
-      <Empty
-        icon={Variable}
-        title="No resource templates"
-        description="This server doesn't expose any URI-template resources."
-      />
-    );
-  }
-
-  return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <div className="lg:sticky lg:top-20 self-start max-h-[calc(100vh-7rem)] flex flex-col">
-        <h2 className="text-lg font-semibold px-3 mb-2">Resource templates</h2>
-        <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
-          {filtered.map((t) => (
-            <TemplateListRow
-              key={t.uriTemplate}
-              template={t}
-              isActive={t.uriTemplate === selected?.uriTemplate}
-              onSelect={() => setSelected(t)}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              No templates match "{query}".
-            </div>
-          )}
-        </div>
-      </div>
-
-      {selected && <TemplatePreview key={selected.uriTemplate} serverName={serverName} template={selected} />}
-    </div>
-  );
-}
-
-function TemplateListRow({
-  template,
-  isActive,
-  onSelect,
-}: {
-  template: MCPResourceTemplate;
-  isActive: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "w-full rounded-md px-4 py-2 text-left text-base transition-colors cursor-pointer truncate",
-        isActive
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {template.title ?? template.name}
-    </button>
   );
 }
 
@@ -508,19 +381,6 @@ function TemplatePreview({
               {template.uriTemplate}
             </CardDescription>
           </div>
-          <Button
-            variant="success"
-            size="sm"
-            onClick={onRead}
-            disabled={!fullyExpanded || reading}
-          >
-            {reading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Eye className="size-3.5" />
-            )}
-            Resolve &amp; read
-          </Button>
         </CardHeader>
         <CardContent className="space-y-6">
           {template.description && (
@@ -564,6 +424,18 @@ function TemplatePreview({
               })}
             </div>
           )}
+          <Button
+            variant="success"
+            onClick={onRead}
+            disabled={!fullyExpanded || reading}
+          >
+            {reading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+            Resolve &amp; read
+          </Button>
         </CardContent>
       </Card>
 

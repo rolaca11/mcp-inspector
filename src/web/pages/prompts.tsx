@@ -110,9 +110,9 @@ export function PromptsPage() {
         </div>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+      <div className="grid gap-30 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <div className="self-start">
-          <h2 className="text-lg font-semibold px-3 mb-2">Prompts</h2>
+
           <div className="flex flex-col gap-1 px-1">
             {filtered.map((p) => (
               <PromptListRow
