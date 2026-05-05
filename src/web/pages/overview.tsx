@@ -1,16 +1,16 @@
 import {
   AlertCircle,
-  ArrowUpRight,
+  RefreshCw,
   CheckCircle2,
   Clock,
   FileBox,
-  GitBranch,
+
   Hammer,
-  Layers,
+  Tag,
   Loader2,
   MessageSquare,
   Sparkles,
-  Terminal,
+
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -67,6 +67,18 @@ export function OverviewPage() {
     <PageShell
       title={
         <span className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void rediscover()}
+            disabled={state === "connecting"}
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {state === "connecting" ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-5" />
+            )}
+          </button>
           {data?.server?.title ?? data?.server?.name ?? server!.name}
           <span className="font-mono text-base text-muted-foreground/70">·</span>
           <span className="font-mono text-base text-muted-foreground/80">
@@ -88,16 +100,16 @@ export function OverviewPage() {
               </span>
             </span>
           </MetaItem>
-          <MetaItem icon={GitBranch}>
+          <MetaItem>
             <Badge variant="muted" className="font-mono">
               <TransportIcon transport={server!.transport} />
               {transportLabel(server!.transport)}
             </Badge>
           </MetaItem>
           {data?.server?.version && (
-            <MetaItem icon={Layers}>
+            <MetaItem icon={Tag}>
               <span className="font-mono text-foreground/70">
-                {data.server?.name}@{data.server?.version}
+                {data.server?.version}
               </span>
             </MetaItem>
           )}
@@ -106,27 +118,6 @@ export function OverviewPage() {
               discovered {formatRelativeTime(lastDiscoveredAt)}
             </MetaItem>
           )}
-        </>
-      }
-      actions={
-        <>
-          <Button variant="outline" size="sm" disabled>
-            <Terminal className="size-3.5" />
-            Open REPL
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void rediscover()}
-            disabled={state === "connecting"}
-          >
-            {state === "connecting" ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <ArrowUpRight className="size-3.5" />
-            )}
-            Re-discover
-          </Button>
         </>
       }
     >

@@ -26,7 +26,7 @@ export function PageShell({
         className,
       )}
     >
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="space-y-4 min-w-0">
           <h1 className="text-3xl font-semibold leading-none tracking-tight text-balance">
             {title}
@@ -57,7 +57,7 @@ export function MetaItem({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 h-6">
       {Icon && <Icon className="size-4 text-muted-foreground/70" />}
       {children}
     </span>
