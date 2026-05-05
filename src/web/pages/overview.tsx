@@ -5,7 +5,6 @@ import {
   Tag,
   Loader2,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,6 @@ import { useActivityStore, type ActivityEntry } from "@/stores/activity-store";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
 export function OverviewPage() {
-  const { serverName } = useParams<{ serverName: string }>();
   const { server, data, connectionState: state, error, lastDiscoveredAt, rediscover } =
     useConnectionStore();
   const activity = useActivityStore((s) => s.entries);
