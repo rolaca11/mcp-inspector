@@ -9,6 +9,7 @@ import {
   Play,
   Search,
 } from "lucide-react";
+import { Controller, type Control, type FieldValues } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,12 @@ import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
-import { useToolArgsStore } from "@/stores/tool-args-store";
+import { useSyncedForm } from "@/hooks/use-synced-form";
+import {
+  mcpSchemaToZod,
+  partialCoerce,
+  reverseCoerceArguments,
+} from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
@@ -180,7 +186,6 @@ interface CallState {
   loading: boolean;
   result?: ToolResult;
   error?: string;
-  /** Full error response JSON (includes `requestBody` when the server echoes it). */
   errorResponse?: Record<string, unknown>;
   durationMs?: number;
 }
@@ -204,13 +209,21 @@ function ToolDetail({
     return init;
   }, [properties]);
 
-  // Persist argument values in Zustand so they survive navigation.
-  const { getArgs, setArg, setArgs } = useToolArgsStore();
-  const cached = getArgs(serverName, tool.name);
-  const values = cached ?? initial;
+  const schema = React.useMemo(
+    () => mcpSchemaToZod(tool.inputSchema),
+    [tool.inputSchema],
+  );
+
+  const form = useSyncedForm({
+    serverName,
+    formKey: tool.name,
+    schema,
+    defaults: initial,
+  });
+
+  const { formState, handleSubmit, watch, setAllValues } = form;
 
   const resultStore = useResultStore();
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
   const [jsonOverride, setJsonOverride] = React.useState<string | null>(null);
   const [jsonError, setJsonError] = React.useState<string | null>(null);
@@ -218,15 +231,13 @@ function ToolDetail({
   const cachedResult = resultStore.get<CallState>(serverName, "tool", tool.name);
   const callState: CallState = loading ? { loading: true } : (cachedResult ?? { loading: false });
 
-  const argsResult = React.useMemo(
-    () => coerceArguments(values, properties, required),
-    [values, properties, required],
-  );
+  const watchedValues = watch() as Record<string, string>;
 
-  const canonicalJson = React.useMemo(
-    () => JSON.stringify(argsResult.value, null, 2),
-    [argsResult.value],
-  );
+  const canonicalJson = React.useMemo(() => {
+    const parsed = schema.safeParse(watchedValues);
+    if (parsed.success) return JSON.stringify(parsed.data, null, 2);
+    return JSON.stringify(partialCoerce(watchedValues, properties), null, 2);
+  }, [watchedValues, schema, properties]);
 
   const onJsonChange = React.useCallback(
     (text: string) => {
@@ -239,12 +250,12 @@ function ToolDetail({
         }
         setJsonError(null);
         const reversed = reverseCoerceArguments(parsed, properties);
-        setArgs(serverName, tool.name, reversed);
+        setAllValues(reversed);
       } catch {
         setJsonError("invalid JSON");
       }
     },
-    [serverName, tool.name, properties, setArgs],
+    [properties, setAllValues],
   );
 
   const onJsonBlur = React.useCallback(() => {
@@ -252,39 +263,38 @@ function ToolDetail({
     setJsonError(null);
   }, []);
 
-  const onCall = React.useCallback(async () => {
-    if (Object.keys(argsResult.errors).length > 0) {
-      setErrors(argsResult.errors);
-      return;
-    }
-    setErrors({});
-    setLoading(true);
-    try {
-      const t0 = performance.now();
-      const result = await api.callTool(serverName, {
-        name: tool.name,
-        arguments: argsResult.value,
-      });
-      const settled: CallState = {
-        loading: false,
-        result,
-        durationMs: Math.round(performance.now() - t0),
-      };
-      resultStore.set(serverName, "tool", tool.name, settled);
-    } catch (e) {
-      const settled: CallState = {
-        loading: false,
-        error: e instanceof ApiError ? e.message : (e as Error).message,
-        errorResponse: e instanceof ApiError ? e.responseBody : undefined,
-      };
-      resultStore.set(serverName, "tool", tool.name, settled);
-    } finally {
-      setLoading(false);
-    }
-  }, [serverName, tool.name, argsResult, resultStore]);
+  const onCall = React.useCallback(
+    () =>
+      void handleSubmit(async (coercedData) => {
+        setLoading(true);
+        try {
+          const t0 = performance.now();
+          const result = await api.callTool(serverName, {
+            name: tool.name,
+            arguments: coercedData as Record<string, unknown>,
+          });
+          const settled: CallState = {
+            loading: false,
+            result,
+            durationMs: Math.round(performance.now() - t0),
+          };
+          resultStore.set(serverName, "tool", tool.name, settled);
+        } catch (e) {
+          const settled: CallState = {
+            loading: false,
+            error: e instanceof ApiError ? e.message : (e as Error).message,
+            errorResponse: e instanceof ApiError ? e.responseBody : undefined,
+          };
+          resultStore.set(serverName, "tool", tool.name, settled);
+        } finally {
+          setLoading(false);
+        }
+      })(),
+    [serverName, tool.name, handleSubmit, resultStore],
+  );
 
   const hasArgs = Object.keys(properties).length > 0;
-  const canCall = !callState.loading && Object.keys(argsResult.errors).length === 0;
+  const canCall = !callState.loading && formState.isValid;
 
   return (
     <div className="space-y-5 min-w-0">
@@ -316,11 +326,7 @@ function ToolDetail({
                     name={name}
                     prop={prop}
                     required={required.has(name)}
-                    value={values[name] ?? ""}
-                    onChange={(v) =>
-                      setArg(serverName, tool.name, name, v)
-                    }
-                    error={errors[name]}
+                    control={form.control}
                   />
                 ))}
               </div>
@@ -384,100 +390,104 @@ function ArgField({
   name,
   prop,
   required,
-  value,
-  onChange,
-  error,
+  control,
 }: {
   name: string;
   prop: MCPToolSchemaProperty;
   required: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
+  control: Control<FieldValues>;
 }) {
   const type = Array.isArray(prop.type) ? prop.type.join("|") : (prop.type ?? "any");
 
   return (
-    <div className="space-y-2">
-      <Label className="flex items-center gap-2.5">
-        <span className="font-mono normal-case text-foreground">{name}</span>
-        <Badge variant="muted" className="font-mono">
-          {type}
-        </Badge>
-        {required && (
-          <span className="inline-flex items-center text-warning">
-            <Asterisk className="size-3.5" />
-            <span className="text-[11px] uppercase tracking-wider">
-              required
-            </span>
-          </span>
-        )}
-      </Label>
-      {prop.description && (
-        <div className="text-sm text-muted-foreground/80">{prop.description}</div>
-      )}
-      {prop.enum ? (
-        <div className="flex flex-wrap gap-1.5">
-          {prop.enum.map((opt) => (
-            <button
-              key={String(opt)}
-              type="button"
-              onClick={() => onChange(String(opt))}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
-                value === String(opt)
-                  ? "border-success/40 bg-success/10 text-success"
-                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-              )}
-            >
-              {String(opt)}
-            </button>
-          ))}
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2.5">
+            <span className="font-mono normal-case text-foreground">{name}</span>
+            <Badge variant="muted" className="font-mono">
+              {type}
+            </Badge>
+            {required && (
+              <span className="inline-flex items-center text-warning">
+                <Asterisk className="size-3.5" />
+                <span className="text-[11px] uppercase tracking-wider">
+                  required
+                </span>
+              </span>
+            )}
+          </Label>
+          {prop.description && (
+            <div className="text-sm text-muted-foreground/80">{prop.description}</div>
+          )}
+          {prop.enum ? (
+            <div className="flex flex-wrap gap-1.5">
+              {prop.enum.map((opt) => (
+                <button
+                  key={String(opt)}
+                  type="button"
+                  onClick={() => field.onChange(String(opt))}
+                  className={cn(
+                    "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
+                    field.value === String(opt)
+                      ? "border-success/40 bg-success/10 text-success"
+                      : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+                  )}
+                >
+                  {String(opt)}
+                </button>
+              ))}
+            </div>
+          ) : type === "boolean" ? (
+            <div className="flex gap-1.5">
+              {["true", "false"].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => field.onChange(opt)}
+                  className={cn(
+                    "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
+                    field.value === opt
+                      ? "border-success/40 bg-success/10 text-success"
+                      : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+                  )}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : type === "object" || type === "array" ? (
+            <Textarea
+              value={field.value ?? ""}
+              onChange={(e) => field.onChange(e.target.value)}
+              onBlur={field.onBlur}
+              placeholder={type === "array" ? "[]" : "{}"}
+              rows={4}
+            />
+          ) : (
+            <Input
+              type={type === "number" || type === "integer" ? "number" : "text"}
+              value={field.value ?? ""}
+              onChange={(e) => field.onChange(e.target.value)}
+              onBlur={field.onBlur}
+              placeholder={
+                prop.default !== undefined
+                  ? `default: ${String(prop.default)}`
+                  : type === "number" || type === "integer"
+                    ? "0"
+                    : "value"
+              }
+              className="font-mono"
+            />
+          )}
+          {fieldState.error && (
+            <div className="text-xs text-destructive">{fieldState.error.message}</div>
+          )}
         </div>
-      ) : type === "boolean" ? (
-        <div className="flex gap-1.5">
-          {["true", "false"].map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(opt)}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
-                value === opt
-                  ? "border-success/40 bg-success/10 text-success"
-                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-              )}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      ) : type === "object" || type === "array" ? (
-        <Textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={type === "array" ? "[]" : "{}"}
-          rows={4}
-        />
-      ) : (
-        <Input
-          type={type === "number" || type === "integer" ? "number" : "text"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={
-            prop.default !== undefined
-              ? `default: ${String(prop.default)}`
-              : type === "number" || type === "integer"
-                ? "0"
-                : "value"
-          }
-          className="font-mono"
-        />
       )}
-      {error && (
-        <div className="text-xs text-destructive">{error}</div>
-      )}
-    </div>
+    />
   );
 }
 
@@ -698,85 +708,4 @@ function EditableJsonBlock({
       <EditorContent editor={editor} className="json-editor-content" />
     </div>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/* Coercion: form strings → typed JSON                                 */
-/* ------------------------------------------------------------------ */
-
-function coerceArguments(
-  values: Record<string, string>,
-  properties: Record<string, MCPToolSchemaProperty>,
-  required: Set<string>,
-): { value: Record<string, unknown>; errors: Record<string, string> } {
-  const out: Record<string, unknown> = {};
-  const errs: Record<string, string> = {};
-
-  for (const [name, raw] of Object.entries(values)) {
-    const prop = properties[name];
-    if (!prop) continue;
-    const isRequired = required.has(name);
-    const trimmed = raw.trim();
-
-    if (trimmed === "") {
-      if (isRequired) errs[name] = "required";
-      continue;
-    }
-
-    const type = Array.isArray(prop.type) ? prop.type[0] : prop.type;
-    switch (type) {
-      case "number":
-      case "integer": {
-        const n = Number(trimmed);
-        if (Number.isNaN(n)) {
-          errs[name] = "must be a number";
-        } else if (type === "integer" && !Number.isInteger(n)) {
-          errs[name] = "must be an integer";
-        } else if (prop.minimum != null && n < prop.minimum) {
-          errs[name] = `must be ≥ ${prop.minimum}`;
-        } else if (prop.maximum != null && n > prop.maximum) {
-          errs[name] = `must be ≤ ${prop.maximum}`;
-        } else {
-          out[name] = n;
-        }
-        break;
-      }
-      case "boolean":
-        out[name] = trimmed === "true";
-        break;
-      case "object":
-      case "array":
-        try {
-          out[name] = JSON.parse(trimmed);
-        } catch (e) {
-          errs[name] = `invalid JSON: ${(e as Error).message}`;
-        }
-        break;
-      default:
-        out[name] = trimmed;
-    }
-  }
-  return { value: out, errors: errs };
-}
-
-function reverseCoerceArguments(
-  parsed: Record<string, unknown>,
-  properties: Record<string, MCPToolSchemaProperty>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const name of Object.keys(properties)) {
-    const value = parsed[name];
-    if (value === undefined || value === null) {
-      out[name] = "";
-      continue;
-    }
-    const prop = properties[name];
-    const type = Array.isArray(prop.type) ? prop.type[0] : prop.type;
-    if (type === "object" || type === "array") {
-      out[name] = JSON.stringify(value);
-    } else {
-      out[name] = String(value);
-    }
-  }
-  return out;
 }

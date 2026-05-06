@@ -21,6 +21,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { Controller } from "react-hook-form";
+
 import { CodeBlock } from "@/components/code-block";
 import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
@@ -28,7 +30,8 @@ import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
-import { useToolArgsStore } from "@/stores/tool-args-store";
+import { useSyncedForm } from "@/hooks/use-synced-form";
+import { templateVariablesToZod } from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
 import {
   expandTemplate,
@@ -327,11 +330,19 @@ function TemplatePreview({
     [template.uriTemplate],
   );
 
-  // Persist template variable values in Zustand so they survive navigation.
-  const { getArgs, setArg } = useToolArgsStore();
-  const resultStore = useResultStore();
-  const values = getArgs(serverName, template.uriTemplate) ?? {};
+  const schema = React.useMemo(
+    () => templateVariablesToZod(variables),
+    [variables],
+  );
 
+  const form = useSyncedForm({
+    serverName,
+    formKey: template.uriTemplate,
+    schema,
+    defaults: {},
+  });
+
+  const resultStore = useResultStore();
   const [reading, setReading] = React.useState(false);
 
   const cached = resultStore.get<ReadState>(serverName, "template", template.uriTemplate);
@@ -340,7 +351,8 @@ function TemplatePreview({
   const errorResponse = cached?.errorResponse;
   const readAt = cached?.readAt ?? null;
 
-  const expanded = expandTemplate(template.uriTemplate, values);
+  const watchedValues = form.watch() as Record<string, string>;
+  const expanded = expandTemplate(template.uriTemplate, watchedValues);
   const fullyExpanded = !/\{[^}]+\}/.test(expanded);
 
   const onRead = React.useCallback(async () => {
@@ -391,36 +403,41 @@ function TemplatePreview({
             </div>
           ) : (
             <div className="space-y-5">
-              {variables.map((v) => {
-                const context: Record<string, string> = {};
-                for (const other of variables) {
-                  if (other !== v && values[other]) context[other] = values[other]!;
-                }
-                return (
-                  <div key={v} className="space-y-2">
-                    <Label className="flex items-center gap-2.5">
-                      <span className="font-mono normal-case text-foreground">
-                        {`{${v}}`}
-                      </span>
-                      <Badge variant="muted" className="font-mono">
-                        string
-                      </Badge>
-                    </Label>
-                    <CompletableInput
-                      serverName={serverName}
-                      refType="resource"
-                      ref={template.uriTemplate}
-                      argument={v}
-                      value={values[v] ?? ""}
-                      onChange={(val) =>
-                        setArg(serverName, template.uriTemplate, v, val)
-                      }
-                      context={context}
-                      placeholder="value"
-                    />
-                  </div>
-                );
-              })}
+              {variables.map((v) => (
+                <Controller
+                  key={v}
+                  name={v}
+                  control={form.control}
+                  render={({ field }) => {
+                    const context: Record<string, string> = {};
+                    for (const other of variables) {
+                      if (other !== v && watchedValues[other]) context[other] = watchedValues[other];
+                    }
+                    return (
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2.5">
+                          <span className="font-mono normal-case text-foreground">
+                            {`{${v}}`}
+                          </span>
+                          <Badge variant="muted" className="font-mono">
+                            string
+                          </Badge>
+                        </Label>
+                        <CompletableInput
+                          serverName={serverName}
+                          refType="resource"
+                          ref={template.uriTemplate}
+                          argument={v}
+                          value={(field.value as string) ?? ""}
+                          onChange={field.onChange}
+                          context={context}
+                          placeholder="value"
+                        />
+                      </div>
+                    );
+                  }}
+                />
+              ))}
             </div>
           )}
           <div className="flex items-center gap-3">

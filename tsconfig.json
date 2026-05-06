@@ -18,9 +18,6 @@
     "declaration": false,
     "sourceMap": true,
     "removeComments": false,
-    "paths": {
-      "@/*": ["./src/web/*"]
-    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "src/web"]
