@@ -461,45 +461,43 @@ function TemplatePreview({
         </CardContent>
       </Card>
 
-      <div className="grid gap-5">
-        <Card>
-          <CardHeader>
-            <CardTitle>Contents</CardTitle>
-            {reading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                reading…
-              </Badge>
-            ) : error ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : result ? (
-              <Badge variant="success">
-                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-                {readAt != null && ` · ${readAt}ms`}
-                {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            {error ? (
-              <ErrorRow message={error} errorResponse={errorResponse} />
-            ) : result ? (
-              <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
-            ) : (
-              <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-                {fullyExpanded ? (
-                  <>Click <span className="font-medium text-foreground">Resolve &amp; read</span> to fetch this resource.</>
-                ) : (
-                  <>Fill in the variables above to resolve the template.</>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Contents</CardTitle>
+          {reading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              reading…
+            </Badge>
+          ) : error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
+          ) : result ? (
+            <Badge variant="success">
+              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+              {readAt != null && ` · ${readAt}ms`}
+              {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null}
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <ErrorRow message={error} errorResponse={errorResponse} />
+          ) : result ? (
+            <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
+          ) : (
+            <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+              {fullyExpanded ? (
+                <>Click <span className="font-medium text-foreground">Resolve &amp; read</span> to fetch this resource.</>
+              ) : (
+                <>Fill in the variables above to resolve the template.</>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
