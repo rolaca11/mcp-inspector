@@ -2,6 +2,8 @@ import * as React from "react";
 import {
   AlertCircle,
   Asterisk,
+  Check,
+  Copy,
   Hammer,
   Loader2,
   Play,
@@ -19,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CodeBlock } from "@/components/code-block";
+import { CodeBlock, highlightJson } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -191,13 +193,15 @@ function ToolDetail({
   }, [properties]);
 
   // Persist argument values in Zustand so they survive navigation.
-  const { getArgs, setArg } = useToolArgsStore();
+  const { getArgs, setArg, setArgs } = useToolArgsStore();
   const cached = getArgs(serverName, tool.name);
   const values = cached ?? initial;
 
   const resultStore = useResultStore();
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
+  const [jsonOverride, setJsonOverride] = React.useState<string | null>(null);
+  const [jsonError, setJsonError] = React.useState<string | null>(null);
 
   const cachedResult = resultStore.get<CallState>(serverName, "tool", tool.name);
   const callState: CallState = loading ? { loading: true } : (cachedResult ?? { loading: false });
@@ -206,6 +210,35 @@ function ToolDetail({
     () => coerceArguments(values, properties, required),
     [values, properties, required],
   );
+
+  const canonicalJson = React.useMemo(
+    () => JSON.stringify(argsResult.value, null, 2),
+    [argsResult.value],
+  );
+
+  const onJsonChange = React.useCallback(
+    (text: string) => {
+      setJsonOverride(text);
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          setJsonError("must be an object");
+          return;
+        }
+        setJsonError(null);
+        const reversed = reverseCoerceArguments(parsed, properties);
+        setArgs(serverName, tool.name, reversed);
+      } catch {
+        setJsonError("invalid JSON");
+      }
+    },
+    [serverName, tool.name, properties, setArgs],
+  );
+
+  const onJsonBlur = React.useCallback(() => {
+    setJsonOverride(null);
+    setJsonError(null);
+  }, []);
 
   const onCall = React.useCallback(async () => {
     if (Object.keys(argsResult.errors).length > 0) {
@@ -279,11 +312,12 @@ function ToolDetail({
                   />
                 ))}
               </div>
-              <div>
-                <CodeBlock language="application/json" caption="--args">
-                  {JSON.stringify(argsResult.value, null, 2)}
-                </CodeBlock>
-              </div>
+              <EditableJsonBlock
+                value={jsonOverride ?? canonicalJson}
+                onChange={onJsonChange}
+                onBlur={onJsonBlur}
+                error={jsonError}
+              />
             </div>
           )}
           <Button
@@ -555,6 +589,90 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Editable JSON block                                                 */
+/* ------------------------------------------------------------------ */
+
+function EditableJsonBlock({
+  value,
+  onChange,
+  onBlur,
+  error,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+  onBlur: () => void;
+  error: string | null;
+}) {
+  const [copied, setCopied] = React.useState(false);
+
+  const onCopy = React.useCallback(() => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    });
+  }, [value]);
+
+  const highlighted = React.useMemo(() => highlightJson(value), [value]);
+
+  return (
+    <div
+      className={cn(
+        "group rounded-lg border overflow-hidden bg-card/40",
+        error ? "border-destructive/60" : "border-border/60",
+      )}
+    >
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-2 text-xs text-muted-foreground/80 font-mono">
+        <span className="truncate">
+          --args
+          {error && (
+            <span className="text-destructive ml-2">· {error}</span>
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+          aria-label="Copy code"
+        >
+          {copied ? (
+            <>
+              <Check className="size-3 text-success" />
+              <span>copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="size-3" />
+              <span>copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <div className="relative min-h-[80px]">
+        <pre
+          className="p-4 text-sm leading-relaxed font-mono text-foreground/90 whitespace-pre-wrap break-words pointer-events-none select-none"
+          aria-hidden="true"
+        >
+          <code>{highlighted}</code>
+          {"\n"}
+        </pre>
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
+          className="absolute inset-0 w-full h-full p-4 text-sm leading-relaxed font-mono bg-transparent resize-none outline-none text-transparent caret-foreground whitespace-pre-wrap break-words selection:bg-foreground/20"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Coercion: form strings → typed JSON                                 */
 /* ------------------------------------------------------------------ */
 
@@ -611,4 +729,26 @@ function coerceArguments(
     }
   }
   return { value: out, errors: errs };
+}
+
+function reverseCoerceArguments(
+  parsed: Record<string, unknown>,
+  properties: Record<string, MCPToolSchemaProperty>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of Object.keys(properties)) {
+    const value = parsed[name];
+    if (value === undefined || value === null) {
+      out[name] = "";
+      continue;
+    }
+    const prop = properties[name];
+    const type = Array.isArray(prop.type) ? prop.type[0] : prop.type;
+    if (type === "object" || type === "array") {
+      out[name] = JSON.stringify(value);
+    } else {
+      out[name] = String(value);
+    }
+  }
+  return out;
 }

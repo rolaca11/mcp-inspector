@@ -91,7 +91,7 @@ export function CodeBlock({
 const JSON_TOKEN =
   /("(?:[^"\\]|\\.)*")\s*(:)|("(?:[^"\\]|\\.)*")|(-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|(true|false)|(null)|([{}[\]:,])/g;
 
-function highlightJson(text: string): React.ReactNode[] {
+export function highlightJson(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   let last = 0;
   let key = 0;
