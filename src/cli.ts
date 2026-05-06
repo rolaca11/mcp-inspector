@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * CLI entry point. Wires up commander subcommands that all share the same
  * "open a session, run an action, close the session" pattern.

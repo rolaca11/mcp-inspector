@@ -20,7 +20,7 @@
 
 import { promises as fs } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { AddressInfo } from "node:net";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import open from "open";
 
