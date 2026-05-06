@@ -1,7 +1,7 @@
 import {
   Loader2,
   Plug,
-  Power,
+  RefreshCw,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ interface HeaderProps {
   apiState: ApiState;
   connection: ConnectionState;
   onConnect: () => void;
-  onDisconnect: () => void;
+  onRediscover: () => void;
   onReloadServers: () => void;
   children?: React.ReactNode;
 }
@@ -54,7 +54,7 @@ export function Header({
   apiState,
   connection,
   onConnect,
-  onDisconnect,
+  onRediscover,
   onReloadServers,
   children,
 }: HeaderProps) {
@@ -101,7 +101,7 @@ export function Header({
         <ConnectButton
           state={connection}
           onConnect={onConnect}
-          onDisconnect={onDisconnect}
+          onRediscover={onRediscover}
         />
 
         <div className="flex-1" />
@@ -153,11 +153,11 @@ export function Header({
 function ConnectButton({
   state,
   onConnect,
-  onDisconnect,
+  onRediscover,
 }: {
   state: ConnectionState;
   onConnect: () => void;
-  onDisconnect: () => void;
+  onRediscover: () => void;
 }) {
   if (state === "connecting") {
     return (
@@ -169,15 +169,13 @@ function ConnectButton({
   }
   if (state === "connected") {
     return (
-      <Button
-        size="sm"
-        variant="secondary"
-        className="ml-2 gap-1.5"
-        onClick={onDisconnect}
+      <button
+        type="button"
+        onClick={onRediscover}
+        className="ml-2 inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
-        <Power className="size-3.5" />
-        Disconnect
-      </Button>
+        <RefreshCw className="size-4" />
+      </button>
     );
   }
   return (

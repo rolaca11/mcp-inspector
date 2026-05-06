@@ -147,7 +147,7 @@ function ServerShell({
   apiState,
   reloadServers,
 }: ServerShellProps) {
-  const { data, connectionState, pendingAuthUrl, rediscover, disconnect } =
+  const { data, connectionState, pendingAuthUrl, rediscover } =
     useConnectionStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -185,7 +185,7 @@ function ServerShell({
         apiState={apiState}
         connection={connectionState}
         onConnect={rediscover}
-        onDisconnect={disconnect}
+        onRediscover={rediscover}
         onReloadServers={reloadServers}
       >
         <NavTabs serverName={active.name} counts={counts} />
