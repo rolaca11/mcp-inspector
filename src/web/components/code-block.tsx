@@ -2,6 +2,7 @@ import * as React from "react";
 import { Check, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { JsonTree } from "@/components/json-tree";
 
 interface CodeBlockProps {
   children: string;
@@ -33,9 +34,35 @@ export function CodeBlock({
     language === "application/json" ||
     language?.endsWith("+json");
 
+  const jsonData = React.useMemo(() => {
+    if (!isJson) return undefined;
+    try {
+      return JSON.parse(children) as unknown;
+    } catch {
+      return undefined;
+    }
+  }, [isJson, children]);
+
+  const isTreeView = jsonData !== undefined;
+  const hasCollapsibles =
+    isTreeView && typeof jsonData === "object" && jsonData !== null;
+
+  const [treeKey, setTreeKey] = React.useState(0);
+  const [defaultCollapsed, setDefaultCollapsed] = React.useState(false);
+
+  const onFoldAll = React.useCallback(() => {
+    setDefaultCollapsed(true);
+    setTreeKey((k) => k + 1);
+  }, []);
+
+  const onUnfoldAll = React.useCallback(() => {
+    setDefaultCollapsed(false);
+    setTreeKey((k) => k + 1);
+  }, []);
+
   const highlighted = React.useMemo(
-    () => (isJson ? highlightJson(children) : null),
-    [isJson, children],
+    () => (isJson && !isTreeView ? highlightJson(children) : null),
+    [isJson, isTreeView, children],
   );
 
   return (
@@ -45,49 +72,69 @@ export function CodeBlock({
           <span className="truncate">
             {caption ?? language ?? ""}
           </span>
-          {copyable && (
-            <button
-              type="button"
-              onClick={onCopy}
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
-              aria-label="Copy code"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-3 text-success" />
-                  <span>copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3" />
-                  <span>copy</span>
-                </>
-              )}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {hasCollapsibles && (
+              <>
+                <button
+                  type="button"
+                  onClick={onFoldAll}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+                >
+                  fold
+                </button>
+                <button
+                  type="button"
+                  onClick={onUnfoldAll}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+                >
+                  unfold
+                </button>
+              </>
+            )}
+            {copyable && (
+              <button
+                type="button"
+                onClick={onCopy}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+                aria-label="Copy code"
+              >
+                {copied ? (
+                  <>
+                    <Check className="size-3 text-success" />
+                    <span>copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3" />
+                    <span>copy</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       )}
       <pre className="overflow-x-auto p-4 text-sm leading-relaxed font-mono text-foreground/90">
-        <code>{highlighted ?? children}</code>
+        <code>
+          {isTreeView ? (
+            <JsonTree
+              key={treeKey}
+              data={jsonData}
+              defaultCollapsed={defaultCollapsed}
+            />
+          ) : (
+            highlighted ?? children
+          )}
+        </code>
       </pre>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Lightweight JSON syntax highlighting                                */
+/* Lightweight JSON syntax highlighting (fallback for malformed JSON)  */
 /* ------------------------------------------------------------------ */
 
-/**
- * Regex-based tokeniser that splits a JSON string into typed spans.
- * Handles strings (distinguishing keys from values), numbers, booleans,
- * null, and structural punctuation. Falls back to plain text on
- * anything unexpected.
- */
-
-// One pattern to match every meaningful JSON token.
-// Order matters: strings must come before numbers so that "-1" inside
-// a string isn't partially matched as a number.
 const JSON_TOKEN =
   /("(?:[^"\\]|\\.)*")\s*(:)|("(?:[^"\\]|\\.)*")|(-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|(true|false)|(null)|([{}[\]:,])/g;
 
@@ -96,59 +143,50 @@ function highlightJson(text: string): React.ReactNode[] {
   let last = 0;
   let key = 0;
 
-  // Reset the regex (it's global, so lastIndex must be 0).
   JSON_TOKEN.lastIndex = 0;
 
   let m: RegExpExecArray | null;
   while ((m = JSON_TOKEN.exec(text)) !== null) {
-    // Push any plain text between tokens (whitespace / newlines).
     if (m.index > last) {
       nodes.push(text.slice(last, m.index));
     }
 
     if (m[1] != null) {
-      // Property key  (string followed by colon)
       nodes.push(
         <span key={key++} className="text-info">
           {m[1]}
         </span>,
       );
-      // The colon itself
       nodes.push(
         <span key={key++} className="text-muted-foreground">
           {m[2]}
         </span>,
       );
     } else if (m[3] != null) {
-      // String value
       nodes.push(
         <span key={key++} className="text-success">
           {m[3]}
         </span>,
       );
     } else if (m[4] != null) {
-      // Number
       nodes.push(
         <span key={key++} className="text-warning">
           {m[4]}
         </span>,
       );
     } else if (m[5] != null) {
-      // Boolean (true / false)
       nodes.push(
         <span key={key++} className="text-warning">
           {m[5]}
         </span>,
       );
     } else if (m[6] != null) {
-      // null
       nodes.push(
         <span key={key++} className="text-muted-foreground">
           {m[6]}
         </span>,
       );
     } else if (m[7] != null) {
-      // Structural: { } [ ] , :
       nodes.push(
         <span key={key++} className="text-muted-foreground">
           {m[7]}
@@ -159,7 +197,6 @@ function highlightJson(text: string): React.ReactNode[] {
     last = m.index + m[0].length;
   }
 
-  // Trailing text (shouldn't happen in well-formed JSON, but be safe).
   if (last < text.length) {
     nodes.push(text.slice(last));
   }
