@@ -46,11 +46,17 @@
   "packageManager": "pnpm@10.24.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "tiktoken": "^1.0.22",
+    "@tiptap/extension-code-block-lowlight": "^3.22.5",
+    "@tiptap/extension-document": "^3.22.5",
+    "@tiptap/extension-text": "^3.22.5",
+    "@tiptap/react": "^3.22.5",
     "commander": "^14.0.3",
+    "highlight.js": "^11.11.1",
+    "lowlight": "^3.3.0",
     "open": "^11.0.0",
     "picocolors": "^1.1.1",
-    "shell-quote": "^1.8.3"
+    "shell-quote": "^1.8.3",
+    "tiktoken": "^1.0.22"
   },
   "devDependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

@@ -178,6 +178,50 @@
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* TipTap JSON editor                                                  */
+/* ------------------------------------------------------------------ */
+
+.json-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.json-editor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.json-editor .tiptap {
+  outline: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.json-editor .tiptap pre {
+  flex: 1;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: oklch(0.985 0 0 / 0.9);
+}
+
+.json-editor .tiptap pre code {
+  font-family: inherit;
+  background: none;
+  padding: 0;
+}
+
+.json-editor .hljs-attr { color: var(--info); }
+.json-editor .hljs-string { color: var(--success); }
+.json-editor .hljs-number { color: var(--warning); }
+.json-editor .hljs-literal { color: var(--warning); }
+.json-editor .hljs-keyword { color: var(--muted-foreground); }
+.json-editor .hljs-punctuation { color: var(--muted-foreground); }
+
 @layer utilities {
   .grid-bg {
     background-image:

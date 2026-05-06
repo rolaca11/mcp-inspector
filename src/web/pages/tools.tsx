@@ -21,7 +21,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CodeBlock, highlightJson } from "@/components/code-block";
+import { useEditor, EditorContent } from "@tiptap/react";
+import Document from "@tiptap/extension-document";
+import Text from "@tiptap/extension-text";
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { createLowlight } from "lowlight";
+import json from "highlight.js/lib/languages/json";
+
+import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -31,6 +38,11 @@ import { useToolArgsStore } from "@/stores/tool-args-store";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
+
+const lowlight = createLowlight();
+lowlight.register({ json });
+
+const JsonDocument = Document.extend({ content: "codeBlock" });
 
 export function ToolsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -592,6 +604,17 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
 /* Editable JSON block                                                 */
 /* ------------------------------------------------------------------ */
 
+function makeCodeBlockContent(text: string) {
+  return {
+    type: "doc" as const,
+    content: [{
+      type: "codeBlock" as const,
+      attrs: { language: "json" },
+      content: text ? [{ type: "text" as const, text }] : [],
+    }],
+  };
+}
+
 function EditableJsonBlock({
   value,
   onChange,
@@ -612,12 +635,37 @@ function EditableJsonBlock({
     });
   }, [value]);
 
-  const highlighted = React.useMemo(() => highlightJson(value), [value]);
+  const editor = useEditor({
+    extensions: [
+      JsonDocument,
+      Text,
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: "json",
+        exitOnTripleEnter: false,
+        exitOnArrowDown: false,
+      }),
+    ],
+    content: makeCodeBlockContent(value),
+    onUpdate: ({ editor }) => {
+      onChange(editor.state.doc.textContent);
+    },
+    onBlur: () => {
+      onBlur();
+    },
+  }, [onChange, onBlur]);
+
+  React.useEffect(() => {
+    if (!editor || editor.isDestroyed || editor.isFocused) return;
+    if (editor.state.doc.textContent === value) return;
+
+    editor.commands.setContent(makeCodeBlockContent(value));
+  }, [value, editor]);
 
   return (
     <div
       className={cn(
-        "group rounded-lg border overflow-hidden bg-card/40",
+        "json-editor group rounded-lg border overflow-hidden bg-card/40",
         error ? "border-destructive/60" : "border-border/60",
       )}
     >
@@ -647,27 +695,7 @@ function EditableJsonBlock({
           )}
         </button>
       </div>
-      <div className="relative min-h-[80px]">
-        <pre
-          className="p-4 text-sm leading-relaxed font-mono text-foreground/90 whitespace-pre-wrap break-words pointer-events-none select-none"
-          aria-hidden="true"
-        >
-          <code>{highlighted}</code>
-          {"\n"}
-        </pre>
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-          spellCheck={false}
-          autoCorrect="off"
-          autoCapitalize="off"
-          data-gramm="false"
-          data-gramm_editor="false"
-          data-enable-grammarly="false"
-          className="absolute inset-0 w-full h-full p-4 text-sm leading-relaxed font-mono bg-transparent resize-none outline-none text-transparent caret-foreground whitespace-pre-wrap break-words selection:bg-foreground/20"
-        />
-      </div>
+      <EditorContent editor={editor} className="json-editor-content" />
     </div>
   );
 }
