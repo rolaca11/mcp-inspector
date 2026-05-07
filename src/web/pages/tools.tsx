@@ -404,7 +404,7 @@ function ArgField({
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label className="flex items-center gap-2.5">
             <span className="font-mono normal-case text-foreground">{name}</span>
             <Badge variant="muted" className="font-mono">
@@ -419,9 +419,9 @@ function ArgField({
               </span>
             )}
           </Label>
-          <div className="flex-1 text-sm text-muted-foreground/80">{prop.description}</div>
+          <div className="flex-1 text-sm text-muted-foreground/80 ms-4">{prop.description}</div>
           {prop.enum ? (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 ms-4">
               {prop.enum.map((opt) => {
                 const selected = field.value === String(opt);
                 const nullable = Array.isArray(prop.type) && prop.type.includes("null");
@@ -443,7 +443,7 @@ function ArgField({
               })}
             </div>
           ) : resolvedType === "boolean" ? (
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 ms-4">
               {["true", "false"].map((opt) => {
                 const selected = field.value === opt;
                 const nullable = Array.isArray(prop.type) && prop.type.includes("null");
@@ -474,6 +474,7 @@ function ArgField({
               onChange={(e) => field.onChange(e.target.value)}
               onBlur={field.onBlur}
               placeholder={resolvedType === "array" ? "[]" : "{}"}
+              className="ms-4"
               rows={4}
             />
           ) : (
@@ -489,11 +490,11 @@ function ArgField({
                     ? "0"
                     : "value"
               }
-              className="font-mono"
+              className="font-mono ms-4"
             />
           )}
           {fieldState.error && (
-            <div className="text-xs text-destructive">{fieldState.error.message}</div>
+            <div className="text-xs text-destructive ms-4">{fieldState.error.message}</div>
           )}
         </div>
       )}
@@ -576,7 +577,7 @@ function ObjectFields({
   );
 
   return (
-    <div className="space-y-3 rounded-md border border-border/40 bg-black/10 p-3">
+    <div className="space-y-3 rounded-md border border-border/40 bg-black/10 p-3 ms-4">
       {Object.entries(properties).map(([name, prop]) => (
         <ObjectPropertyField
           key={name}
@@ -688,7 +689,7 @@ function ArrayFields({
   const isComplex = (itemType === "object" && itemSchema.properties) || itemType === "array";
 
   return (
-    <div className="space-y-2 rounded-md border border-border/40 bg-black/10 p-3">
+    <div className="space-y-2 rounded-md border border-border/40 bg-black/10 p-3 ms-4">
       {value.map((item, index) => (
         <div
           key={index}

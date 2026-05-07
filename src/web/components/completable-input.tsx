@@ -159,7 +159,7 @@ export function CompletableInput({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className={cn("font-mono", className)}
+            className={cn("font-mono w-full", className)}
             placeholder={placeholder}
             autoComplete="off"
           />

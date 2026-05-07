@@ -404,7 +404,7 @@ function TemplatePreview({
                       if (other !== v && watchedValues[other]) context[other] = watchedValues[other];
                     }
                     return (
-                      <div className="space-y-2">
+                      <div className="flex flex-col gap-2">
                         <Label className="flex items-center gap-2.5">
                           <span className="font-mono normal-case text-foreground">
                             {`{${v}}`}
