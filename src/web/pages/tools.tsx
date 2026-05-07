@@ -397,6 +397,9 @@ function ArgField({
   control: Control<FieldValues>;
 }) {
   const type = Array.isArray(prop.type) ? prop.type.join("|") : (prop.type ?? "any");
+  const resolvedType = Array.isArray(prop.type)
+    ? prop.type.find((t) => t !== "null") ?? prop.type[0]
+    : prop.type;
 
   return (
     <Controller
@@ -439,7 +442,7 @@ function ArgField({
                 </button>
               ))}
             </div>
-          ) : type === "boolean" ? (
+          ) : resolvedType === "boolean" ? (
             <div className="flex gap-1.5">
               {["true", "false"].map((opt) => (
                 <button
@@ -457,24 +460,26 @@ function ArgField({
                 </button>
               ))}
             </div>
-          ) : type === "object" || type === "array" ? (
+          ) : resolvedType === "object" && prop.properties ? (
+            <ObjectArgFieldWrapper field={field} prop={prop} />
+          ) : resolvedType === "object" || resolvedType === "array" ? (
             <Textarea
               value={field.value ?? ""}
               onChange={(e) => field.onChange(e.target.value)}
               onBlur={field.onBlur}
-              placeholder={type === "array" ? "[]" : "{}"}
+              placeholder={resolvedType === "array" ? "[]" : "{}"}
               rows={4}
             />
           ) : (
             <Input
-              type={type === "number" || type === "integer" ? "number" : "text"}
+              type={resolvedType === "number" || resolvedType === "integer" ? "number" : "text"}
               value={field.value ?? ""}
               onChange={(e) => field.onChange(e.target.value)}
               onBlur={field.onBlur}
               placeholder={
                 prop.default !== undefined
                   ? `default: ${String(prop.default)}`
-                  : type === "number" || type === "integer"
+                  : resolvedType === "number" || resolvedType === "integer"
                     ? "0"
                     : "value"
               }
@@ -486,6 +491,300 @@ function ArgField({
           )}
         </div>
       )}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Object sub-fields                                                   */
+/* ------------------------------------------------------------------ */
+
+function parseObjectValue(value: string): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const obj = JSON.parse(value);
+    return typeof obj === "object" && obj !== null && !Array.isArray(obj)
+      ? (obj as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function ObjectArgFieldWrapper({
+  field,
+  prop,
+}: {
+  field: { value: string; onChange: (v: string) => void; onBlur: () => void };
+  prop: MCPToolSchemaProperty;
+}) {
+  const parsed = React.useMemo(
+    () => parseObjectValue(field.value),
+    [field.value],
+  );
+
+  const onChange = React.useCallback(
+    (obj: Record<string, unknown>) => {
+      field.onChange(
+        Object.keys(obj).length > 0 ? JSON.stringify(obj) : "",
+      );
+    },
+    [field],
+  );
+
+  return (
+    <ObjectFields
+      value={parsed}
+      onChange={onChange}
+      onBlur={field.onBlur}
+      properties={prop.properties!}
+      requiredSet={new Set(prop.required ?? [])}
+    />
+  );
+}
+
+function ObjectFields({
+  value,
+  onChange,
+  onBlur,
+  properties,
+  requiredSet,
+}: {
+  value: Record<string, unknown>;
+  onChange: (obj: Record<string, unknown>) => void;
+  onBlur: () => void;
+  properties: Record<string, MCPToolSchemaProperty>;
+  requiredSet: Set<string>;
+}) {
+  const handleChange = React.useCallback(
+    (name: string, subValue: unknown) => {
+      const next = { ...value };
+      if (subValue === undefined) {
+        delete next[name];
+      } else {
+        next[name] = subValue;
+      }
+      onChange(next);
+    },
+    [value, onChange],
+  );
+
+  return (
+    <div className="space-y-3 rounded-md border border-border/40 bg-black/10 p-3">
+      {Object.entries(properties).map(([name, prop]) => (
+        <ObjectPropertyField
+          key={name}
+          name={name}
+          prop={prop}
+          required={requiredSet.has(name)}
+          value={value[name]}
+          onChange={(v) => handleChange(name, v)}
+          onBlur={onBlur}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ObjectPropertyField({
+  name,
+  prop,
+  required,
+  value,
+  onChange,
+  onBlur,
+}: {
+  name: string;
+  prop: MCPToolSchemaProperty;
+  required: boolean;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  onBlur: () => void;
+}) {
+  const typeDisplay = Array.isArray(prop.type)
+    ? prop.type.join("|")
+    : (prop.type ?? "any");
+  const resolvedType = Array.isArray(prop.type)
+    ? prop.type.find((t) => t !== "null") ?? prop.type[0]
+    : prop.type;
+
+  const stringValue =
+    value === undefined || value === null
+      ? ""
+      : typeof value === "object"
+        ? JSON.stringify(value)
+        : String(value);
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="flex items-center gap-2">
+        <span className="font-mono normal-case text-foreground text-xs">
+          {name}
+        </span>
+        <Badge variant="muted" className="font-mono text-[10px] px-1.5 py-0">
+          {typeDisplay}
+        </Badge>
+        {required && (
+          <span className="inline-flex items-center text-warning">
+            <Asterisk className="size-3" />
+            <span className="text-[10px] uppercase tracking-wider">
+              required
+            </span>
+          </span>
+        )}
+      </Label>
+      {prop.description && (
+        <div className="text-xs text-muted-foreground/80">
+          {prop.description}
+        </div>
+      )}
+      {prop.enum ? (
+        <div className="flex flex-wrap gap-1">
+          {prop.enum.map((opt) => (
+            <button
+              key={String(opt)}
+              type="button"
+              onClick={() => onChange(opt)}
+              className={cn(
+                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                stringValue === String(opt)
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+              )}
+            >
+              {String(opt)}
+            </button>
+          ))}
+        </div>
+      ) : resolvedType === "boolean" ? (
+        <div className="flex gap-1">
+          {[true, false].map((opt) => (
+            <button
+              key={String(opt)}
+              type="button"
+              onClick={() => onChange(opt)}
+              className={cn(
+                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                value === opt
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+              )}
+            >
+              {String(opt)}
+            </button>
+          ))}
+        </div>
+      ) : resolvedType === "object" && prop.properties ? (
+        <ObjectFields
+          value={
+            typeof value === "object" &&
+            value !== null &&
+            !Array.isArray(value)
+              ? (value as Record<string, unknown>)
+              : {}
+          }
+          onChange={onChange as (obj: Record<string, unknown>) => void}
+          onBlur={onBlur}
+          properties={prop.properties}
+          requiredSet={new Set(prop.required ?? [])}
+        />
+      ) : resolvedType === "object" || resolvedType === "array" ? (
+        <JsonSubField
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          placeholder={resolvedType === "array" ? "[]" : "{}"}
+        />
+      ) : (
+        <Input
+          type={
+            resolvedType === "number" || resolvedType === "integer"
+              ? "number"
+              : "text"
+          }
+          value={stringValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "") {
+              onChange(undefined);
+            } else if (
+              resolvedType === "number" ||
+              resolvedType === "integer"
+            ) {
+              const n = Number(v);
+              onChange(Number.isNaN(n) ? undefined : n);
+            } else {
+              onChange(v);
+            }
+          }}
+          onBlur={onBlur}
+          placeholder={
+            prop.default !== undefined
+              ? `default: ${String(prop.default)}`
+              : resolvedType === "number" || resolvedType === "integer"
+                ? "0"
+                : "value"
+          }
+          className="font-mono text-xs"
+        />
+      )}
+    </div>
+  );
+}
+
+function JsonSubField({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  onBlur: () => void;
+  placeholder: string;
+}) {
+  const canonical = React.useMemo(
+    () =>
+      value !== undefined && value !== null
+        ? JSON.stringify(value, null, 2)
+        : "",
+    [value],
+  );
+
+  const [text, setText] = React.useState(canonical);
+  const focusedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!focusedRef.current) setText(canonical);
+  }, [canonical]);
+
+  return (
+    <Textarea
+      value={text}
+      onFocus={() => {
+        focusedRef.current = true;
+      }}
+      onBlur={() => {
+        focusedRef.current = false;
+        setText(canonical);
+        onBlur();
+      }}
+      onChange={(e) => {
+        const t = e.target.value;
+        setText(t);
+        if (t.trim() === "") {
+          onChange(undefined);
+        } else {
+          try {
+            onChange(JSON.parse(t));
+          } catch {
+            // Don't propagate until valid JSON
+          }
+        }
+      }}
+      placeholder={placeholder}
+      rows={3}
+      className="text-xs font-mono"
     />
   );
 }
