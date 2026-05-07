@@ -42,7 +42,7 @@ export function Header({
       <div className="mx-auto flex h-18 max-w-450 items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-4 min-w-0">
-          <Logo size={28} className="text-foreground/80" />
+          <Logo size={32} className="text-foreground" />
           <nav className="flex items-center gap-1.5 text-muted-foreground/70 text-base">
             <SourceSelector
               sources={sources}
