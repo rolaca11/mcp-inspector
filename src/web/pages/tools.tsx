@@ -42,6 +42,7 @@ import {
   mcpSchemaToZod,
   partialCoerce,
   reverseCoerceArguments,
+  resolveSchemaRefs,
 } from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
@@ -199,8 +200,12 @@ function ToolDetail({
   serverName: string;
   tool: MCPTool;
 }) {
-  const properties = tool.inputSchema.properties ?? {};
-  const required = new Set(tool.inputSchema.required ?? []);
+  const resolvedSchema = React.useMemo(
+    () => resolveSchemaRefs(tool.inputSchema),
+    [tool.inputSchema],
+  );
+  const properties = resolvedSchema.properties ?? {};
+  const required = new Set(resolvedSchema.required ?? []);
 
   const initial = React.useMemo(() => {
     const init: Record<string, string> = {};
@@ -214,8 +219,8 @@ function ToolDetail({
   }, [properties]);
 
   const schema = React.useMemo(
-    () => mcpSchemaToZod(tool.inputSchema),
-    [tool.inputSchema],
+    () => mcpSchemaToZod(resolvedSchema),
+    [resolvedSchema],
   );
 
   const form = useSyncedForm({

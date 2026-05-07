@@ -1,6 +1,85 @@
 import { z } from "zod";
 import type { MCPToolSchema, MCPToolSchemaProperty } from "@/data/types";
 
+function resolveJsonPointer(root: Record<string, unknown>, pointer: string): unknown {
+  const path = pointer.replace(/^#\//, "").split("/").map(s =>
+    s.replace(/~1/g, "/").replace(/~0/g, "~"),
+  );
+  let current: unknown = root;
+  for (const segment of path) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+function resolveRefNode(
+  node: Record<string, unknown>,
+  root: Record<string, unknown>,
+  seen: Set<string>,
+): Record<string, unknown> {
+  const ref = node["$ref"];
+  if (typeof ref !== "string") return node;
+  if (seen.has(ref)) return node;
+  seen.add(ref);
+
+  const resolved = resolveJsonPointer(root, ref);
+  if (resolved == null || typeof resolved !== "object" || Array.isArray(resolved)) return node;
+
+  const { "$ref": _, ...siblings } = node;
+  const merged = { ...(resolved as Record<string, unknown>), ...siblings };
+  return resolveRefsDeep(merged, root, seen);
+}
+
+function resolveRefsDeep(
+  node: Record<string, unknown>,
+  root: Record<string, unknown>,
+  seen: Set<string>,
+): Record<string, unknown> {
+  let result = node;
+  if ("$ref" in result) {
+    result = resolveRefNode(result, root, new Set(seen));
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(result)) {
+    if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+      const props: Record<string, unknown> = {};
+      for (const [pName, pValue] of Object.entries(value as Record<string, unknown>)) {
+        if (pValue && typeof pValue === "object" && !Array.isArray(pValue)) {
+          props[pName] = resolveRefsDeep(pValue as Record<string, unknown>, root, new Set(seen));
+        } else {
+          props[pName] = pValue;
+        }
+      }
+      out[key] = props;
+    } else if (key === "items" && value && typeof value === "object" && !Array.isArray(value)) {
+      out[key] = resolveRefsDeep(value as Record<string, unknown>, root, new Set(seen));
+    } else if (
+      (key === "anyOf" || key === "oneOf" || key === "allOf") &&
+      Array.isArray(value)
+    ) {
+      out[key] = value.map((item) =>
+        item && typeof item === "object" && !Array.isArray(item)
+          ? resolveRefsDeep(item as Record<string, unknown>, root, new Set(seen))
+          : item,
+      );
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+export function resolveSchemaRefs(schema: MCPToolSchema): MCPToolSchema {
+  const resolved = resolveRefsDeep(
+    schema as unknown as Record<string, unknown>,
+    schema as unknown as Record<string, unknown>,
+    new Set(),
+  );
+  return resolved as unknown as MCPToolSchema;
+}
+
 function resolveType(prop: MCPToolSchemaProperty): string | undefined {
   if (Array.isArray(prop.type)) {
     return prop.type.find((t) => t !== "null") ?? prop.type[0];
