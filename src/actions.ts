@@ -3,7 +3,7 @@
  * print to stdout/stderr. These are the building blocks both the CLI
  * subcommands and the interactive REPL invoke — keeping the behavior in
  * one place means scripted (`mcp-inspector tools list ...`) and interactive
- * (`mcpi> tools`) modes stay in lock-step.
+ * (`mcp-inspector> tools`) modes stay in lock-step.
  */
 
 import pc from "picocolors";

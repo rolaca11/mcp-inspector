@@ -31,7 +31,7 @@ Or with pnpm:
 pnpm add -g @rolaca11/mcp-inspector
 ```
 
-This gives you the `mcp-inspector` and `mcpi` commands globally.
+This gives you the `mcp-inspector` command globally.
 
 ### One-off usage with npx
 
@@ -51,7 +51,7 @@ pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
 
 `pnpm build` produces both:
 
-- `dist/cli.js` — the binary exposed as `mcp-inspector` / `mcpi` via
+- `dist/cli.js` — the binary exposed as `mcp-inspector` via
   `package.json#bin`.
 - `dist/web/` — the static dashboard bundle that `mcp-inspector serve` loads.
 
@@ -268,14 +268,14 @@ The redirect URI uses the literal loopback IP (`127.0.0.1`) rather than
 verbs as the CLI:
 
 ```text
-mcpi> discover
-mcpi> tools
-mcpi> call echo {"message":"hi"}
-mcpi> read demo://resource/static/document/instructions.md
-mcpi> complete prompt completable-prompt department
-mcpi> json on
-mcpi> tools
-mcpi> quit
+mcp-inspector> discover
+mcp-inspector> tools
+mcp-inspector> call echo {"message":"hi"}
+mcp-inspector> read demo://resource/static/document/instructions.md
+mcp-inspector> complete prompt completable-prompt department
+mcp-inspector> json on
+mcp-inspector> tools
+mcp-inspector> quit
 ```
 
 Tab completion is on for verbs, tool names, prompt names, resource URIs, and

@@ -64,7 +64,7 @@ export async function runRepl(session: Session): Promise<void> {
   }
   console.log(pc.dim('type "help" for commands, "quit" to exit'));
 
-  rl.setPrompt(pc.bold(pc.cyan("mcpi> ")));
+  rl.setPrompt(pc.bold(pc.cyan("mcp-inspector> ")));
   rl.prompt();
 
   const lineHandler = async (raw: string) => {

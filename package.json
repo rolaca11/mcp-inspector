@@ -4,8 +4,7 @@
   "description": "MCP client for discovering and exercising resources, tools, prompts, and completions over stdio or OAuth-protected HTTP. Ships with a CLI, an interactive REPL, and a web dashboard served by `mcp-inspector serve`.",
   "type": "module",
   "bin": {
-    "mcp-inspector": "dist/cli.js",
-    "mcpi": "dist/cli.js"
+    "mcp-inspector": "dist/cli.js"
   },
   "files": [
     "dist",
