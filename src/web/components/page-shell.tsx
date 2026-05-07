@@ -57,7 +57,7 @@ export function MetaItem({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-2 h-6">
+    <span className="inline-flex items-center gap-1.5 h-6">
       {Icon && <Icon className="size-4 text-muted-foreground/70" />}
       {children}
     </span>

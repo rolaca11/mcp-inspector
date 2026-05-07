@@ -1,33 +1,19 @@
-import { useState } from "react";
-import {
-  AlertCircle,
-  RefreshCw,
-  Clock,
-  Tag,
-  Loader2,
-  ChevronRight,
-} from "lucide-react";
+import {useState} from "react";
+import {AlertCircle, ChevronRight, Loader2, RefreshCw, Tag,} from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Empty } from "@/components/empty";
-import { MetaItem, PageShell } from "@/components/page-shell";
-import { StatusDot } from "@/components/status-dot";
-import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import { useConnectionStore } from "@/stores/connection-store";
-import { useActivityStore, type ActivityEntry } from "@/stores/activity-store";
-import { CodeBlock } from "@/components/code-block";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
+import {Empty} from "@/components/empty";
+import {MetaItem, PageShell} from "@/components/page-shell";
+import {TransportIcon, transportLabel} from "@/components/transport-icon";
+import {useConnectionStore} from "@/stores/connection-store";
+import {type ActivityEntry, useActivityStore} from "@/stores/activity-store";
+import {CodeBlock} from "@/components/code-block";
+import {cn, formatRelativeTime} from "@/lib/utils";
 
 export function OverviewPage() {
-  const { server, data, connectionState: state, error, lastDiscoveredAt, rediscover } =
+  const { server, data, connectionState: state, error, rediscover } =
     useConnectionStore();
   const activity = useActivityStore((s) => s.entries);
   const activityForServer = activity.filter((a) => a.serverName === server?.name);
@@ -35,22 +21,6 @@ export function OverviewPage() {
   if (!server) {
     return null;
   }
-
-  const tone =
-    state === "connected"
-      ? "success"
-      : state === "error"
-        ? "destructive"
-        : state === "connecting"
-          ? "warning"
-          : "muted";
-  const statusLabel = {
-    connected: "Connected",
-    connecting: "Connecting…",
-    disconnected: "Disconnected",
-    error: "Connection error",
-    idle: "Idle",
-  }[state];
 
   return (
     <PageShell
@@ -79,17 +49,6 @@ export function OverviewPage() {
       meta={
         <>
           <MetaItem>
-            <span className="inline-flex items-center gap-1.5">
-              <StatusDot
-                tone={tone}
-                pulse={state === "connected" || state === "connecting"}
-              />
-              <span className={tone === "success" ? "text-success" : ""}>
-                {statusLabel}
-              </span>
-            </span>
-          </MetaItem>
-          <MetaItem>
             <Badge variant="muted" className="font-mono">
               <TransportIcon transport={server!.transport} />
               {transportLabel(server!.transport)}
@@ -100,11 +59,6 @@ export function OverviewPage() {
               <span className="font-mono text-foreground/70">
                 {data.server?.version}
               </span>
-            </MetaItem>
-          )}
-          {lastDiscoveredAt && (
-            <MetaItem icon={Clock}>
-              discovered {formatRelativeTime(lastDiscoveredAt)}
             </MetaItem>
           )}
         </>
@@ -207,7 +161,6 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
             !hasResponse && "invisible",
           )}
         />
-        <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
         <Badge variant={tone} className="font-mono w-24 pt-1 justify-center">
           {kindLabel}
         </Badge>
