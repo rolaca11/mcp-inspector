@@ -67,10 +67,10 @@ function ToggleBtn({
       role="button"
       tabIndex={0}
     >
-      <span className="text-muted-foreground/50 select-none">
-        {collapsed ? "▸ " : "▾ "}
-      </span>
       {children}
+      <span className="text-muted-foreground/50 select-none">
+        {collapsed ? " ▸" : " ▾"}
+      </span>
     </span>
   );
 }
