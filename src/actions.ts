@@ -47,7 +47,9 @@ function emitTokenCount(payload: unknown, opts: FormatOptions): void {
 
 export async function discover(session: Session, opts: FormatOptions = {}) {
   const caps = session.client.getServerCapabilities() ?? {};
-  const info = session.client.getServerVersion();
+  const version = session.client.getServerVersion();
+  const instructions = session.client.getInstructions();
+  const info = version ? { ...version, instructions } : undefined;
 
   const [resources, templates, tools, prompts] = await Promise.all([
     caps.resources ? safeList(() => session.client.listResources()) : { resources: [] as ResourceLike[] },

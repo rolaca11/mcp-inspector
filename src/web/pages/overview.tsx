@@ -11,6 +11,7 @@ import {useConnectionStore} from "@/stores/connection-store";
 import {type ActivityEntry, useActivityStore} from "@/stores/activity-store";
 import {CodeBlock} from "@/components/code-block";
 import {cn, formatRelativeTime} from "@/lib/utils";
+import {MarkdownDescription} from "@/components/markdown-description";
 
 export function OverviewPage() {
   const { server, data, connectionState: state, error, rediscover } =
@@ -45,7 +46,6 @@ export function OverviewPage() {
           </span>
         </span>
       }
-      description={data?.server?.instructions ?? undefined}
       meta={
         <>
           <MetaItem>
@@ -83,6 +83,18 @@ export function OverviewPage() {
             >
               Retry
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {data?.server?.instructions && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Server instructions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MarkdownDescription
+              className="text-base text-muted-foreground leading-relaxed">{data.server.instructions}</MarkdownDescription>
           </CardContent>
         </Card>
       )}

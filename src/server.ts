@@ -28,19 +28,19 @@
  * always closed on process exit so child stdio processes are reaped.
  */
 
-import { createReadStream, promises as fs } from "node:fs";
+import {createReadStream, promises as fs} from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {fileURLToPath} from "node:url";
 
 import pc from "picocolors";
 
-import { connect, type Session } from "./client.js";
-import { loadConfigSync, type LoadedConfig } from "./config.js";
-import { errorMessage } from "./format.js";
-import { authFile } from "./paths.js";
-import { setLoadedConfig, parseTarget, targetId } from "./target.js";
-import { countResponseTokens } from "./tokens.js";
+import {connect, type Session} from "./client.js";
+import {loadConfigSync, type LoadedConfig} from "./config.js";
+import {errorMessage} from "./format.js";
+import {authFile} from "./paths.js";
+import {parseTarget, setLoadedConfig, targetId} from "./target.js";
+import {countResponseTokens} from "./tokens.js";
 
 /* ------------------------------------------------------------------ */
 /* Pending auth URLs (serve-mode: sent to the web UI instead of        */
@@ -422,7 +422,8 @@ async function handleApi(
 
 async function actionDiscover(session: Session) {
   const caps = session.client.getServerCapabilities() ?? {};
-  const info = session.client.getServerVersion() ?? null;
+  const version = session.client.getServerVersion() ?? null;
+  const instructions = session.client.getInstructions();
 
   const [resources, templates, tools, prompts] = await Promise.all([
     caps.resources
@@ -442,7 +443,7 @@ async function actionDiscover(session: Session) {
   ]);
 
   return {
-    server: info,
+    server: {...version, instructions},
     capabilities: caps,
     resources,
     resourceTemplates: templates,
