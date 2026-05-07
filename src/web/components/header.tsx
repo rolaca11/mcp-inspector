@@ -1,5 +1,6 @@
 import {Loader2, Plug, RefreshCw,} from "lucide-react";
 import {Button} from "@/components/ui/button";
+import {Logo} from "@/components/logo";
 import {ServerSelector} from "@/components/server-selector";
 import {SourceSelector} from "@/components/source-selector";
 import type {ConnectionState} from "@/stores/connection-store";
@@ -41,6 +42,7 @@ export function Header({
       <div className="mx-auto flex h-18 max-w-450 items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-4 min-w-0">
+          <Logo size={28} className="text-foreground/80" />
           <nav className="flex items-center gap-1.5 text-muted-foreground/70 text-base">
             <SourceSelector
               sources={sources}
