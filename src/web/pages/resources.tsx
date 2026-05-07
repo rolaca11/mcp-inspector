@@ -42,6 +42,7 @@ import {
   type ResourceContents,
 } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { MarkdownDescription } from "@/components/markdown-description";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -257,7 +258,7 @@ function ResourcePreview({
         </CardHeader>
         <CardContent className="space-y-6">
           {resource.description && (
-            <p className="text-sm text-muted-foreground">{resource.description}</p>
+            <MarkdownDescription className="text-muted-foreground">{resource.description}</MarkdownDescription>
           )}
           <Button variant="success" onClick={onRead} disabled={reading}>
             {reading ? (
@@ -385,7 +386,7 @@ function TemplatePreview({
         </CardHeader>
         <CardContent className="space-y-6">
           {template.description && (
-            <p className="text-sm text-muted-foreground">{template.description}</p>
+            <MarkdownDescription className="text-muted-foreground">{template.description}</MarkdownDescription>
           )}
           {variables.length === 0 ? (
             <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">

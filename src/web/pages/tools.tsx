@@ -47,6 +47,7 @@ import {
 import { api, ApiError } from "@/data/api";
 import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { MarkdownDescription } from "@/components/markdown-description";
 
 const lowlight = createLowlight();
 lowlight.register({ json });
@@ -317,7 +318,7 @@ function ToolDetail({
         </CardHeader>
         <CardContent className="space-y-6">
           {tool.description && (
-            <p className="text-sm text-muted-foreground">{tool.description}</p>
+            <MarkdownDescription className="text-muted-foreground">{tool.description}</MarkdownDescription>
           )}
           {hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
@@ -424,7 +425,7 @@ function ArgField({
               </span>
             )}
           </Label>
-          <div className="flex-1 text-sm text-muted-foreground/80 ms-4">{prop.description}</div>
+          {prop.description && <MarkdownDescription className="flex-1 text-muted-foreground/80 ms-4">{prop.description}</MarkdownDescription>}
           {prop.enum ? (
             <div className="flex flex-wrap gap-1.5 ms-4">
               {prop.enum.map((opt) => {
@@ -952,9 +953,7 @@ function ObjectPropertyField({
         )}
       </Label>
       {prop.description && (
-        <div className="text-xs text-muted-foreground/80">
-          {prop.description}
-        </div>
+        <MarkdownDescription className="text-muted-foreground/80 text-xs">{prop.description}</MarkdownDescription>
       )}
       <ValueField
         value={value}

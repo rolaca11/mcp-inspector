@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,6 +27,7 @@ import { useSelectionStore } from "@/stores/selection-store";
 import { api, ApiError } from "@/data/api";
 import type { GetPromptResult, MCPPrompt } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { MarkdownDescription } from "@/components/markdown-description";
 
 export function PromptsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -243,7 +243,7 @@ function PromptDetail({
               )}
             </CardTitle>
             {prompt.description && (
-              <CardDescription>{prompt.description}</CardDescription>
+              <MarkdownDescription className="text-muted-foreground">{prompt.description}</MarkdownDescription>
             )}
           </div>
           <Button
@@ -285,9 +285,7 @@ function PromptDetail({
                     )}
                   </Label>
                   {arg.description && (
-                    <div className="text-sm text-muted-foreground/80">
-                      {arg.description}
-                    </div>
+                    <MarkdownDescription className="text-muted-foreground/80">{arg.description}</MarkdownDescription>
                   )}
                   <CompletableInput
                     serverName={serverName}
@@ -365,9 +363,7 @@ function PromptResultView({ result }: { result: GetPromptResult }) {
   return (
     <div className="space-y-3">
       {result.description && (
-        <div className="text-sm text-muted-foreground italic">
-          {result.description}
-        </div>
+        <MarkdownDescription className="text-muted-foreground italic">{result.description}</MarkdownDescription>
       )}
       {result.messages.map((msg, i) => (
         <div
