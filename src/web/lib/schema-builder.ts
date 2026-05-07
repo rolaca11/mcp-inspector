@@ -71,6 +71,15 @@ function mcpPropertyToZod(
 
   if (isNullable(prop)) {
     schema = schema.nullable();
+
+    if (required) {
+      schema = z.union([
+        z
+          .literal("")
+          .transform(() => null),
+        schema,
+      ]);
+    }
   }
 
   if (!required) {
@@ -134,7 +143,12 @@ export function partialCoerce(
     const prop = properties[name];
     if (!prop) continue;
     const trimmed = (raw ?? "").trim();
-    if (trimmed === "") continue;
+    if (trimmed === "") {
+      if (prop.enum && isNullable(prop)) {
+        out[name] = null;
+      }
+      continue;
+    }
 
     const type = resolveType(prop);
     switch (type) {

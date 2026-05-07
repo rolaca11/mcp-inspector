@@ -428,39 +428,47 @@ function ArgField({
           )}
           {prop.enum ? (
             <div className="flex flex-wrap gap-1.5">
-              {prop.enum.map((opt) => (
-                <button
-                  key={String(opt)}
-                  type="button"
-                  onClick={() => field.onChange(String(opt))}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
-                    field.value === String(opt)
-                      ? "border-success/40 bg-success/10 text-success"
-                      : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-                  )}
-                >
-                  {String(opt)}
-                </button>
-              ))}
+              {prop.enum.map((opt) => {
+                const selected = field.value === String(opt);
+                const nullable = Array.isArray(prop.type) && prop.type.includes("null");
+                return (
+                  <button
+                    key={String(opt)}
+                    type="button"
+                    onClick={() => field.onChange(selected && nullable ? "" : String(opt))}
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
+                      selected
+                        ? "border-success/40 bg-success/10 text-success"
+                        : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+                    )}
+                  >
+                    {String(opt)}
+                  </button>
+                );
+              })}
             </div>
           ) : resolvedType === "boolean" ? (
             <div className="flex gap-1.5">
-              {["true", "false"].map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => field.onChange(opt)}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
-                    field.value === opt
-                      ? "border-success/40 bg-success/10 text-success"
-                      : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-                  )}
-                >
-                  {opt}
-                </button>
-              ))}
+              {["true", "false"].map((opt) => {
+                const selected = field.value === opt;
+                const nullable = Array.isArray(prop.type) && prop.type.includes("null");
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => field.onChange(selected && nullable ? "" : opt)}
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-sm font-mono transition-colors cursor-pointer",
+                      selected
+                        ? "border-success/40 bg-success/10 text-success"
+                        : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+                    )}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
           ) : resolvedType === "object" && prop.properties ? (
             <ObjectArgFieldWrapper field={field} prop={prop} />
@@ -775,45 +783,53 @@ function ValueField({
         : String(value);
 
   if (schema.enum) {
+    const nullable = Array.isArray(schema.type) && schema.type.includes("null");
     return (
       <div className="flex flex-wrap gap-1">
-        {schema.enum.map((opt) => (
-          <button
-            key={String(opt)}
-            type="button"
-            onClick={() => onChange(opt)}
-            className={cn(
-              "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
-              stringValue === String(opt)
-                ? "border-success/40 bg-success/10 text-success"
-                : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-            )}
-          >
-            {String(opt)}
-          </button>
-        ))}
+        {schema.enum.map((opt) => {
+          const selected = stringValue === String(opt);
+          return (
+            <button
+              key={String(opt)}
+              type="button"
+              onClick={() => onChange(selected && nullable ? null : opt)}
+              className={cn(
+                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                selected
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+              )}
+            >
+              {String(opt)}
+            </button>
+          );
+        })}
       </div>
     );
   }
 
   if (resolvedType === "boolean") {
+    const nullable = Array.isArray(schema.type) && schema.type.includes("null");
     return (
       <div className="flex gap-1">
-        {[true, false].map((opt) => (
-          <button
-            key={String(opt)}
-            type="button"
-            onClick={() => onChange(opt)}
-            className={cn(
-              "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
-              value === opt
-                ? "border-success/40 bg-success/10 text-success"
-                : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-            )}
-          >
-            {String(opt)}
-          </button>
-        ))}
+        {[true, false].map((opt) => {
+          const selected = value === opt;
+          return (
+            <button
+              key={String(opt)}
+              type="button"
+              onClick={() => onChange(selected && nullable ? null : opt)}
+              className={cn(
+                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+                selected
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+              )}
+            >
+              {String(opt)}
+            </button>
+          );
+        })}
       </div>
     );
   }
