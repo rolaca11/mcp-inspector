@@ -7,7 +7,9 @@ import {
   Hammer,
   Loader2,
   Play,
+  Plus,
   Search,
+  X,
 } from "lucide-react";
 import { Controller, type Control, type FieldValues } from "react-hook-form";
 
@@ -462,6 +464,8 @@ function ArgField({
             </div>
           ) : resolvedType === "object" && prop.properties ? (
             <ObjectArgFieldWrapper field={field} prop={prop} />
+          ) : resolvedType === "array" && prop.items && typeof prop.items === "object" && !Array.isArray(prop.items) ? (
+            <ArrayArgFieldWrapper field={field} prop={prop} />
           ) : resolvedType === "object" || resolvedType === "array" ? (
             <Textarea
               value={field.value ?? ""}
@@ -586,6 +590,314 @@ function ObjectFields({
   );
 }
 
+function parseArrayValue(value: string): unknown[] {
+  if (!value) return [];
+  try {
+    const arr = JSON.parse(value);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function defaultForSchema(schema: MCPToolSchemaProperty): unknown {
+  if (schema.default !== undefined) return schema.default;
+  const type = Array.isArray(schema.type)
+    ? schema.type.find((t) => t !== "null") ?? schema.type[0]
+    : schema.type;
+  switch (type) {
+    case "boolean":
+      return false;
+    case "number":
+    case "integer":
+      return 0;
+    case "object":
+      return {};
+    case "array":
+      return [];
+    default:
+      return "";
+  }
+}
+
+function ArrayArgFieldWrapper({
+  field,
+  prop,
+}: {
+  field: { value: string; onChange: (v: string) => void; onBlur: () => void };
+  prop: MCPToolSchemaProperty;
+}) {
+  const parsed = React.useMemo(
+    () => parseArrayValue(field.value),
+    [field.value],
+  );
+
+  const onChange = React.useCallback(
+    (arr: unknown[]) => {
+      field.onChange(arr.length > 0 ? JSON.stringify(arr) : "");
+    },
+    [field],
+  );
+
+  return (
+    <ArrayFields
+      value={parsed}
+      onChange={onChange}
+      onBlur={field.onBlur}
+      itemSchema={prop.items as MCPToolSchemaProperty}
+    />
+  );
+}
+
+function ArrayFields({
+  value,
+  onChange,
+  onBlur,
+  itemSchema,
+}: {
+  value: unknown[];
+  onChange: (arr: unknown[]) => void;
+  onBlur: () => void;
+  itemSchema: MCPToolSchemaProperty;
+}) {
+  const handleItemChange = React.useCallback(
+    (index: number, itemValue: unknown) => {
+      const next = [...value];
+      next[index] = itemValue;
+      onChange(next);
+    },
+    [value, onChange],
+  );
+
+  const handleRemove = React.useCallback(
+    (index: number) => {
+      onChange(value.filter((_, i) => i !== index));
+    },
+    [value, onChange],
+  );
+
+  const handleAdd = React.useCallback(() => {
+    onChange([...value, defaultForSchema(itemSchema)]);
+  }, [value, onChange, itemSchema]);
+
+  const itemType = Array.isArray(itemSchema.type)
+    ? itemSchema.type.find((t) => t !== "null") ?? itemSchema.type[0]
+    : itemSchema.type;
+  const isComplex = (itemType === "object" && itemSchema.properties) || itemType === "array";
+
+  return (
+    <div className="space-y-2 rounded-md border border-border/40 bg-black/10 p-3">
+      {value.map((item, index) => (
+        <div
+          key={index}
+          className={cn(
+            "group/item",
+            isComplex ? "space-y-1" : "flex items-center gap-2",
+          )}
+        >
+          {isComplex ? (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                  [{index}]
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(index)}
+                  className="opacity-0 group-hover/item:opacity-100 rounded p-0.5 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+              <ValueField
+                value={item}
+                onChange={(v) => handleItemChange(index, v)}
+                onBlur={onBlur}
+                schema={itemSchema}
+              />
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0 w-5 text-right">
+                {index}
+              </span>
+              <div className="flex-1 min-w-0">
+                <ValueField
+                  value={item}
+                  onChange={(v) => handleItemChange(index, v)}
+                  onBlur={onBlur}
+                  schema={itemSchema}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemove(index)}
+                className="opacity-0 group-hover/item:opacity-100 rounded p-0.5 text-muted-foreground hover:text-destructive transition-all cursor-pointer shrink-0"
+              >
+                <X className="size-3" />
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer pt-1"
+      >
+        <Plus className="size-3" />
+        Add item
+      </button>
+    </div>
+  );
+}
+
+function ValueField({
+  value,
+  onChange,
+  onBlur,
+  schema,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  onBlur: () => void;
+  schema: MCPToolSchemaProperty;
+}) {
+  const resolvedType = Array.isArray(schema.type)
+    ? schema.type.find((t) => t !== "null") ?? schema.type[0]
+    : schema.type;
+
+  const stringValue =
+    value === undefined || value === null
+      ? ""
+      : typeof value === "object"
+        ? JSON.stringify(value)
+        : String(value);
+
+  if (schema.enum) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {schema.enum.map((opt) => (
+          <button
+            key={String(opt)}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={cn(
+              "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+              stringValue === String(opt)
+                ? "border-success/40 bg-success/10 text-success"
+                : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+            )}
+          >
+            {String(opt)}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (resolvedType === "boolean") {
+    return (
+      <div className="flex gap-1">
+        {[true, false].map((opt) => (
+          <button
+            key={String(opt)}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={cn(
+              "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+              value === opt
+                ? "border-success/40 bg-success/10 text-success"
+                : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+            )}
+          >
+            {String(opt)}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (resolvedType === "object" && schema.properties) {
+    return (
+      <ObjectFields
+        value={
+          typeof value === "object" &&
+          value !== null &&
+          !Array.isArray(value)
+            ? (value as Record<string, unknown>)
+            : {}
+        }
+        onChange={onChange as (obj: Record<string, unknown>) => void}
+        onBlur={onBlur}
+        properties={schema.properties}
+        requiredSet={new Set(schema.required ?? [])}
+      />
+    );
+  }
+
+  if (
+    resolvedType === "array" &&
+    schema.items &&
+    typeof schema.items === "object" &&
+    !Array.isArray(schema.items)
+  ) {
+    return (
+      <ArrayFields
+        value={Array.isArray(value) ? (value as unknown[]) : []}
+        onChange={onChange as (arr: unknown[]) => void}
+        onBlur={onBlur}
+        itemSchema={schema.items as MCPToolSchemaProperty}
+      />
+    );
+  }
+
+  if (resolvedType === "object" || resolvedType === "array") {
+    return (
+      <JsonSubField
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={resolvedType === "array" ? "[]" : "{}"}
+      />
+    );
+  }
+
+  return (
+    <Input
+      type={
+        resolvedType === "number" || resolvedType === "integer"
+          ? "number"
+          : "text"
+      }
+      value={stringValue}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "") {
+          onChange(undefined);
+        } else if (
+          resolvedType === "number" ||
+          resolvedType === "integer"
+        ) {
+          const n = Number(v);
+          onChange(Number.isNaN(n) ? undefined : n);
+        } else {
+          onChange(v);
+        }
+      }}
+      onBlur={onBlur}
+      placeholder={
+        schema.default !== undefined
+          ? `default: ${String(schema.default)}`
+          : resolvedType === "number" || resolvedType === "integer"
+            ? "0"
+            : "value"
+      }
+      className="font-mono text-xs"
+    />
+  );
+}
+
 function ObjectPropertyField({
   name,
   prop,
@@ -604,16 +916,6 @@ function ObjectPropertyField({
   const typeDisplay = Array.isArray(prop.type)
     ? prop.type.join("|")
     : (prop.type ?? "any");
-  const resolvedType = Array.isArray(prop.type)
-    ? prop.type.find((t) => t !== "null") ?? prop.type[0]
-    : prop.type;
-
-  const stringValue =
-    value === undefined || value === null
-      ? ""
-      : typeof value === "object"
-        ? JSON.stringify(value)
-        : String(value);
 
   return (
     <div className="space-y-1.5">
@@ -638,96 +940,12 @@ function ObjectPropertyField({
           {prop.description}
         </div>
       )}
-      {prop.enum ? (
-        <div className="flex flex-wrap gap-1">
-          {prop.enum.map((opt) => (
-            <button
-              key={String(opt)}
-              type="button"
-              onClick={() => onChange(opt)}
-              className={cn(
-                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
-                stringValue === String(opt)
-                  ? "border-success/40 bg-success/10 text-success"
-                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-              )}
-            >
-              {String(opt)}
-            </button>
-          ))}
-        </div>
-      ) : resolvedType === "boolean" ? (
-        <div className="flex gap-1">
-          {[true, false].map((opt) => (
-            <button
-              key={String(opt)}
-              type="button"
-              onClick={() => onChange(opt)}
-              className={cn(
-                "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
-                value === opt
-                  ? "border-success/40 bg-success/10 text-success"
-                  : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
-              )}
-            >
-              {String(opt)}
-            </button>
-          ))}
-        </div>
-      ) : resolvedType === "object" && prop.properties ? (
-        <ObjectFields
-          value={
-            typeof value === "object" &&
-            value !== null &&
-            !Array.isArray(value)
-              ? (value as Record<string, unknown>)
-              : {}
-          }
-          onChange={onChange as (obj: Record<string, unknown>) => void}
-          onBlur={onBlur}
-          properties={prop.properties}
-          requiredSet={new Set(prop.required ?? [])}
-        />
-      ) : resolvedType === "object" || resolvedType === "array" ? (
-        <JsonSubField
-          value={value}
-          onChange={onChange}
-          onBlur={onBlur}
-          placeholder={resolvedType === "array" ? "[]" : "{}"}
-        />
-      ) : (
-        <Input
-          type={
-            resolvedType === "number" || resolvedType === "integer"
-              ? "number"
-              : "text"
-          }
-          value={stringValue}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === "") {
-              onChange(undefined);
-            } else if (
-              resolvedType === "number" ||
-              resolvedType === "integer"
-            ) {
-              const n = Number(v);
-              onChange(Number.isNaN(n) ? undefined : n);
-            } else {
-              onChange(v);
-            }
-          }}
-          onBlur={onBlur}
-          placeholder={
-            prop.default !== undefined
-              ? `default: ${String(prop.default)}`
-              : resolvedType === "number" || resolvedType === "integer"
-                ? "0"
-                : "value"
-          }
-          className="font-mono text-xs"
-        />
-      )}
+      <ValueField
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        schema={prop}
+      />
     </div>
   );
 }
