@@ -9,11 +9,12 @@ permissions:
   contents: write
 
 jobs:
-  nightly:
-    name: Nightly Release
+  check:
+    name: Check for changes
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,21 +43,21 @@ jobs:
             fi
           fi
 
-      - name: Install pnpm
-        if: steps.changes.outputs.has_changes == 'true'
-        uses: pnpm/action-setup@v4
-
-      - name: Tag nightly version
+      - name: Create and push tag
+        id: tag
         if: steps.changes.outputs.has_changes == 'true'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BASE_VERSION=$(node -p "require('./package.json').version")
-          NIGHTLY_VERSION="${BASE_VERSION}-nightly.$(date -u +'%Y%m%d')"
-          pnpm version "$NIGHTLY_VERSION"
+          TAG="v${BASE_VERSION}-nightly.$(date -u +'%Y%m%d')"
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Push tag
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          git remote set-url origin "https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git"
-          git push origin main --follow-tags
+  release:
+    name: Release
+    needs: check
+    if: needs.check.outputs.tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.check.outputs.tag }}
+    secrets: inherit
