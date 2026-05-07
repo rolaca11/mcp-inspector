@@ -1,61 +1,27 @@
-import {
-  Loader2,
-  Plug,
-  RefreshCw,
-} from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ServerSelector } from "@/components/server-selector";
-import { SourceSelector } from "@/components/source-selector";
-import { StatusDot } from "@/components/status-dot";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { ConnectionState } from "@/stores/connection-store";
-import type { ApiState } from "@/stores/servers-store";
-import type { MCPServer } from "@/data/types";
+import {Loader2, Plug, RefreshCw,} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {ServerSelector} from "@/components/server-selector";
+import {SourceSelector} from "@/components/source-selector";
+import type {ConnectionState} from "@/stores/connection-store";
+import type {MCPServer} from "@/data/types";
 
 interface HeaderProps {
   servers: MCPServer[];
   active: MCPServer;
   onSelect: (server: MCPServer) => void;
-  apiState: ApiState;
   connection: ConnectionState;
   onConnect: () => void;
   onRediscover: () => void;
-  onReloadServers: () => void;
   children?: React.ReactNode;
 }
-
-const API_STATE_TONE: Record<
-  ApiState,
-  "success" | "warning" | "destructive" | "muted"
-> = {
-  ok: "success",
-  loading: "muted",
-  offline: "warning",
-  error: "destructive",
-};
-
-const API_STATE_LABEL: Record<ApiState, string> = {
-  ok: "live",
-  loading: "loading",
-  offline: "offline",
-  error: "API error",
-};
 
 export function Header({
   servers,
   active,
   onSelect,
-  apiState,
   connection,
   onConnect,
   onRediscover,
-  onReloadServers,
   children,
 }: HeaderProps) {
   const grouped = new Map<string, { count: number; label: string }>();
@@ -72,7 +38,7 @@ export function Header({
 
   return (
     <header className="border-b border-border/60 bg-chrome sticky top-0 z-40">
-      <div className="mx-auto flex h-[4.5rem] max-w-[1800px] items-center gap-5 px-8">
+      <div className="mx-auto flex h-18 max-w-450 items-center gap-5 px-8">
         {/* Left: logo + breadcrumbs */}
         <div className="flex items-center gap-4 min-w-0">
           <nav className="flex items-center gap-1.5 text-muted-foreground/70 text-base">
@@ -89,7 +55,7 @@ export function Header({
               activeConnection={connection}
             />
             <span aria-hidden className="select-none px-0.5">/</span>
-            <span className="font-mono text-xs truncate max-w-[18rem] text-foreground/70">
+            <span className="font-mono pt-1 text-sm truncate max-w-[18rem] text-foreground/70">
               {active.transport === "stdio"
                 ? active.target
                 : active.target.replace(/^https?:\/\//, "")}
@@ -103,47 +69,6 @@ export function Header({
           onConnect={onConnect}
           onRediscover={onRediscover}
         />
-
-        <div className="flex-1" />
-
-        {/* Right: API status badge */}
-        <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onReloadServers}
-                className="cursor-pointer"
-              >
-                <Badge
-                  variant={
-                    apiState === "offline"
-                      ? "warning"
-                      : apiState === "error"
-                        ? "destructive"
-                        : "muted"
-                  }
-                  className="hidden md:inline-flex"
-                >
-                  <StatusDot
-                    tone={API_STATE_TONE[apiState]}
-                    pulse={apiState === "loading"}
-                  />
-                  {API_STATE_LABEL[apiState]}
-                </Badge>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {apiState === "ok"
-                ? "Connected to /api — click to reload"
-                : apiState === "offline"
-                  ? "API unreachable — click to retry"
-                  : apiState === "error"
-                    ? "API error — click to retry"
-                    : "Loading…"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
       </div>
       {children}
     </header>

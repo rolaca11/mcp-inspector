@@ -133,7 +133,7 @@ export function ToolsPage() {
       }
     >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-40 self-start flex flex-col">
+        <div className="lg:sticky lg:top-32 self-start flex flex-col">
           <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
             {filtered.map((t) => (
               <ToolListRow
@@ -319,8 +319,8 @@ function ToolDetail({
               This tool takes no arguments.
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-5">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-6">
                 {Object.entries(properties).map(([name, prop]) => (
                   <ArgField
                     key={name}
@@ -423,9 +423,7 @@ function ArgField({
               </span>
             )}
           </Label>
-          {prop.description && (
-            <div className="text-sm text-muted-foreground/80">{prop.description}</div>
-          )}
+          <div className="flex-1 text-sm text-muted-foreground/80">{prop.description}</div>
           {prop.enum ? (
             <div className="flex flex-wrap gap-1.5">
               {prop.enum.map((opt) => {
@@ -751,7 +749,7 @@ function ArrayFields({
       <button
         type="button"
         onClick={handleAdd}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer pt-1"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <Plus className="size-3" />
         Add item

@@ -102,7 +102,7 @@ export default function App() {
 
 function ServerLayout() {
   const { serverName } = useParams<{ serverName: string }>();
-  const { servers, apiState, fetchServers } = useServersStore();
+  const { servers } = useServersStore();
   const setServer = useConnectionStore((s) => s.setServer);
 
   const active = React.useMemo(
@@ -128,8 +128,6 @@ function ServerLayout() {
     <ServerShell
       servers={servers}
       active={active}
-      apiState={apiState}
-      reloadServers={fetchServers}
     />
   );
 }
@@ -137,15 +135,11 @@ function ServerLayout() {
 interface ServerShellProps {
   servers: MCPServer[];
   active: MCPServer;
-  apiState: ApiState;
-  reloadServers: () => void;
 }
 
 function ServerShell({
   servers,
   active,
-  apiState,
-  reloadServers,
 }: ServerShellProps) {
   const { data, connectionState, pendingAuthUrl, rediscover } =
     useConnectionStore();
@@ -182,18 +176,16 @@ function ServerShell({
         servers={servers}
         active={active}
         onSelect={switchToServer}
-        apiState={apiState}
         connection={connectionState}
         onConnect={rediscover}
         onRediscover={rediscover}
-        onReloadServers={reloadServers}
       >
         <NavTabs serverName={active.name} counts={counts} />
       </Header>
 
       {pendingAuthUrl && (
         <div className="border-b border-blue-500/30 bg-blue-500/10 px-8 py-3">
-          <div className="mx-auto flex max-w-[1800px] items-center gap-3 text-sm">
+          <div className="mx-auto flex max-w-450 items-center gap-3 text-sm">
             <span className="text-blue-400">
               OAuth authorization required —
             </span>

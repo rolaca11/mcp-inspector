@@ -145,12 +145,7 @@
     height: 100%;
   }
   body {
-    background: radial-gradient(
-        1200px 600px at 50% -200px,
-        oklch(0.30 0.04 var(--hue) / 0.35),
-        transparent 60%
-      ),
-      var(--background);
+    background: var(--background);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

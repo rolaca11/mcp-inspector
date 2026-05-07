@@ -136,7 +136,7 @@ export function OverviewPage() {
               Calls and reads recorded since the dashboard loaded.
             </CardDescription>
           </div>
-          <Badge variant="muted" className="font-mono">
+          <Badge variant="muted" className="font-mono pt-1">
             {activityForServer.length}
           </Badge>
         </CardHeader>
@@ -187,7 +187,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   return (
     <div className="flex items-center gap-4 px-6 py-4">
       <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
-      <Badge variant="muted" className="font-mono w-[90px] justify-center">
+      <Badge variant="muted" className="font-mono w-24 pt-1 justify-center">
         {kindLabel}
       </Badge>
       <span className="font-mono text-sm truncate flex-1 min-w-0">
@@ -195,7 +195,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       </span>
       <span
         className={cn(
-          "font-mono text-xs truncate hidden md:block max-w-[28rem]",
+          "font-mono text-xs truncate hidden md:block max-w-md",
           entry.outcome === "error"
             ? "text-destructive/90"
             : "text-muted-foreground/80",
@@ -204,7 +204,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
         {detail}
       </span>
       {entry.tokenCount != null && (
-        <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-[6rem] text-right hidden lg:block">
+        <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-24 text-right hidden lg:block">
           {entry.tokenCount.toLocaleString()} tok
         </span>
       )}

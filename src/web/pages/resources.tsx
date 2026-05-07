@@ -160,7 +160,7 @@ function CombinedResourcesPanel({
 
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <div className="lg:sticky lg:top-40 self-start flex flex-col">
+      <div className="lg:sticky lg:top-32 self-start flex flex-col">
         <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
           {items.map((item) => (
             <button
@@ -259,16 +259,6 @@ function ResourcePreview({
           {resource.description && (
             <p className="text-sm text-muted-foreground">{resource.description}</p>
           )}
-          <div className="grid grid-cols-2 gap-4">
-            <KV label="MIME">
-              <span className="font-mono">{resource.mimeType ?? "—"}</span>
-            </KV>
-            <KV label="Size">
-              <span className="font-mono tabular-nums">
-                {resource.size != null ? formatBytes(resource.size) : "—"}
-              </span>
-            </KV>
-          </div>
           <Button variant="success" onClick={onRead} disabled={reading}>
             {reading ? (
               <Loader2 className="size-4 animate-spin" />
@@ -607,17 +597,6 @@ function ErrorRow({
           {JSON.stringify(errorResponse, null, 2)}
         </CodeBlock>
       )}
-    </div>
-  );
-}
-
-function KV({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-md border border-border/50 bg-card/40 px-4 py-3">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground/70 mb-1.5">
-        {label}
-      </div>
-      <div className="text-base">{children}</div>
     </div>
   );
 }
