@@ -64,12 +64,14 @@ export function OverviewPage() {
         </>
       }
     >
-      {state === "error" && (
+      {(state === "error" || (state === "disconnected" && error)) && (
         <Card className="border-destructive/40 bg-destructive/5">
           <CardContent className="flex items-start gap-4 py-5">
             <AlertCircle className="size-5 text-destructive mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-base font-medium">Couldn't connect to this server</div>
+              <div className="text-base font-medium">
+                {state === "error" ? "Couldn't connect to this server" : "Connection lost"}
+              </div>
               <div className="text-sm text-muted-foreground mt-1 break-all">
                 {error}
               </div>
@@ -143,22 +145,22 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       ? entry.error
       : entry.detail ?? "";
 
-  const hasResponse = entry.response !== undefined;
+  const hasDetail = entry.response !== undefined || (entry.outcome === "error" && !!entry.error);
 
   return (
     <div>
       <div
         className={cn(
           "flex items-center gap-4 px-6 py-4",
-          hasResponse && "cursor-pointer hover:bg-muted/40 transition-colors",
+          hasDetail && "cursor-pointer hover:bg-muted/40 transition-colors",
         )}
-        onClick={hasResponse ? () => setOpen(!open) : undefined}
+        onClick={hasDetail ? () => setOpen(!open) : undefined}
       >
         <ChevronRight
           className={cn(
             "size-4 shrink-0 transition-transform duration-150 text-muted-foreground",
             open && "rotate-90",
-            !hasResponse && "invisible",
+            !hasDetail && "invisible",
           )}
         />
         <Badge variant={tone} className="font-mono w-24 pt-1 justify-center">
@@ -193,11 +195,19 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
           {formatRelativeTime(entry.at)}
         </span>
       </div>
-      {open && hasResponse && (
-        <div className="px-6 pb-4">
-          <CodeBlock language="application/json" caption="Response">
-            {JSON.stringify(entry.response, null, 2)}
-          </CodeBlock>
+      {open && hasDetail && (
+        <div className="px-6 py-4 space-y-3">
+          {entry.outcome === "error" && entry.error && !entry.response && (
+            <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+              <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
+              <span className="break-all">{entry.error}</span>
+            </div>
+          )}
+          {entry.response !== undefined && (
+            <CodeBlock language="application/json" caption={entry.outcome === "error" ? "Error response" : "Response"}>
+              {JSON.stringify(entry.response, null, 2)}
+            </CodeBlock>
+          )}
         </div>
       )}
     </div>

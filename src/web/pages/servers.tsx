@@ -1,8 +1,7 @@
 import {FolderTree} from "lucide-react";
 
 import {Badge} from "@/components/ui/badge";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
-import {CodeBlock} from "@/components/code-block";
+import {Card, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
 import {Empty} from "@/components/empty";
 import {PageShell} from "@/components/page-shell";
 import {StatusDot} from "@/components/status-dot";
@@ -33,7 +32,7 @@ export function ServersPage({
   onSelect,
   connection,
 }: ServersPageProps) {
-  const { data, lastDiscoveredAt } = useConnectionStore();
+  const { data, lastDiscoveredAt, error } = useConnectionStore();
 
   const sources = Array.from(
     servers.reduce((map, s) => {
@@ -86,8 +85,10 @@ export function ServersPage({
                   : connection === "connecting"
                     ? "connecting…"
                     : connection === "error"
-                      ? "connection error"
-                      : "disconnected";
+                      ? `error: ${error ?? "connection failed"}`
+                      : error
+                        ? `disconnected: ${error}`
+                        : "disconnected";
               return (
                 <button
                   key={s.name}
@@ -131,33 +132,6 @@ export function ServersPage({
         </Card>
       ))}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>.mcp.json schema</CardTitle>
-          <CardDescription className="hidden md:block">
-            Same shape used by Claude Desktop / Claude Code.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CodeBlock language="application/json">{SCHEMA_EXAMPLE}</CodeBlock>
-        </CardContent>
-      </Card>
     </PageShell>
   );
 }
-
-const SCHEMA_EXAMPLE = `{
-  "mcpServers": {
-    "everything": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-everything", "stdio"],
-      "env": { "DEBUG": "1" }
-    },
-    "remote": {
-      "type": "http",
-      "url": "https://example.com/mcp",
-      "headers": { "X-Foo": "bar" }
-    }
-  }
-}`;

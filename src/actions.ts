@@ -17,6 +17,7 @@ import {
   printPrompts,
   printResourceContents,
   printResourceTemplates,
+  errorMessage,
   printResources,
   printToolResult,
   printTokenCount,
@@ -318,7 +319,7 @@ async function safeList<T>(fn: () => Promise<T>): Promise<T> {
     // Server advertised the capability but the call still failed (e.g. method
     // not found in an old SDK). Surface the error softly so the rest of the
     // discover output is still useful.
-    console.error(pc.yellow(`(skipped: ${(e as Error).message})`));
+    console.error(pc.yellow(`(skipped: ${errorMessage(e)})`));
     return {} as T;
   }
 }

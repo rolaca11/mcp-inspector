@@ -41,6 +41,8 @@ interface CallInit {
 }
 
 async function call<T>(path: string, init?: CallInit): Promise<T> {
+  const url = `${BASE}${path}`;
+  const method = init?.method ?? "GET";
   const opts: RequestInit = {
     method: init?.method,
     headers: init?.headers,
@@ -54,18 +56,28 @@ async function call<T>(path: string, init?: CallInit): Promise<T> {
       ...(init.headers ?? {}),
     };
   }
-  const r = await fetch(`${BASE}${path}`, opts);
+
+  let r: Response;
+  try {
+    r = await fetch(url, opts);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error(`${method} ${url}: request was aborted`);
+    }
+    throw new Error(`${method} ${url} failed: ${errorChain(e)}`);
+  }
+
   if (!r.ok) {
-    let msg = r.statusText;
+    let msg = `${r.status} ${r.statusText}`;
     let responseBody: Record<string, unknown> | undefined;
     try {
       const body = (await r.json()) as Record<string, unknown>;
       responseBody = body;
       if (typeof body?.error === "string") msg = body.error;
     } catch {
-      /* ignore */
+      /* response body was not JSON */
     }
-    throw new ApiError(r.status, msg, responseBody);
+    throw new ApiError(r.status, `${method} ${path}: ${msg}`, responseBody);
   }
   if (r.status === 204) return undefined as T;
   return (await r.json()) as T;
@@ -99,7 +111,10 @@ async function tracked<T>(
     tx.finish(summarize ? summarize(result) : payload, tokenCount, result);
     return result;
   } catch (e) {
-    tx.fail((e as Error).message);
+    tx.fail(
+      (e as Error).message,
+      e instanceof ApiError ? e.responseBody : undefined,
+    );
     throw e;
   }
 }
@@ -313,4 +328,14 @@ function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function errorChain(e: unknown): string {
+  const parts: string[] = [];
+  let cur: unknown = e;
+  while (cur instanceof Error) {
+    if (cur.message && !parts.includes(cur.message)) parts.push(cur.message);
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return parts.join(": ") || "unknown error";
 }

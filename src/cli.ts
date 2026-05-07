@@ -20,9 +20,9 @@ import * as actions from "./actions.js";
 import { connect } from "./client.js";
 import { loadConfigSync, type LoadedConfig } from "./config.js";
 import { runRepl } from "./repl.js";
+import { errorMessage } from "./format.js";
 import { parseTarget, setLoadedConfig } from "./target.js";
-
-const VERSION = "0.1.0";
+import { VERSION } from "./version.js";
 
 interface GlobalOpts {
   json?: boolean;
@@ -564,7 +564,7 @@ async function main() {
   } catch (e) {
     const err = e as Error & { code?: unknown };
     if (process.env.MCPI_DEBUG) console.error(err.stack ?? err);
-    else console.error(pc.red(`error: ${err.message}`));
+    else console.error(pc.red(`error: ${errorMessage(err)}`));
     process.exitCode = 1;
   }
 }

@@ -4,7 +4,7 @@ export function Footer() {
       <div className="mx-auto flex max-w-[1800px] flex-col gap-3 px-8 py-8 text-sm text-muted-foreground/70 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="font-mono">mcp-inspector</span>
-          <span className="text-muted-foreground/40">v{__APP_VERSION__}</span>
+          <span className="text-muted-foreground/40">v{__PKG_VERSION__}</span>
           <span className="text-muted-foreground/40">·</span>
           <span>
             Built on{" "}
@@ -17,7 +17,7 @@ export function Footer() {
           </span>
         </div>
         <a
-          href={`https://github.com/rolaca11/mcp-inspector/releases/tag/v${__APP_VERSION__}`}
+          href={`https://github.com/rolaca11/mcp-inspector/releases/tag/v${__PKG_VERSION__}`}
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-foreground"

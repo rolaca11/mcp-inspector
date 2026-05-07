@@ -51,7 +51,11 @@ export const useServersStore = create<ServersState>((set) => ({
       if (e instanceof ApiError) {
         set({ servers: [], apiState: "error", error: e.message });
       } else {
-        set({ servers: [], apiState: "offline", error: undefined });
+        set({
+          servers: [],
+          apiState: "offline",
+          error: (e as Error).message || "Network error — is the inspector server running?",
+        });
       }
     }
   },

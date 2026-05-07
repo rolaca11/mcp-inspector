@@ -9,7 +9,7 @@ import { parse as shellParse } from "shell-quote";
 import pc from "picocolors";
 
 import * as actions from "./actions.js";
-import { extractTemplateVars } from "./format.js";
+import { errorMessage, extractTemplateVars } from "./format.js";
 import type { Session } from "./client.js";
 
 const HELP = `
@@ -81,7 +81,7 @@ export async function runRepl(session: Session): Promise<void> {
         return;
       }
     } catch (e) {
-      console.error(pc.red(`error: ${(e as Error).message}`));
+      console.error(pc.red(`error: ${errorMessage(e)}`));
     } finally {
       rl.resume();
       rl.prompt();

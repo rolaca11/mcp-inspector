@@ -40,7 +40,7 @@ interface ActivityState {
   start(input: Omit<ActivityEntry, "id" | "outcome" | "at" | "durationMs">): {
     id: string;
     finish(detail?: string, tokenCount?: number | null, response?: unknown): void;
-    fail(error: string): void;
+    fail(error: string, response?: unknown): void;
   };
 
   clear(): void;
@@ -84,11 +84,12 @@ export const useActivityStore = create<ActivityState>((set) => ({
           ...(response !== undefined ? { response } : {}),
         });
       },
-      fail: (error) => {
+      fail: (error, response) => {
         patch({
           outcome: "error",
           durationMs: Math.round(performance.now() - startedAt),
           error,
+          ...(response !== undefined ? { response } : {}),
         });
       },
     };

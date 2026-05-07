@@ -37,6 +37,7 @@ import pc from "picocolors";
 
 import { connect, type Session } from "./client.js";
 import { loadConfigSync, type LoadedConfig } from "./config.js";
+import { errorMessage } from "./format.js";
 import { authFile } from "./paths.js";
 import { setLoadedConfig, parseTarget, targetId } from "./target.js";
 import { countResponseTokens } from "./tokens.js";
@@ -135,7 +136,7 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
         console.error(pc.red("[serve] unhandled:"), err);
         if (!res.headersSent) {
           res.writeHead(500, { "content-type": "application/json" });
-          res.end(JSON.stringify({ error: (err as Error).message }));
+          res.end(JSON.stringify({ error: errorMessage(err) }));
         } else {
           res.end();
         }
@@ -411,7 +412,7 @@ async function handleApi(
 
     return sendErr(404, { error: `unknown route: ${method} ${urlPath}` });
   } catch (e) {
-    return sendErr(500, { error: (e as Error).message });
+    return sendErr(500, { error: errorMessage(e) });
   }
 }
 

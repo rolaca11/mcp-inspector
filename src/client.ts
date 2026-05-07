@@ -20,10 +20,11 @@ import {
   startLoopbackCallback,
 } from "./oauth.js";
 import { parseTarget, targetId, type TargetSpec } from "./target.js";
+import { VERSION } from "./version.js";
 
 const CLIENT_INFO: Implementation = {
   name: "mcp-inspector",
-  version: "0.1.0",
+  version: VERSION,
 };
 
 export interface ConnectOptions {

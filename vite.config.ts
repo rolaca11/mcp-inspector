@@ -20,7 +20,7 @@ const API_PROXY_TARGET = process.env.MCPI_API ?? "http://127.0.0.1:8765";
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __PKG_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [react(), tailwindcss()],
   resolve: {

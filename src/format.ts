@@ -25,6 +25,16 @@ export function printJson(value: unknown): void {
   process.stdout.write(JSON.stringify(value, null, 2) + "\n");
 }
 
+export function errorMessage(e: unknown): string {
+  const parts: string[] = [];
+  let cur: unknown = e;
+  while (cur instanceof Error) {
+    if (cur.message && !parts.includes(cur.message)) parts.push(cur.message);
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return parts.join(": ") || "unknown error";
+}
+
 /* ------------------------------------------------------------------ */
 /* Resources & resource templates                                      */
 /* ------------------------------------------------------------------ */

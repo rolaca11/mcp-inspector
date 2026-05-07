@@ -111,9 +111,8 @@ async function runDiscover(
         pendingAuthUrl: null,
       });
     } else {
-      // Network failure (API not reachable, no `serve` running).
       set({
-        error: undefined,
+        error: (e as Error).message || "Network error — is the inspector server running?",
         connectionState: "disconnected",
         data: null,
         loading: false,
