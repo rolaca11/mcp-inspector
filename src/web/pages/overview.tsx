@@ -193,25 +193,22 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
 
   return (
     <div>
-      <div className="flex items-center gap-4 px-6 py-4">
-        {hasResponse ? (
-          <button
-            type="button"
-            onClick={() => setOpen(!open)}
-            className="shrink-0 p-0.5 rounded transition-colors hover:bg-muted/70 cursor-pointer text-muted-foreground hover:text-foreground"
-          >
-            <ChevronRight
-              className={cn(
-                "size-4 transition-transform duration-150",
-                open && "rotate-90",
-              )}
-            />
-          </button>
-        ) : (
-          <span className="w-5 shrink-0" />
+      <div
+        className={cn(
+          "flex items-center gap-4 px-6 py-4",
+          hasResponse && "cursor-pointer hover:bg-muted/40 transition-colors",
         )}
+        onClick={hasResponse ? () => setOpen(!open) : undefined}
+      >
+        <ChevronRight
+          className={cn(
+            "size-4 shrink-0 transition-transform duration-150 text-muted-foreground",
+            open && "rotate-90",
+            !hasResponse && "invisible",
+          )}
+        />
         <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
-        <Badge variant="muted" className="font-mono w-24 pt-1 justify-center">
+        <Badge variant={tone} className="font-mono w-24 pt-1 justify-center">
           {kindLabel}
         </Badge>
         <span className="font-mono text-sm truncate flex-1 min-w-0">
