@@ -203,7 +203,9 @@ function ToolDetail({
   const initial = React.useMemo(() => {
     const init: Record<string, string> = {};
     for (const [name, prop] of Object.entries(properties)) {
-      if (prop.default !== undefined) init[name] = String(prop.default);
+      if (prop.default !== undefined) init[name] = typeof prop.default === "object" && prop.default !== null
+          ? JSON.stringify(prop.default)
+          : String(prop.default);
       else init[name] = "";
     }
     return init;
@@ -225,7 +227,6 @@ function ToolDetail({
 
   const resultStore = useResultStore();
   const [loading, setLoading] = React.useState(false);
-  const [jsonOverride, setJsonOverride] = React.useState<string | null>(null);
   const [jsonError, setJsonError] = React.useState<string | null>(null);
 
   const cachedResult = resultStore.get<CallState>(serverName, "tool", tool.name);
@@ -241,7 +242,6 @@ function ToolDetail({
 
   const onJsonChange = React.useCallback(
     (text: string) => {
-      setJsonOverride(text);
       try {
         const parsed = JSON.parse(text);
         if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -259,7 +259,6 @@ function ToolDetail({
   );
 
   const onJsonBlur = React.useCallback(() => {
-    setJsonOverride(null);
     setJsonError(null);
   }, []);
 
@@ -331,7 +330,7 @@ function ToolDetail({
                 ))}
               </div>
               <EditableJsonBlock
-                value={jsonOverride ?? canonicalJson}
+                value={canonicalJson}
                 onChange={onJsonChange}
                 onBlur={onJsonBlur}
                 error={jsonError}
@@ -637,6 +636,8 @@ function EditableJsonBlock({
   error: string | null;
 }) {
   const [copied, setCopied] = React.useState(false);
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
 
   const onCopy = React.useCallback(() => {
     void navigator.clipboard.writeText(value).then(() => {
@@ -660,7 +661,10 @@ function EditableJsonBlock({
     onUpdate: ({ editor }) => {
       onChange(editor.state.doc.textContent);
     },
-    onBlur: () => {
+    onBlur: ({ editor }) => {
+      if (editor.state.doc.textContent !== valueRef.current) {
+        editor.commands.setContent(makeCodeBlockContent(valueRef.current));
+      }
       onBlur();
     },
   }, [onChange, onBlur]);

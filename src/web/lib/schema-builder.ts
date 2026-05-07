@@ -116,9 +116,7 @@ export function reverseCoerceArguments(
       out[name] = "";
       continue;
     }
-    const prop = properties[name]!;
-    const type = resolveType(prop);
-    if (type === "object" || type === "array") {
+    if (typeof value === "object") {
       out[name] = JSON.stringify(value);
     } else {
       out[name] = String(value);
