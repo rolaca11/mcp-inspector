@@ -1,22 +1,15 @@
-import { ExternalLink, FileCog, FolderTree, Plus } from "lucide-react";
+import {FolderTree} from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { CodeBlock } from "@/components/code-block";
-import { Empty } from "@/components/empty";
-import { PageShell } from "@/components/page-shell";
-import { StatusDot } from "@/components/status-dot";
-import { TransportIcon, transportLabel } from "@/components/transport-icon";
-import { useConnectionStore, type ConnectionState } from "@/stores/connection-store";
-import type { MCPServer } from "@/data/types";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import {Badge} from "@/components/ui/badge";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
+import {CodeBlock} from "@/components/code-block";
+import {Empty} from "@/components/empty";
+import {PageShell} from "@/components/page-shell";
+import {StatusDot} from "@/components/status-dot";
+import {TransportIcon, transportLabel} from "@/components/transport-icon";
+import {type ConnectionState, useConnectionStore} from "@/stores/connection-store";
+import type {MCPServer} from "@/data/types";
+import {cn, formatRelativeTime} from "@/lib/utils";
 
 interface ServersPageProps {
   servers: MCPServer[];
@@ -67,19 +60,8 @@ export function ServersPage({
     <PageShell
       title="Servers"
       description="Resolved view of every named server across your `.mcp.json` files. Project-local entries override user-global ones."
-      actions={
-        <>
-          <Button variant="outline" size="sm" disabled>
-            <FileCog className="size-3.5" />
-            Edit .mcp.json
-          </Button>
-          <Button size="sm" disabled>
-            <Plus className="size-3.5" />
-            Add server
-          </Button>
-        </>
-      }
     >
+      <div className="grid lg:grid-cols-2 gap-4">
       {sources.map(([path, list]) => (
         <Card key={path}>
           <CardHeader>
@@ -92,10 +74,6 @@ export function ServersPage({
                 {list.length} server{list.length === 1 ? "" : "s"} loaded from this file.
               </CardDescription>
             </div>
-            <Badge variant="muted">
-              <ExternalLink className="size-3" />
-              open
-            </Badge>
           </CardHeader>
           <div className="divide-y divide-border/50">
             {list.map((s) => {
@@ -146,22 +124,13 @@ export function ServersPage({
                       {statusLabel}
                     </div>
                   </div>
-                  <Button
-                    variant={isActive ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(s);
-                    }}
-                  >
-                    {isActive ? "Active" : "Select"}
-                  </Button>
                 </button>
               );
             })}
           </div>
         </Card>
       ))}
+      </div>
 
       <Card>
         <CardHeader>

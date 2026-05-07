@@ -96,7 +96,7 @@ async function tracked<T>(
       result != null && typeof result === "object" && "_tokenCount" in result
         ? (result as { _tokenCount?: number | null })._tokenCount
         : undefined;
-    tx.finish(summarize ? summarize(result) : payload, tokenCount);
+    tx.finish(summarize ? summarize(result) : payload, tokenCount, result);
     return result;
   } catch (e) {
     tx.fail((e as Error).message);

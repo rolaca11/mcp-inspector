@@ -1,9 +1,11 @@
+import { useState } from "react";
 import {
   AlertCircle,
   RefreshCw,
   Clock,
   Tag,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,7 @@ import { StatusDot } from "@/components/status-dot";
 import { TransportIcon, transportLabel } from "@/components/transport-icon";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useActivityStore, type ActivityEntry } from "@/stores/activity-store";
+import { CodeBlock } from "@/components/code-block";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
 export function OverviewPage() {
@@ -162,6 +165,8 @@ export function OverviewPage() {
 /* ------------------------------------------------------------------ */
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
+  const [open, setOpen] = useState(false);
+
   const kindLabel = {
     "tool-call": "tool",
     "resource-read": "resource",
@@ -184,40 +189,67 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       ? entry.error
       : entry.detail ?? "";
 
+  const hasResponse = entry.response !== undefined;
+
   return (
-    <div className="flex items-center gap-4 px-6 py-4">
-      <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
-      <Badge variant="muted" className="font-mono w-24 pt-1 justify-center">
-        {kindLabel}
-      </Badge>
-      <span className="font-mono text-sm truncate flex-1 min-w-0">
-        {entry.target}
-      </span>
-      <span
-        className={cn(
-          "font-mono text-xs truncate hidden md:block max-w-md",
-          entry.outcome === "error"
-            ? "text-destructive/90"
-            : "text-muted-foreground/80",
+    <div>
+      <div className="flex items-center gap-4 px-6 py-4">
+        {hasResponse ? (
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="shrink-0 p-0.5 rounded transition-colors hover:bg-muted/70 cursor-pointer text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight
+              className={cn(
+                "size-4 transition-transform duration-150",
+                open && "rotate-90",
+              )}
+            />
+          </button>
+        ) : (
+          <span className="w-5 shrink-0" />
         )}
-      >
-        {detail}
-      </span>
-      {entry.tokenCount != null && (
-        <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-24 text-right hidden lg:block">
-          {entry.tokenCount.toLocaleString()} tok
+        <StatusDot tone={tone} pulse={entry.outcome === "pending"} />
+        <Badge variant="muted" className="font-mono w-24 pt-1 justify-center">
+          {kindLabel}
+        </Badge>
+        <span className="font-mono text-sm truncate flex-1 min-w-0">
+          {entry.target}
         </span>
+        <span
+          className={cn(
+            "font-mono text-xs truncate hidden md:block max-w-md",
+            entry.outcome === "error"
+              ? "text-destructive/90"
+              : "text-muted-foreground/80",
+          )}
+        >
+          {detail}
+        </span>
+        {entry.tokenCount != null && (
+          <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-24 text-right hidden lg:block">
+            {entry.tokenCount.toLocaleString()} tok
+          </span>
+        )}
+        <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-16 text-right">
+          {entry.durationMs == null
+            ? "…"
+            : entry.durationMs >= 1000
+              ? `${(entry.durationMs / 1000).toFixed(2)}s`
+              : `${entry.durationMs}ms`}
+        </span>
+        <span className="text-xs text-muted-foreground/70 w-22 text-right">
+          {formatRelativeTime(entry.at)}
+        </span>
+      </div>
+      {open && hasResponse && (
+        <div className="px-6 pb-4">
+          <CodeBlock language="application/json" caption="Response">
+            {JSON.stringify(entry.response, null, 2)}
+          </CodeBlock>
+        </div>
       )}
-      <span className="font-mono text-xs text-muted-foreground/80 tabular-nums w-16 text-right">
-        {entry.durationMs == null
-          ? "…"
-          : entry.durationMs >= 1000
-            ? `${(entry.durationMs / 1000).toFixed(2)}s`
-            : `${entry.durationMs}ms`}
-      </span>
-      <span className="text-xs text-muted-foreground/70 w-22 text-right">
-        {formatRelativeTime(entry.at)}
-      </span>
     </div>
   );
 }

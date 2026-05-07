@@ -314,11 +314,7 @@ function ToolDetail({
           {tool.description && (
             <p className="text-sm text-muted-foreground">{tool.description}</p>
           )}
-          {!hasArgs ? (
-            <div className="rounded-md border border-dashed border-border/60 px-5 py-8 text-center text-sm text-muted-foreground">
-              This tool takes no arguments.
-            </div>
-          ) : (
+          {hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
                 {Object.entries(properties).map(([name, prop]) => (

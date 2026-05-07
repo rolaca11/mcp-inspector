@@ -22,7 +22,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto max-w-[1800px] px-8 py-12 flex flex-col gap-10",
+        "mx-auto max-w-450 px-8 py-12 flex flex-col gap-10",
         className,
       )}
     >

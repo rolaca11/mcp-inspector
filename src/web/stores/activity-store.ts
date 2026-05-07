@@ -30,6 +30,7 @@ export interface ActivityEntry {
   /** Token count from the Anthropic Token Counting API (when available). */
   tokenCount?: number | null;
   error?: string;
+  response?: unknown;
   at: string;
 }
 
@@ -38,7 +39,7 @@ interface ActivityState {
 
   start(input: Omit<ActivityEntry, "id" | "outcome" | "at" | "durationMs">): {
     id: string;
-    finish(detail?: string, tokenCount?: number | null): void;
+    finish(detail?: string, tokenCount?: number | null, response?: unknown): void;
     fail(error: string): void;
   };
 
@@ -74,12 +75,13 @@ export const useActivityStore = create<ActivityState>((set) => ({
 
     return {
       id: entry.id,
-      finish: (detail, tokenCount) => {
+      finish: (detail, tokenCount, response) => {
         patch({
           outcome: "ok",
           durationMs: Math.round(performance.now() - startedAt),
           ...(detail != null ? { detail } : {}),
           ...(tokenCount != null ? { tokenCount } : {}),
+          ...(response !== undefined ? { response } : {}),
         });
       },
       fail: (error) => {
