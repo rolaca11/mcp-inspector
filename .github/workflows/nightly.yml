@@ -1,0 +1,95 @@
+name: Nightly Release
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC every night
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  nightly:
+    name: Nightly Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history to compare against latest tag
+
+      - name: Check for changes since last release
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the target commit of the latest GitHub release (including pre-releases / nightlies)
+          RELEASE_SHA=$(gh release view --json targetCommitish --jq .targetCommitish 2>/dev/null || echo "")
+
+          if [ -z "$RELEASE_SHA" ]; then
+            echo "No GitHub release found — treating as changed"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            COMMITS_SINCE=$(git rev-list "${RELEASE_SHA}..HEAD" --count)
+            echo "Latest release points at: ${RELEASE_SHA}"
+            echo "Commits since: ${COMMITS_SINCE}"
+
+            if [ "$COMMITS_SINCE" -gt 0 ]; then
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Install pnpm
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        if: steps.changes.outputs.has_changes == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        if: steps.changes.outputs.has_changes == 'true'
+        run: pnpm typecheck
+
+      - name: Build
+        if: steps.changes.outputs.has_changes == 'true'
+        run: pnpm build
+
+      - name: Set nightly version
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          NIGHTLY_VERSION="${BASE_VERSION}-nightly.$(date -u +'%Y%m%d')"
+          echo "Publishing ${NIGHTLY_VERSION}"
+          pnpm version "$NIGHTLY_VERSION" --no-git-tag-version
+
+      - name: Create GitHub Release
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NIGHTLY_VERSION=$(node -p "require('./package.json').version")
+          gh release create "v${NIGHTLY_VERSION}" \
+            --target "${{ github.sha }}" \
+            --title "v${NIGHTLY_VERSION}" \
+            --generate-notes \
+            --prerelease
+
+      - name: Publish to npm
+        if: steps.changes.outputs.has_changes == 'true'
+        run: pnpm publish --access public --tag nightly --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
