@@ -16,6 +16,7 @@ interface ConfigSource {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
+  inspector: "Inspector",
   global: "Global",
   project: "Project",
   "--config": "--config",

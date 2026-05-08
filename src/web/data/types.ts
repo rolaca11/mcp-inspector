@@ -6,7 +6,7 @@
 
 export type Transport = "stdio" | "http" | "sse" | "streamable-http";
 
-export type SourceLabel = "global" | "project" | "--config";
+export type SourceLabel = "inspector" | "global" | "project" | "--config";
 
 export interface MCPServer {
   /** Slug used in `.mcp.json#/mcpServers/<name>`. */

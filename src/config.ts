@@ -4,6 +4,7 @@
  * supplying a URL or a shell command.
  *
  * Locations are read in this precedence order (last wins on conflicts):
+ *   0. `<configDir>/mcp.json`   — inspector config dir (lowest precedence)
  *   1. `~/.claude.json`         — Claude Code user config (mcpServers key)
  *   2. `~/.mcp.json`            — user-global config
  *   3. `<cwd>/.mcp.json`        — project-local config
@@ -33,6 +34,8 @@ import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { configDir } from "./paths.js";
+
 export type StdioServerConfig = {
   type?: "stdio";
   command: string;
@@ -49,7 +52,7 @@ export type HttpServerConfig = {
 
 export type ServerConfig = StdioServerConfig | HttpServerConfig;
 
-export type SourceLabel = "global" | "project" | "--config";
+export type SourceLabel = "inspector" | "global" | "project" | "--config";
 
 export interface ConfigSource {
   /** Absolute path to the file that was read. */
@@ -87,8 +90,9 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
   const home = opts.home ?? os.homedir();
 
   // Order matters: lowest precedence first, last wins on duplicates.
-  // ~/.claude.json (global) → ~/.mcp.json (global) → <cwd>/.mcp.json (project) → --config extras
+  // <configDir>/mcp.json (inspector) → ~/.claude.json (global) → ~/.mcp.json (global) → <cwd>/.mcp.json (project) → --config extras
   const candidates: Array<{ file: string; label: SourceLabel }> = [
+    { file: path.join(configDir(), "mcp.json"), label: "inspector" },
     { file: path.join(home, ".claude.json"), label: "global" },
     { file: path.join(home, ".mcp.json"), label: "global" },
     { file: path.join(cwd, ".mcp.json"), label: "project" },

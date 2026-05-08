@@ -12,13 +12,15 @@
  *   - a quoted stdio command (e.g. "npx -y @modelcontextprotocol/server-everything").
  */
 
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { Command, Option } from "commander";
 import pc from "picocolors";
 
 import * as actions from "./actions.js";
 import { connect } from "./client.js";
-import { loadConfigSync, type LoadedConfig } from "./config.js";
+import { loadConfigSync, type LoadedConfig, type ServerConfig } from "./config.js";
+import { configDir } from "./paths.js";
 import { runRepl } from "./repl.js";
 import { errorMessage } from "./format.js";
 import { parseTarget, setLoadedConfig } from "./target.js";
@@ -494,6 +496,188 @@ function printServers(config: LoadedConfig, asJson: boolean) {
     console.log(`  ${" ".repeat(nameWidth)}  ${pc.dim(`from ${source} (${label})`)}`);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* config                                                              */
+/* ------------------------------------------------------------------ */
+
+const inspectorConfigFile = path.join(configDir(), "mcp.json");
+
+function readInspectorConfig(): Record<string, unknown> {
+  if (!existsSync(inspectorConfigFile)) return {};
+  const raw = readFileSync(inspectorConfigFile, "utf8");
+  const parsed = JSON.parse(raw);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${inspectorConfigFile}: expected a JSON object at top level`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function writeInspectorConfig(obj: Record<string, unknown>): void {
+  mkdirSync(path.dirname(inspectorConfigFile), { recursive: true });
+  writeFileSync(inspectorConfigFile, JSON.stringify(obj, null, 2) + "\n");
+}
+
+function getServersRecord(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
+  const s = obj.mcpServers;
+  if (s === undefined) return {};
+  if (typeof s !== "object" || s === null || Array.isArray(s)) {
+    throw new Error(`${inspectorConfigFile}: "mcpServers" must be an object`);
+  }
+  return s as Record<string, unknown>;
+}
+
+const config = program
+  .command("config")
+  .description(
+    `Manage the inspector-level MCP server config (${inspectorConfigFile})`,
+  );
+
+config
+  .command("path")
+  .description("Print the inspector config file path")
+  .action(() => {
+    console.log(inspectorConfigFile);
+  });
+
+config
+  .command("list")
+  .description("List servers defined in the inspector config")
+  .option("--json", "emit machine-readable JSON")
+  .action((_opts, cmd: Command) => {
+    const opts = cmd.opts() as { json?: boolean };
+    const obj = readInspectorConfig();
+    const servers = getServersRecord(obj);
+    const entries = Object.entries(servers);
+
+    if (opts.json) {
+      console.log(JSON.stringify({ path: inspectorConfigFile, servers }, null, 2));
+      return;
+    }
+
+    console.log(pc.dim(inspectorConfigFile));
+    if (entries.length === 0) {
+      console.log(pc.dim("No servers configured."));
+      return;
+    }
+
+    const nameWidth = Math.max(...entries.map(([n]) => n.length), 4);
+    for (const [name, value] of entries) {
+      const v = value as Record<string, unknown>;
+      const padded = name.padEnd(nameWidth);
+      if (typeof v.url === "string") {
+        const kind = (typeof v.type === "string" && v.type) || "http";
+        console.log(`  ${pc.cyan(padded)}  ${v.url}  ${pc.dim(`[${kind}]`)}`);
+      } else if (typeof v.command === "string") {
+        const argsStr = Array.isArray(v.args) ? (v.args as string[]).join(" ") : "";
+        console.log(
+          `  ${pc.cyan(padded)}  ${v.command}${argsStr ? " " + argsStr : ""}  ${pc.dim("[stdio]")}`,
+        );
+      } else {
+        console.log(`  ${pc.cyan(padded)}  ${pc.dim("(unrecognized entry)")}`);
+      }
+    }
+  });
+
+config
+  .command("add")
+  .argument("<name>", "server name")
+  .option("--command <cmd>", "stdio command to run")
+  .option("--args <json>", "stdio args as a JSON array", "[]")
+  .option("--env <json>", "stdio env as a JSON object", "{}")
+  .option("--cwd <path>", "stdio working directory")
+  .option("--url <url>", "HTTP server URL")
+  .option(
+    "--type <type>",
+    "transport type (http, sse, streamable-http, stdio)",
+  )
+  .option("--headers <json>", "HTTP headers as a JSON object", "{}")
+  .option("-f, --force", "overwrite if the server name already exists")
+  .description("Add a server to the inspector config")
+  .action((name: string, _opts, cmd: Command) => {
+    const opts = cmd.opts() as {
+      command?: string;
+      args?: string;
+      env?: string;
+      cwd?: string;
+      url?: string;
+      type?: string;
+      headers?: string;
+      force?: boolean;
+    };
+
+    if (!opts.command && !opts.url) {
+      throw new Error("either --command or --url is required");
+    }
+    if (opts.command && opts.url) {
+      throw new Error("--command and --url are mutually exclusive");
+    }
+
+    let entry: ServerConfig;
+    if (opts.command) {
+      entry = { command: opts.command };
+      const args = JSON.parse(opts.args ?? "[]");
+      if (!Array.isArray(args)) throw new Error("--args must be a JSON array");
+      if (args.length > 0) entry.args = args as string[];
+      const env = JSON.parse(opts.env ?? "{}");
+      if (typeof env !== "object" || env === null || Array.isArray(env))
+        throw new Error("--env must be a JSON object");
+      if (Object.keys(env).length > 0) entry.env = env as Record<string, string>;
+      if (opts.cwd) entry.cwd = opts.cwd;
+      if (opts.type === "stdio") entry.type = "stdio";
+    } else {
+      entry = { url: opts.url! };
+      const headers = JSON.parse(opts.headers ?? "{}");
+      if (typeof headers !== "object" || headers === null || Array.isArray(headers))
+        throw new Error("--headers must be a JSON object");
+      if (Object.keys(headers).length > 0)
+        (entry as { headers?: Record<string, string> }).headers =
+          headers as Record<string, string>;
+      if (
+        opts.type === "http" ||
+        opts.type === "sse" ||
+        opts.type === "streamable-http"
+      ) {
+        (entry as { type?: string }).type = opts.type;
+      }
+    }
+
+    const obj = readInspectorConfig();
+    const servers = getServersRecord(obj);
+    if (name in servers && !opts.force) {
+      throw new Error(
+        `server "${name}" already exists — use --force to overwrite`,
+      );
+    }
+    servers[name] = entry;
+    obj.mcpServers = servers;
+    writeInspectorConfig(obj);
+    console.log(
+      pc.green(`Added "${name}" to ${inspectorConfigFile}`),
+    );
+  });
+
+config
+  .command("remove")
+  .argument("<name>", "server name to remove")
+  .description("Remove a server from the inspector config")
+  .action((name: string) => {
+    const obj = readInspectorConfig();
+    const servers = getServersRecord(obj);
+    if (!(name in servers)) {
+      throw new Error(
+        `server "${name}" not found in ${inspectorConfigFile}`,
+      );
+    }
+    delete servers[name];
+    obj.mcpServers = servers;
+    writeInspectorConfig(obj);
+    console.log(
+      pc.green(`Removed "${name}" from ${inspectorConfigFile}`),
+    );
+  });
 
 /* ------------------------------------------------------------------ */
 /* serve                                                               */
