@@ -320,7 +320,11 @@ async function handleApi(
     };
 
     if ((sub === "discover" || sub === "") && method === "GET") {
-      return sendWithTokens(await actionDiscover(session));
+      // Drop the pooled session so we re-run the `initialize` handshake and
+      // pick up any changes to serverInfo / capabilities / instructions.
+      await ctx.sessions.release(name, true);
+      const fresh = await ctx.sessions.acquire(name);
+      return sendWithTokens(await actionDiscover(fresh));
     }
     if (sub === "resources" && method === "GET") {
       const r = await session.client.listResources();
