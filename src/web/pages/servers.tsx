@@ -4,7 +4,7 @@ import {FolderTree, Trash2} from "lucide-react";
 import {AddServerDialog} from "@/components/add-server-dialog";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
-import {Card, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
+import {Card, CardAction, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
 import {Empty} from "@/components/empty";
 import {PageShell} from "@/components/page-shell";
 import {StatusDot} from "@/components/status-dot";
@@ -80,21 +80,21 @@ export function ServersPage({
     <PageShell
       title="Servers"
       description="Resolved view of every named server across your `.mcp.json` files. Project-local entries override user-global ones."
-      actions={addButton}
     >
       <div className="grid lg:grid-cols-2 gap-4">
-      {sources.map(([path, list]) => (
+      {sources.map(([path, list]) => {
+        const isInspectorSource = list[0]?.sourceLabel === "inspector";
+        return (
         <Card key={path}>
           <CardHeader>
-            <div className="flex flex-col gap-1 min-w-0">
-              <CardTitle className="flex items-center gap-2">
-                <FolderTree className="size-4 text-muted-foreground" />
-                <span className="font-mono text-foreground">{path}</span>
-              </CardTitle>
-              <CardDescription>
-                {list.length} server{list.length === 1 ? "" : "s"} loaded from this file.
-              </CardDescription>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <FolderTree className="size-4 text-muted-foreground" />
+              <span className="font-mono text-foreground">{path}</span>
+            </CardTitle>
+            <CardDescription>
+              {list.length} server{list.length === 1 ? "" : "s"} loaded from this file.
+            </CardDescription>
+            {isInspectorSource && <CardAction>{addButton}</CardAction>}
           </CardHeader>
           <div className="divide-y divide-border/50">
             {list.map((s) => {
@@ -168,7 +168,8 @@ export function ServersPage({
             })}
           </div>
         </Card>
-      ))}
+        );
+      })}
       </div>
     </PageShell>
   );
