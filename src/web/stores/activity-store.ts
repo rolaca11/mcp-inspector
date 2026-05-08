@@ -43,6 +43,17 @@ interface ActivityState {
     fail(error: string, response?: unknown): void;
   };
 
+  insert(entries: Array<{
+    kind: ActivityKind;
+    serverName: string;
+    target: string;
+    outcome: "ok" | "error";
+    durationMs: number;
+    tokenCount?: number | null;
+    error?: string;
+    response?: unknown;
+  }>): void;
+
   clear(): void;
 }
 
@@ -93,6 +104,25 @@ export const useActivityStore = create<ActivityState>((set) => ({
         });
       },
     };
+  },
+
+  insert(incoming) {
+    const now = new Date().toISOString();
+    const newEntries: ActivityEntry[] = incoming.map((e) => ({
+      id: cryptoRandomId(),
+      kind: e.kind,
+      serverName: e.serverName,
+      target: e.target,
+      outcome: e.outcome,
+      durationMs: e.durationMs,
+      ...(e.tokenCount != null ? { tokenCount: e.tokenCount } : {}),
+      ...(e.error != null ? { error: e.error } : {}),
+      ...(e.response !== undefined ? { response: e.response } : {}),
+      at: now,
+    }));
+    set((s) => ({
+      entries: [...newEntries, ...s.entries].slice(0, MAX_ENTRIES),
+    }));
   },
 
   clear() {

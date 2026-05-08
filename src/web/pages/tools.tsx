@@ -38,7 +38,7 @@ import {
   resolveSchemaRefs,
 } from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
-import type { MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
+import type { ActivityResult, MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
 
@@ -176,10 +176,9 @@ function ToolListRow({
 
 interface CallState {
   loading: boolean;
-  result?: ToolResult;
+  activity?: ActivityResult<ToolResult>;
   error?: string;
   errorResponse?: Record<string, unknown>;
-  durationMs?: number;
 }
 
 function ToolDetail({
@@ -263,15 +262,13 @@ function ToolDetail({
       void handleSubmit(async (coercedData) => {
         setLoading(true);
         try {
-          const t0 = performance.now();
-          const result = await api.callTool(serverName, {
+          const activities = await api.callTool(serverName, {
             name: tool.name,
             arguments: coercedData as Record<string, unknown>,
           });
           const settled: CallState = {
             loading: false,
-            result,
-            durationMs: Math.round(performance.now() - t0),
+            activity: activities[0],
           };
           resultStore.set(serverName, "tool", tool.name, settled);
         } catch (e) {
@@ -358,11 +355,17 @@ function ToolDetail({
               <AlertCircle className="size-3" />
               error
             </Badge>
-          ) : callState.result ? (
-            <Badge variant={callState.result.isError ? "destructive" : "success"}>
-              {callState.result.isError ? "isError" : "ok"}
-              {callState.durationMs != null && ` · ${callState.durationMs}ms`}
-              {callState.result._tokenCount != null && ` · ${callState.result._tokenCount.toLocaleString()} tokens`}
+          ) : callState.activity?.outcome === "error" ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+            </Badge>
+          ) : callState.activity?.result ? (
+            <Badge variant={callState.activity.result.isError ? "destructive" : "success"}>
+              {callState.activity.result.isError ? "isError" : "ok"}
+              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+              {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
             </Badge>
           ) : null}
         </CardHeader>
@@ -1016,12 +1019,13 @@ function JsonSubField({
 /* ------------------------------------------------------------------ */
 
 function ToolResultView({ state }: { state: CallState }) {
-  if (state.error) {
+  const errorMsg = state.error ?? (state.activity?.outcome === "error" ? state.activity.error : null);
+  if (errorMsg) {
     return (
       <div className="space-y-2">
         <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
           <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-          <span className="break-all">{state.error}</span>
+          <span className="break-all">{errorMsg}</span>
         </div>
         {state.errorResponse && (
           <CodeBlock language="application/json" caption="error response">
@@ -1031,14 +1035,14 @@ function ToolResultView({ state }: { state: CallState }) {
       </div>
     );
   }
-  if (!state.result) {
+  if (!state.activity?.result) {
     return (
       <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
         Call the tool to see a response.
       </div>
     );
   }
-  const r = state.result;
+  const r = state.activity.result;
   return (
     <div className="space-y-3">
       {r.content.map((block, i) => (

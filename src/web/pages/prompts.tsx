@@ -25,7 +25,7 @@ import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { api, ApiError } from "@/data/api";
-import type { GetPromptResult, MCPPrompt } from "@/data/types";
+import type { ActivityResult, GetPromptResult, MCPPrompt } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
 
@@ -164,10 +164,9 @@ function PromptListRow({
 
 interface GetState {
   loading: boolean;
-  result?: GetPromptResult;
+  activity?: ActivityResult<GetPromptResult>;
   error?: string;
   errorResponse?: Record<string, unknown>;
-  durationMs?: number;
 }
 
 function PromptDetail({
@@ -202,19 +201,17 @@ function PromptDetail({
     setErrors({});
     setLoading(true);
     try {
-      const t0 = performance.now();
       const stringified: Record<string, string> = {};
       for (const [k, v] of Object.entries(values)) {
         if (v !== "") stringified[k] = v;
       }
-      const r = await api.getPrompt(serverName, {
+      const activities = await api.getPrompt(serverName, {
         name: prompt.name,
         arguments: stringified,
       });
       const settled: GetState = {
         loading: false,
-        result: r,
-        durationMs: Math.round(performance.now() - t0),
+        activity: activities[0],
       };
       resultStore.set(serverName, "prompt", prompt.name, settled);
     } catch (e) {
@@ -319,26 +316,26 @@ function PromptDetail({
               <Loader2 className="size-3 animate-spin" />
               running…
             </Badge>
-          ) : state.error ? (
+          ) : (state.error || state.activity?.outcome === "error") ? (
             <Badge variant="destructive">
               <AlertCircle className="size-3" />
               error
             </Badge>
-          ) : state.result ? (
+          ) : state.activity?.result ? (
             <Badge variant="success">
-              {state.result.messages.length} message
-              {state.result.messages.length === 1 ? "" : "s"}
-              {state.durationMs != null && ` · ${state.durationMs}ms`}
-              {state.result._tokenCount != null && ` · ${state.result._tokenCount.toLocaleString()} tokens`}
+              {state.activity.result.messages.length} message
+              {state.activity.result.messages.length === 1 ? "" : "s"}
+              {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
+              {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
             </Badge>
           ) : null}
         </CardHeader>
         <CardContent>
-          {state.error ? (
+          {(state.error || state.activity?.outcome === "error") ? (
             <div className="space-y-2">
               <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
                 <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-                <span className="break-all">{state.error}</span>
+                <span className="break-all">{state.error ?? state.activity?.error}</span>
               </div>
               {state.errorResponse && (
                 <CodeBlock language="application/json" caption="error response">
@@ -346,8 +343,8 @@ function PromptDetail({
                 </CodeBlock>
               )}
             </div>
-          ) : state.result ? (
-            <PromptResultView result={state.result} />
+          ) : state.activity?.result ? (
+            <PromptResultView result={state.activity.result} />
           ) : (
             <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
               Resolve the prompt to see its messages.

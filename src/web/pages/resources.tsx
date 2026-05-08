@@ -36,6 +36,7 @@ import { api, ApiError } from "@/data/api";
 import {
   expandTemplate,
   extractTemplateVariables,
+  type ActivityResult,
   type MCPResource,
   type MCPResourceTemplate,
   type ReadResourceResult,
@@ -197,10 +198,9 @@ function CombinedResourcesPanel({
 }
 
 interface ReadState {
-  result?: ReadResourceResult;
+  activity?: ActivityResult<ReadResourceResult>;
   error?: string;
   errorResponse?: Record<string, unknown>;
-  readAt?: number;
 }
 
 function ResourcePreview({
@@ -214,19 +214,18 @@ function ResourcePreview({
   const [reading, setReading] = React.useState(false);
 
   const cached = resultStore.get<ReadState>(serverName, "resource", resource.uri);
-  const result = cached?.result ?? null;
-  const error = cached?.error ?? null;
+  const activity = cached?.activity ?? null;
+  const result = activity?.outcome === "ok" ? activity.result ?? null : null;
+  const activityError = activity?.outcome === "error" ? activity.error ?? null : null;
+  const error = cached?.error ?? activityError;
   const errorResponse = cached?.errorResponse;
-  const readAt = cached?.readAt ?? null;
 
   const onRead = React.useCallback(async () => {
     setReading(true);
     try {
-      const t0 = performance.now();
-      const r = await api.readResource(serverName, { uri: resource.uri });
+      const activities = await api.readResource(serverName, { uri: resource.uri });
       resultStore.set(serverName, "resource", resource.uri, {
-        result: r,
-        readAt: Math.round(performance.now() - t0),
+        activity: activities[0],
       } satisfies ReadState);
     } catch (e) {
       resultStore.set(serverName, "resource", resource.uri, {
@@ -287,8 +286,8 @@ function ResourcePreview({
           ) : result ? (
             <Badge variant="success">
               {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-              {readAt != null && ` · ${readAt}ms`}
-              {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
+              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
             </Badge>
           ) : null}
         </CardHeader>
@@ -337,10 +336,11 @@ function TemplatePreview({
   const [reading, setReading] = React.useState(false);
 
   const cached = resultStore.get<ReadState>(serverName, "template", template.uriTemplate);
-  const result = cached?.result ?? null;
-  const error = cached?.error ?? null;
+  const activity = cached?.activity ?? null;
+  const result = activity?.outcome === "ok" ? activity.result ?? null : null;
+  const activityError = activity?.outcome === "error" ? activity.error ?? null : null;
+  const error = cached?.error ?? activityError;
   const errorResponse = cached?.errorResponse;
-  const readAt = cached?.readAt ?? null;
 
   const watchedValues = form.watch() as Record<string, string>;
   const expanded = expandTemplate(template.uriTemplate, watchedValues);
@@ -350,11 +350,9 @@ function TemplatePreview({
     if (!fullyExpanded) return;
     setReading(true);
     try {
-      const t0 = performance.now();
-      const r = await api.readResource(serverName, { uri: expanded });
+      const activities = await api.readResource(serverName, { uri: expanded });
       resultStore.set(serverName, "template", template.uriTemplate, {
-        result: r,
-        readAt: Math.round(performance.now() - t0),
+        activity: activities[0],
       } satisfies ReadState);
     } catch (e) {
       resultStore.set(serverName, "template", template.uriTemplate, {
@@ -468,8 +466,8 @@ function TemplatePreview({
           ) : result ? (
             <Badge variant="success">
               {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-              {readAt != null && ` · ${readAt}ms`}
-              {result._tokenCount != null && ` · ${result._tokenCount.toLocaleString()} tokens`}
+              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
             </Badge>
           ) : null}
         </CardHeader>

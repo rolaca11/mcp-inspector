@@ -91,15 +91,26 @@ async function runDiscover(
   const stopPolling = startAuthUrlPolling(serverName, ctrl.signal, set);
 
   try {
-    const r = await api.discover(serverName, ctrl.signal);
+    const activities = await api.discover(serverName, ctrl.signal);
     if (ctrl.signal.aborted) return;
-    set({
-      data: r,
-      lastDiscoveredAt: new Date().toISOString(),
-      connectionState: "connected",
-      loading: false,
-      pendingAuthUrl: null,
-    });
+    const a = activities[0];
+    if (a?.outcome === "ok" && a.result) {
+      set({
+        data: a.result,
+        lastDiscoveredAt: new Date().toISOString(),
+        connectionState: "connected",
+        loading: false,
+        pendingAuthUrl: null,
+      });
+    } else {
+      set({
+        error: a?.error ?? "discover returned no result",
+        connectionState: "error",
+        data: null,
+        loading: false,
+        pendingAuthUrl: null,
+      });
+    }
   } catch (e) {
     if (ctrl.signal.aborted) return;
     if (e instanceof ApiError) {

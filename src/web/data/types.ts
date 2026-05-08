@@ -136,8 +136,6 @@ export interface ToolResult {
   isError?: boolean;
   content: ContentBlock[];
   structuredContent?: unknown;
-  /** Token count from the Anthropic Token Counting API (when available). */
-  _tokenCount?: number | null;
 }
 
 export interface ResourceContents {
@@ -149,8 +147,6 @@ export interface ResourceContents {
 
 export interface ReadResourceResult {
   contents: ResourceContents[];
-  /** Token count from the Anthropic Token Counting API (when available). */
-  _tokenCount?: number | null;
 }
 
 export interface PromptMessage {
@@ -161,8 +157,6 @@ export interface PromptMessage {
 export interface GetPromptResult {
   description?: string;
   messages: PromptMessage[];
-  /** Token count from the Anthropic Token Counting API (when available). */
-  _tokenCount?: number | null;
 }
 
 export interface CompleteResult {
@@ -171,8 +165,6 @@ export interface CompleteResult {
     total?: number;
     hasMore?: boolean;
   };
-  /** Token count from the Anthropic Token Counting API (when available). */
-  _tokenCount?: number | null;
 }
 
 export interface DiscoverResult {
@@ -182,8 +174,24 @@ export interface DiscoverResult {
   resourceTemplates: MCPResourceTemplate[];
   tools: MCPTool[];
   prompts: MCPPrompt[];
-  /** Token count from the Anthropic Token Counting API (when available). */
-  _tokenCount?: number | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Activity result (unified response envelope for action endpoints)    */
+/* ------------------------------------------------------------------ */
+
+export interface ActivityResult<T = unknown> {
+  kind: string;
+  target: string;
+  outcome: "ok" | "error";
+  durationMs: number;
+  tokenCount: number | null;
+  result?: T;
+  error?: string;
+}
+
+export interface ActivitiesResponse<T = unknown> {
+  activities: ActivityResult<T>[];
 }
 
 /* ------------------------------------------------------------------ */

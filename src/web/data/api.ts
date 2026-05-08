@@ -1,11 +1,15 @@
 /**
  * Tiny client for the `mcp-inspector serve` HTTP API. Routes mirror
- * `src/server.ts`. Every call is recorded to `activityLog` so the dashboard's
- * activity feed shows the real history of what was sent.
+ * `src/server.ts`. Every action endpoint returns `{ activities: [...] }`
+ * with server-computed metadata (kind, target, outcome, durationMs,
+ * tokenCount). The client pushes these into the activity store so the
+ * dashboard feed stays in sync.
  */
 
 import { useActivityStore, type ActivityKind } from "@/stores/activity-store";
 import type {
+  ActivitiesResponse,
+  ActivityResult,
   AuthStatus,
   CompleteResult,
   DiscoverResult,
@@ -84,39 +88,29 @@ async function call<T>(path: string, init?: CallInit): Promise<T> {
 }
 
 /**
- * Wraps a call so it appears in the activity log. The `detail` callback
- * receives the parsed result and returns a one-line summary for the feed.
+ * Calls an action endpoint that returns `{ activities: [...] }`, pushes
+ * the server-computed activity entries into the client-side store, and
+ * returns the activities array.
  */
-async function tracked<T>(
+async function activityCall<T>(
   serverName: string,
-  kind: ActivityKind,
-  target: string,
-  payload: string | undefined,
-  fn: () => Promise<T>,
-  summarize?: (result: T) => string,
-): Promise<T> {
-  const tx = useActivityStore.getState().start({
-    kind,
-    serverName,
-    target,
-    ...(payload != null ? { detail: payload } : {}),
-  });
-  try {
-    const result = await fn();
-    // Extract _tokenCount from the response if available.
-    const tokenCount =
-      result != null && typeof result === "object" && "_tokenCount" in result
-        ? (result as { _tokenCount?: number | null })._tokenCount
-        : undefined;
-    tx.finish(summarize ? summarize(result) : payload, tokenCount, result);
-    return result;
-  } catch (e) {
-    tx.fail(
-      (e as Error).message,
-      e instanceof ApiError ? e.responseBody : undefined,
-    );
-    throw e;
-  }
+  path: string,
+  init?: CallInit,
+): Promise<ActivityResult<T>[]> {
+  const resp = await call<ActivitiesResponse<T>>(path, init);
+  useActivityStore.getState().insert(
+    resp.activities.map((a) => ({
+      kind: a.kind as ActivityKind,
+      serverName,
+      target: a.target,
+      outcome: a.outcome,
+      durationMs: a.durationMs,
+      tokenCount: a.tokenCount,
+      error: a.error,
+      response: a.result,
+    })),
+  );
+  return resp.activities;
 }
 
 /* ------------------------------------------------------------------ */
@@ -148,112 +142,76 @@ export const api = {
     return call("/servers");
   },
 
-  discover(name: string, signal?: AbortSignal): Promise<DiscoverResult> {
-    return tracked(
+  discover(
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<ActivityResult<DiscoverResult>[]> {
+    return activityCall<DiscoverResult>(
       name,
-      "discover",
-      "discover",
-      undefined,
-      () =>
-        call<DiscoverResult>(
-          `/servers/${encodeURIComponent(name)}/discover`,
-          signal ? { signal } : undefined,
-        ),
-      (r) => {
-        const counts = [
-          r.tools.length && `${r.tools.length} tools`,
-          r.resources.length && `${r.resources.length} resources`,
-          r.resourceTemplates.length &&
-            `${r.resourceTemplates.length} templates`,
-          r.prompts.length && `${r.prompts.length} prompts`,
-        ].filter(Boolean);
-        return counts.join(" · ");
-      },
+      `/servers/${encodeURIComponent(name)}/discover`,
+      signal ? { signal } : undefined,
     );
   },
 
   callTool(
     name: string,
-    body: { name: string; arguments?: Record<string, unknown> },
-  ): Promise<ToolResult> {
-    return tracked(
+    body:
+      | { name: string; arguments?: Record<string, unknown> }
+      | Array<{ name: string; arguments?: Record<string, unknown> }>,
+  ): Promise<ActivityResult<ToolResult>[]> {
+    return activityCall<ToolResult>(
       name,
-      "tool-call",
-      body.name,
-      truncate(JSON.stringify(body.arguments ?? {})),
-      () =>
-        call<ToolResult>(`/servers/${encodeURIComponent(name)}/tools/call`, {
-          method: "POST",
-          body,
-        }),
-      (r) => (r.isError ? "isError: true" : firstTextPreview(r)),
+      `/servers/${encodeURIComponent(name)}/tools/call`,
+      { method: "POST", body },
     );
   },
 
   readResource(
     name: string,
-    body: { uri: string },
-  ): Promise<ReadResourceResult> {
-    return tracked(
+    body: { uri: string } | Array<{ uri: string }>,
+  ): Promise<ActivityResult<ReadResourceResult>[]> {
+    return activityCall<ReadResourceResult>(
       name,
-      "resource-read",
-      body.uri,
-      undefined,
-      () =>
-        call<ReadResourceResult>(
-          `/servers/${encodeURIComponent(name)}/resources/read`,
-          { method: "POST", body },
-        ),
-      (r) => {
-        const c = r.contents[0];
-        if (!c) return "no contents";
-        const len = c.text?.length ?? c.blob?.length ?? 0;
-        return `${c.mimeType ?? "?"} · ${formatBytes(len)}`;
-      },
+      `/servers/${encodeURIComponent(name)}/resources/read`,
+      { method: "POST", body },
     );
   },
 
   getPrompt(
     name: string,
-    body: { name: string; arguments?: Record<string, string> },
-  ): Promise<GetPromptResult> {
-    return tracked(
+    body:
+      | { name: string; arguments?: Record<string, string> }
+      | Array<{ name: string; arguments?: Record<string, string> }>,
+  ): Promise<ActivityResult<GetPromptResult>[]> {
+    return activityCall<GetPromptResult>(
       name,
-      "prompt-get",
-      body.name,
-      truncate(JSON.stringify(body.arguments ?? {})),
-      () =>
-        call<GetPromptResult>(
-          `/servers/${encodeURIComponent(name)}/prompts/get`,
-          { method: "POST", body },
-        ),
-      (r) => `${r.messages.length} message${r.messages.length === 1 ? "" : "s"}`,
+      `/servers/${encodeURIComponent(name)}/prompts/get`,
+      { method: "POST", body },
     );
   },
 
   complete(
     name: string,
-    body: {
-      refType: "prompt" | "resource";
-      ref: string;
-      argument: string;
-      value?: string;
-      context?: Record<string, string>;
-    },
-  ): Promise<CompleteResult> {
-    return tracked(
+    body:
+      | {
+          refType: "prompt" | "resource";
+          ref: string;
+          argument: string;
+          value?: string;
+          context?: Record<string, string>;
+        }
+      | Array<{
+          refType: "prompt" | "resource";
+          ref: string;
+          argument: string;
+          value?: string;
+          context?: Record<string, string>;
+        }>,
+  ): Promise<ActivityResult<CompleteResult>[]> {
+    return activityCall<CompleteResult>(
       name,
-      "complete",
-      `${body.refType}:${body.ref}/${body.argument}`,
-      body.value || undefined,
-      () =>
-        call<CompleteResult>(`/servers/${encodeURIComponent(name)}/complete`, {
-          method: "POST",
-          body,
-        }),
-      (r) =>
-        `${r.completion.values.length} result${r.completion.values.length === 1 ? "" : "s"}` +
-        (r.completion.total ? ` of ${r.completion.total}` : ""),
+      `/servers/${encodeURIComponent(name)}/complete`,
+      { method: "POST", body },
     );
   },
 
@@ -271,31 +229,21 @@ export const api = {
     return call(`/servers/${encodeURIComponent(name)}/auth-url`);
   },
 
-  authLogout(name: string): Promise<{ removed: boolean; file: string }> {
-    return tracked(
+  authLogout(
+    name: string,
+  ): Promise<ActivityResult<{ removed: boolean; file: string }>[]> {
+    return activityCall<{ removed: boolean; file: string }>(
       name,
-      "auth",
-      "logout",
-      undefined,
-      () =>
-        call(`/servers/${encodeURIComponent(name)}/auth`, {
-          method: "DELETE",
-        }),
-      (r) => (r.removed ? "removed token store" : "no token store"),
+      `/servers/${encodeURIComponent(name)}/auth`,
+      { method: "DELETE" },
     );
   },
 
-  disconnect(name: string): Promise<{ ok: true }> {
-    return tracked(
+  disconnect(name: string): Promise<ActivityResult<{ ok: true }>[]> {
+    return activityCall<{ ok: true }>(
       name,
-      "disconnect",
-      name,
-      undefined,
-      () =>
-        call(`/servers/${encodeURIComponent(name)}/disconnect`, {
-          method: "POST",
-        }),
-      () => "session closed",
+      `/servers/${encodeURIComponent(name)}/disconnect`,
+      { method: "POST" },
     );
   },
 
@@ -328,30 +276,6 @@ export { ApiError };
 /* ------------------------------------------------------------------ */
 /* Tiny helpers                                                        */
 /* ------------------------------------------------------------------ */
-
-function truncate(s: string, n = 120): string {
-  if (!s) return s;
-  if (s.length <= n) return s;
-  return s.slice(0, n - 1) + "…";
-}
-
-function firstTextPreview(r: ToolResult): string {
-  for (const c of r.content) {
-    if (c.type === "text") return truncate(c.text.replace(/\s+/g, " ").trim(), 80);
-    if (c.type === "image") return `image · ${c.mimeType}`;
-    if (c.type === "audio") return `audio · ${c.mimeType}`;
-    if (c.type === "resource_link") return `link · ${c.uri}`;
-    if (c.type === "resource") return `embedded · ${c.resource.uri}`;
-  }
-  return "ok";
-}
-
-function formatBytes(n: number): string {
-  if (!n) return "0 B";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
-}
 
 function errorChain(e: unknown): string {
   const parts: string[] = [];

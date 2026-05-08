@@ -53,7 +53,7 @@ export function CompletableInput({
             if (v !== "") cleanContext[k] = v;
           }
         }
-        const r = await api.complete(serverName, {
+        const activities = await api.complete(serverName, {
           refType,
           ref: refId,
           argument,
@@ -63,8 +63,9 @@ export function CompletableInput({
             : {}),
         });
         if (id !== reqRef.current) return;
-        setSuggestions(r.completion.values);
-        setOpen(r.completion.values.length > 0);
+        const r = activities[0]?.result;
+        setSuggestions(r?.completion.values ?? []);
+        setOpen((r?.completion.values.length ?? 0) > 0);
         setActiveIndex(-1);
       } catch {
         if (id !== reqRef.current) return;

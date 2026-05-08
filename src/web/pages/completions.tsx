@@ -26,6 +26,7 @@ import { useConnectionStore } from "@/stores/connection-store";
 import { api, ApiError } from "@/data/api";
 import {
   extractTemplateVariables,
+  type ActivityResult,
   type CompleteResult,
   type MCPPrompt,
   type MCPResourceTemplate,
@@ -40,10 +41,9 @@ interface RefOption {
 
 interface CompleteState {
   loading: boolean;
-  result?: CompleteResult;
+  activity?: ActivityResult<CompleteResult>;
   error?: string;
   errorResponse?: Record<string, unknown>;
-  durationMs?: number;
 }
 
 export function CompletionsPage() {
@@ -160,12 +160,11 @@ function CompletionsPlayground({
     if (!currentRef || !argument) return;
     setState({ loading: true });
     try {
-      const t0 = performance.now();
       const context: Record<string, string> = {};
       for (const { key, value: v } of contextPairs) {
         if (key.trim() !== "") context[key.trim()] = v;
       }
-      const r = await api.complete(serverName, {
+      const activities = await api.complete(serverName, {
         refType,
         ref: currentRef.id,
         argument,
@@ -174,8 +173,7 @@ function CompletionsPlayground({
       });
       setState({
         loading: false,
-        result: r,
-        durationMs: Math.round(performance.now() - t0),
+        activity: activities[0],
       });
     } catch (e) {
       setState({
@@ -385,27 +383,28 @@ function CompletionsPlayground({
                 <Loader2 className="size-3 animate-spin" />
                 running…
               </Badge>
-            ) : state.error ? (
+            ) : (state.error || state.activity?.outcome === "error") ? (
               <Badge variant="destructive">
                 <AlertCircle className="size-3" />
                 error
               </Badge>
-            ) : state.result ? (
+            ) : state.activity?.result ? (
               <Badge variant="success">
-                {state.result.completion.values.length}
-                {state.result.completion.total != null
-                  ? ` / ${state.result.completion.total}`
+                {state.activity.result.completion.values.length}
+                {state.activity.result.completion.total != null
+                  ? ` / ${state.activity.result.completion.total}`
                   : ""}
-                {state.durationMs != null && ` · ${state.durationMs}ms`}
+                {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
+                {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
               </Badge>
             ) : null}
           </CardHeader>
           <CardContent className="space-y-2">
-            {state.error ? (
+            {(state.error || state.activity?.outcome === "error") ? (
               <div className="space-y-2">
                 <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
                   <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-                  <span className="break-all">{state.error}</span>
+                  <span className="break-all">{state.error ?? state.activity?.error}</span>
                 </div>
                 {state.errorResponse && (
                   <CodeBlock language="application/json" caption="error response">
@@ -413,11 +412,11 @@ function CompletionsPlayground({
                   </CodeBlock>
                 )}
               </div>
-            ) : state.result ? (
-              state.result.completion.values.length === 0 ? (
+            ) : state.activity?.result ? (
+              state.activity.result.completion.values.length === 0 ? (
                 <Empty title="No completions" description="The server returned an empty list." />
               ) : (
-                state.result.completion.values.map((r, i) => (
+                state.activity.result.completion.values.map((r, i) => (
                   <button
                     key={`${r}-${i}`}
                     type="button"

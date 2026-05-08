@@ -341,8 +341,8 @@ async function handleApi(
       return send(200, status);
     }
     if (method === "DELETE") {
-      const removed = await deleteAuthFile(name);
-      return send(200, removed);
+      const activity = await runActivity("auth", "logout", () => deleteAuthFile(name));
+      return send(200, { activities: [activity] });
     }
     return send(405, { error: "method not allowed" });
   }
@@ -371,108 +371,110 @@ async function handleApi(
     send(status, hasBody ? { ...payload, requestBody: body } : payload);
 
   try {
+    if ((sub === "discover" || sub === "") && method === "GET") {
+      await ctx.sessions.release(name, true);
+      const activity = await runActivity("discover", "discover", async () => {
+        const fresh = await ctx.sessions.acquire(name);
+        return actionDiscover(fresh);
+      });
+      return send(200, { activities: [activity] });
+    }
+
     const session = await ctx.sessions.acquire(name);
 
-    /** Send MCP result, enriching it with a token count. */
-    const sendWithTokens = (result: unknown) => {
-      const counted = countResponseTokens(result);
-      const tokenCount = counted.ok ? counted.tokens : null;
-      return send(200, { ...(result as Record<string, unknown>), _tokenCount: tokenCount });
-    };
-
-    if ((sub === "discover" || sub === "") && method === "GET") {
-      // Drop the pooled session so we re-run the `initialize` handshake and
-      // pick up any changes to serverInfo / capabilities / instructions.
-      await ctx.sessions.release(name, true);
-      const fresh = await ctx.sessions.acquire(name);
-      return sendWithTokens(await actionDiscover(fresh));
-    }
     if (sub === "resources" && method === "GET") {
-      const r = await session.client.listResources();
-      return sendWithTokens(r);
+      return send(200, await session.client.listResources());
     }
     if (sub === "resources/templates" && method === "GET") {
-      const r = await session.client.listResourceTemplates();
-      return sendWithTokens(r);
+      return send(200, await session.client.listResourceTemplates());
     }
     if (sub === "resources/read" && method === "POST") {
-      const { uri } = body as { uri?: string };
-      if (typeof uri !== "string") return sendErr(400, { error: "missing `uri`" });
-      const r = await session.client.readResource({ uri });
-      return sendWithTokens(r);
+      const items = Array.isArray(body) ? body : [body];
+      const activities = await Promise.all(items.map(async (item) => {
+        const { uri } = item as { uri?: string };
+        if (typeof uri !== "string") return errorActivity("resource-read", "", "missing `uri`");
+        return runActivity("resource-read", uri, () => session.client.readResource({ uri }));
+      }));
+      return send(200, { activities });
     }
     if (sub === "tools" && method === "GET") {
-      return sendWithTokens(await session.client.listTools());
+      return send(200, await session.client.listTools());
     }
     if (sub === "tools/call" && method === "POST") {
-      const { name: toolName, arguments: toolArgs } = body as {
-        name?: string;
-        arguments?: Record<string, unknown>;
-      };
-      if (typeof toolName !== "string")
-        return sendErr(400, { error: "missing `name`" });
-      const r = await session.client.callTool({
-        name: toolName,
-        arguments: toolArgs ?? {},
-      });
-      return sendWithTokens(r);
+      const items = Array.isArray(body) ? body : [body];
+      const activities = await Promise.all(items.map(async (item) => {
+        const { name: toolName, arguments: toolArgs } = item as {
+          name?: string;
+          arguments?: Record<string, unknown>;
+        };
+        if (typeof toolName !== "string") return errorActivity("tool-call", "", "missing `name`");
+        return runActivity("tool-call", toolName, () =>
+          session.client.callTool({ name: toolName, arguments: toolArgs ?? {} }),
+        );
+      }));
+      return send(200, { activities });
     }
     if (sub === "prompts" && method === "GET") {
-      return sendWithTokens(await session.client.listPrompts());
+      return send(200, await session.client.listPrompts());
     }
     if (sub === "prompts/get" && method === "POST") {
-      const { name: promptName, arguments: promptArgs } = body as {
-        name?: string;
-        arguments?: Record<string, string>;
-      };
-      if (typeof promptName !== "string")
-        return sendErr(400, { error: "missing `name`" });
-      const r = await session.client.getPrompt({
-        name: promptName,
-        arguments: promptArgs ?? {},
-      });
-      return sendWithTokens(r);
+      const items = Array.isArray(body) ? body : [body];
+      const activities = await Promise.all(items.map(async (item) => {
+        const { name: promptName, arguments: promptArgs } = item as {
+          name?: string;
+          arguments?: Record<string, string>;
+        };
+        if (typeof promptName !== "string") return errorActivity("prompt-get", "", "missing `name`");
+        return runActivity("prompt-get", promptName, () =>
+          session.client.getPrompt({ name: promptName, arguments: promptArgs ?? {} }),
+        );
+      }));
+      return send(200, { activities });
     }
     if (sub === "complete" && method === "POST") {
-      const {
-        refType,
-        ref,
-        argument,
-        value,
-        context,
-      } = body as {
-        refType?: "prompt" | "resource";
-        ref?: string;
-        argument?: string;
-        value?: string;
-        context?: Record<string, string>;
-      };
-      if (refType !== "prompt" && refType !== "resource")
-        return sendErr(400, { error: "refType must be 'prompt' or 'resource'" });
-      if (typeof ref !== "string")
-        return sendErr(400, { error: "missing `ref`" });
-      if (typeof argument !== "string")
-        return sendErr(400, { error: "missing `argument`" });
-
-      const refObj =
-        refType === "prompt"
-          ? ({ type: "ref/prompt" as const, name: ref })
-          : ({ type: "ref/resource" as const, uri: ref });
-      const params: Parameters<Session["client"]["complete"]>[0] = {
-        ref: refObj,
-        argument: { name: argument, value: value ?? "" },
-      };
-      if (context && Object.keys(context).length > 0) {
-        (params as { context?: { arguments: Record<string, string> } }).context = {
-          arguments: context,
+      const items = Array.isArray(body) ? body : [body];
+      const activities = await Promise.all(items.map(async (item) => {
+        const {
+          refType, ref, argument, value, context,
+        } = item as {
+          refType?: "prompt" | "resource";
+          ref?: string;
+          argument?: string;
+          value?: string;
+          context?: Record<string, string>;
         };
-      }
-      const r = await session.client.complete(params);
-      return sendWithTokens(r);
+        if (refType !== "prompt" && refType !== "resource")
+          return errorActivity("complete", "", "refType must be 'prompt' or 'resource'");
+        if (typeof ref !== "string")
+          return errorActivity("complete", "", "missing `ref`");
+        if (typeof argument !== "string")
+          return errorActivity("complete", "", "missing `argument`");
+
+        return runActivity("complete", `${refType}:${ref}/${argument}`, () => {
+          const refObj =
+            refType === "prompt"
+              ? ({ type: "ref/prompt" as const, name: ref })
+              : ({ type: "ref/resource" as const, uri: ref });
+          const params: Parameters<Session["client"]["complete"]>[0] = {
+            ref: refObj,
+            argument: { name: argument, value: value ?? "" },
+          };
+          if (context && Object.keys(context).length > 0) {
+            (params as { context?: { arguments: Record<string, string> } }).context = {
+              arguments: context,
+            };
+          }
+          return session.client.complete(params);
+        });
+      }));
+      return send(200, { activities });
     }
     if (sub === "disconnect" && method === "POST") {
-      await ctx.sessions.release(name, true);
-      return send(200, { ok: true });
+      const activity = await runActivity("disconnect", name, async () => {
+        await ctx.sessions.release(name, true);
+        return { ok: true };
+      });
+      return send(200, { activities: [activity] });
     }
 
     return sendErr(404, { error: `unknown route: ${method} ${urlPath}` });
@@ -515,6 +517,49 @@ async function actionDiscover(session: Session) {
     tools,
     prompts,
   };
+}
+
+interface ActivityEntry {
+  kind: string;
+  target: string;
+  outcome: "ok" | "error";
+  durationMs: number;
+  tokenCount: number | null;
+  result?: unknown;
+  error?: string;
+}
+
+async function runActivity(
+  kind: string,
+  target: string,
+  fn: () => Promise<unknown>,
+): Promise<ActivityEntry> {
+  const start = performance.now();
+  try {
+    const result = await fn();
+    const counted = countResponseTokens(result);
+    return {
+      kind,
+      target,
+      outcome: "ok",
+      durationMs: Math.round(performance.now() - start),
+      tokenCount: counted.ok ? counted.tokens : null,
+      result,
+    };
+  } catch (e) {
+    return {
+      kind,
+      target,
+      outcome: "error",
+      durationMs: Math.round(performance.now() - start),
+      tokenCount: null,
+      error: errorMessage(e),
+    };
+  }
+}
+
+function errorActivity(kind: string, target: string, error: string): ActivityEntry {
+  return { kind, target, outcome: "error", durationMs: 0, tokenCount: null, error };
 }
 
 async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
