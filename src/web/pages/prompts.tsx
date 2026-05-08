@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -230,32 +232,34 @@ function PromptDetail({
     <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <CardTitle className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono">{prompt.name}</span>
-              {prompt.title && (
-                <span className="font-normal text-sm text-muted-foreground">
-                  · {prompt.title}
-                </span>
-              )}
-            </CardTitle>
+          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-mono">{prompt.name}</span>
+            {prompt.title && (
+              <span className="font-normal text-sm text-muted-foreground">
+                · {prompt.title}
+              </span>
+            )}
+          </CardTitle>
+          <CardDescription>
             {prompt.description && (
               <MarkdownDescription className="text-muted-foreground">{prompt.description}</MarkdownDescription>
             )}
-          </div>
-          <Button
-            variant="success"
-            size="sm"
-            onClick={onGet}
-            disabled={state.loading}
-          >
-            {state.loading ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Play className="size-3.5" />
-            )}
-            Get prompt
-          </Button>
+          </CardDescription>
+          <CardAction>
+            <Button
+              variant="success"
+              size="sm"
+              onClick={onGet}
+              disabled={state.loading}
+            >
+              {state.loading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Play className="size-3.5" />
+              )}
+              Get prompt
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent className="space-y-6">
           {!prompt.arguments?.length ? (
@@ -311,24 +315,26 @@ function PromptDetail({
       <Card>
         <CardHeader>
           <CardTitle>Resolved messages</CardTitle>
-          {state.loading ? (
-            <Badge variant="muted">
-              <Loader2 className="size-3 animate-spin" />
-              running…
-            </Badge>
-          ) : (state.error || state.activity?.outcome === "error") ? (
-            <Badge variant="destructive">
-              <AlertCircle className="size-3" />
-              error
-            </Badge>
-          ) : state.activity?.result ? (
-            <Badge variant="success">
-              {state.activity.result.messages.length} message
-              {state.activity.result.messages.length === 1 ? "" : "s"}
-              {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
-              {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
-            </Badge>
-          ) : null}
+          <CardAction>
+            {state.loading ? (
+              <Badge variant="muted">
+                <Loader2 className="size-3 animate-spin" />
+                running…
+              </Badge>
+            ) : (state.error || state.activity?.outcome === "error") ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+              </Badge>
+            ) : state.activity?.result ? (
+              <Badge variant="success">
+                {state.activity.result.messages.length} message
+                {state.activity.result.messages.length === 1 ? "" : "s"}
+                {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
+                {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
+              </Badge>
+            ) : null}
+          </CardAction>
         </CardHeader>
         <CardContent>
           {(state.error || state.activity?.outcome === "error") ? (

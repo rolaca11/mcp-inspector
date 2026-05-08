@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -378,26 +379,28 @@ function CompletionsPlayground({
         <Card>
           <CardHeader>
             <CardTitle>Results</CardTitle>
-            {state.loading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                running…
-              </Badge>
-            ) : (state.error || state.activity?.outcome === "error") ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : state.activity?.result ? (
-              <Badge variant="success">
-                {state.activity.result.completion.values.length}
-                {state.activity.result.completion.total != null
-                  ? ` / ${state.activity.result.completion.total}`
-                  : ""}
-                {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
-                {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
+            <CardAction>
+              {state.loading ? (
+                <Badge variant="muted">
+                  <Loader2 className="size-3 animate-spin" />
+                  running…
+                </Badge>
+              ) : (state.error || state.activity?.outcome === "error") ? (
+                <Badge variant="destructive">
+                  <AlertCircle className="size-3" />
+                  error
+                </Badge>
+              ) : state.activity?.result ? (
+                <Badge variant="success">
+                  {state.activity.result.completion.values.length}
+                  {state.activity.result.completion.total != null
+                    ? ` / ${state.activity.result.completion.total}`
+                    : ""}
+                  {state.activity.durationMs != null && ` · ${state.activity.durationMs}ms`}
+                  {state.activity.tokenCount != null && ` · ${state.activity.tokenCount.toLocaleString()} tokens`}
+                </Badge>
+              ) : null}
+            </CardAction>
           </CardHeader>
           <CardContent className="space-y-2">
             {(state.error || state.activity?.outcome === "error") ? (

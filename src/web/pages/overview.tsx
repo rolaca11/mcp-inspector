@@ -1,17 +1,17 @@
-import {useState} from "react";
-import {AlertCircle, ChevronRight, Loader2, RefreshCw, Tag,} from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, ChevronRight, Loader2, RefreshCw, Tag, } from "lucide-react";
 
-import {Badge} from "@/components/ui/badge";
-import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
-import {Empty} from "@/components/empty";
-import {MetaItem, PageShell} from "@/components/page-shell";
-import {TransportIcon, transportLabel} from "@/components/transport-icon";
-import {useConnectionStore} from "@/stores/connection-store";
-import {type ActivityEntry, useActivityStore} from "@/stores/activity-store";
-import {CodeBlock} from "@/components/code-block";
-import {cn, formatRelativeTime} from "@/lib/utils";
-import {MarkdownDescription} from "@/components/markdown-description";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, } from "@/components/ui/card";
+import { Empty } from "@/components/empty";
+import { MetaItem, PageShell } from "@/components/page-shell";
+import { TransportIcon, transportLabel } from "@/components/transport-icon";
+import { useConnectionStore } from "@/stores/connection-store";
+import { type ActivityEntry, useActivityStore } from "@/stores/activity-store";
+import { CodeBlock } from "@/components/code-block";
+import { cn, formatRelativeTime } from "@/lib/utils";
+import { MarkdownDescription } from "@/components/markdown-description";
 
 export function OverviewPage() {
   const { server, data, connectionState: state, error, rediscover } =
@@ -101,15 +101,15 @@ export function OverviewPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1">
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>
-              Calls and reads recorded since the dashboard loaded.
-            </CardDescription>
-          </div>
-          <Badge variant="muted" className="font-mono pt-1">
-            {activityForServer.length}
-          </Badge>
+          <CardTitle>Recent activity</CardTitle>
+          <CardDescription>
+            Calls and reads recorded since the dashboard loaded.
+          </CardDescription>
+          <CardAction>
+            <Badge variant="muted" className="font-mono pt-1">
+              {activityForServer.length}
+            </Badge>
+          </CardAction>
         </CardHeader>
         {activityForServer.length === 0 ? (
           <CardContent>

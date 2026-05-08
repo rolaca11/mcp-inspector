@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -133,6 +134,7 @@ export function AuthPage() {
           <Card>
             <CardHeader>
               <CardTitle>Status</CardTitle>
+              <CardAction>
               {loading && !status ? (
                 <Badge variant="muted">
                   <Loader2 className="size-3 animate-spin" />
@@ -149,6 +151,7 @@ export function AuthPage() {
                   not authenticated
                 </Badge>
               )}
+              </CardAction>
             </CardHeader>
             <CardContent className="space-y-4">
               {!status ? (

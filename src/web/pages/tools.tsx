@@ -15,7 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -199,8 +201,8 @@ function ToolDetail({
     const init: Record<string, string> = {};
     for (const [name, prop] of Object.entries(properties)) {
       if (prop.default !== undefined) init[name] = typeof prop.default === "object" && prop.default !== null
-          ? JSON.stringify(prop.default)
-          : String(prop.default);
+        ? JSON.stringify(prop.default)
+        : String(prop.default);
       else init[name] = "";
     }
     return init;
@@ -300,11 +302,13 @@ function ToolDetail({
               </span>
             )}
           </CardTitle>
+          <CardDescription>
+            {tool.description && (
+              <MarkdownDescription>{tool.description}</MarkdownDescription>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {tool.description && (
-            <MarkdownDescription className="text-muted-foreground">{tool.description}</MarkdownDescription>
-          )}
           {hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
@@ -345,29 +349,31 @@ function ToolDetail({
       <Card>
         <CardHeader>
           <CardTitle>Result</CardTitle>
-          {callState.loading ? (
-            <Badge variant="muted">
-              <Loader2 className="size-3 animate-spin" />
-              running…
-            </Badge>
-          ) : callState.error ? (
-            <Badge variant="destructive">
-              <AlertCircle className="size-3" />
-              error
-            </Badge>
-          ) : callState.activity?.outcome === "error" ? (
-            <Badge variant="destructive">
-              <AlertCircle className="size-3" />
-              error
-              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
-            </Badge>
-          ) : callState.activity?.result ? (
-            <Badge variant={callState.activity.result.isError ? "destructive" : "success"}>
-              {callState.activity.result.isError ? "isError" : "ok"}
-              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
-              {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
-            </Badge>
-          ) : null}
+          <CardAction>
+            {callState.loading ? (
+              <Badge variant="muted">
+                <Loader2 className="size-3 animate-spin" />
+                running…
+              </Badge>
+            ) : callState.error ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+              </Badge>
+            ) : callState.activity?.outcome === "error" ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+                {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+              </Badge>
+            ) : callState.activity?.result ? (
+              <Badge variant={callState.activity.result.isError ? "destructive" : "success"}>
+                {callState.activity.result.isError ? "isError" : "ok"}
+                {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+                {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
+              </Badge>
+            ) : null}
+          </CardAction>
         </CardHeader>
         <CardContent>
           <ToolResultView state={callState} />
@@ -832,8 +838,8 @@ function ValueField({
       <ObjectFields
         value={
           typeof value === "object" &&
-          value !== null &&
-          !Array.isArray(value)
+            value !== null &&
+            !Array.isArray(value)
             ? (value as Record<string, unknown>)
             : {}
         }

@@ -26,7 +26,7 @@ export function PageShell({
         className,
       )}
     >
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="flex flex-col lg:flex-row lg:items-start">
         <div className="space-y-4 min-w-0">
           <h1 className="text-3xl font-semibold leading-none tracking-tight text-balance">
             {title}

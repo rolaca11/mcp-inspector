@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -241,19 +242,17 @@ function ResourcePreview({
     <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <CardTitle className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono">{resource.title ?? resource.name}</span>
-              {resource.mimeType && (
-                <Badge variant="muted" className="font-mono">
-                  {resource.mimeType}
-                </Badge>
-              )}
-            </CardTitle>
-            <CardDescription className="font-mono truncate">
-              {resource.uri}
-            </CardDescription>
-          </div>
+          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-mono">{resource.title ?? resource.name}</span>
+            {resource.mimeType && (
+              <Badge variant="muted" className="font-mono">
+                {resource.mimeType}
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription className="font-mono truncate">
+            {resource.uri}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {resource.description && (
@@ -273,23 +272,25 @@ function ResourcePreview({
       <Card>
         <CardHeader>
           <CardTitle>Contents</CardTitle>
-          {reading ? (
-            <Badge variant="muted">
-              <Loader2 className="size-3 animate-spin" />
-              reading…
-            </Badge>
-          ) : error ? (
-            <Badge variant="destructive">
-              <AlertCircle className="size-3" />
-              error
-            </Badge>
-          ) : result ? (
-            <Badge variant="success">
-              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
-              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
-            </Badge>
-          ) : null}
+          <CardAction>
+            {reading ? (
+              <Badge variant="muted">
+                <Loader2 className="size-3 animate-spin" />
+                reading…
+              </Badge>
+            ) : error ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+              </Badge>
+            ) : result ? (
+              <Badge variant="success">
+                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+                {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+                {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
+              </Badge>
+            ) : null}
+          </CardAction>
         </CardHeader>
         <CardContent>
           {error ? (
@@ -368,19 +369,17 @@ function TemplatePreview({
     <div className="space-y-5 min-w-0">
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <CardTitle className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono">{template.title ?? template.name}</span>
-              {template.mimeType && (
-                <Badge variant="muted" className="font-mono">
-                  {template.mimeType}
-                </Badge>
-              )}
-            </CardTitle>
-            <CardDescription className="font-mono truncate">
-              {template.uriTemplate}
-            </CardDescription>
-          </div>
+          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-mono">{template.title ?? template.name}</span>
+            {template.mimeType && (
+              <Badge variant="muted" className="font-mono">
+                {template.mimeType}
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription className="font-mono truncate">
+            {template.uriTemplate}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {template.description && (
@@ -453,23 +452,25 @@ function TemplatePreview({
       <Card>
         <CardHeader>
           <CardTitle>Contents</CardTitle>
-          {reading ? (
-            <Badge variant="muted">
-              <Loader2 className="size-3 animate-spin" />
-              reading…
-            </Badge>
-          ) : error ? (
-            <Badge variant="destructive">
-              <AlertCircle className="size-3" />
-              error
-            </Badge>
-          ) : result ? (
-            <Badge variant="success">
-              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
-              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
-            </Badge>
-          ) : null}
+          <CardAction>
+            {reading ? (
+              <Badge variant="muted">
+                <Loader2 className="size-3 animate-spin" />
+                reading…
+              </Badge>
+            ) : error ? (
+              <Badge variant="destructive">
+                <AlertCircle className="size-3" />
+                error
+              </Badge>
+            ) : result ? (
+              <Badge variant="success">
+                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+                {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+                {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
+              </Badge>
+            ) : null}
+          </CardAction>
         </CardHeader>
         <CardContent>
           {error ? (
@@ -552,9 +553,8 @@ function ResourceContentBlock({
   content: ResourceContents;
   caption?: string;
 }) {
-  const meta = `${content.mimeType ?? "?"}${
-    caption ? ` · ${caption}` : ""
-  }`;
+  const meta = `${content.mimeType ?? "?"}${caption ? ` · ${caption}` : ""
+    }`;
   if (content.text != null) {
     const formatted = tryFormatJson(content.text, content.mimeType);
     return (

@@ -81,7 +81,7 @@ export function ServersPage({
       title="Servers"
       description="Resolved view of every named server across your `.mcp.json` files. Project-local entries override user-global ones."
     >
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="columns-2">
       {sources.map(([path, list]) => {
         const isInspectorSource = list[0]?.sourceLabel === "inspector";
         return (
