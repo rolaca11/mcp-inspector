@@ -81,6 +81,11 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
   if (enabled.length) {
     console.log(pc.dim(`Capabilities: ${enabled.join(", ")}`));
   }
+  if (instructions) {
+    console.log();
+    console.log(pc.bold("Instructions:"));
+    console.log(instructions);
+  }
   console.log();
 
   printResources(resources.resources, opts);
