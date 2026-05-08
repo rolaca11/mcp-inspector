@@ -298,6 +298,29 @@ export const api = {
       () => "session closed",
     );
   },
+
+  /* Inspector config CRUD */
+
+  configServers(): Promise<{ path: string; servers: Record<string, unknown> }> {
+    return call("/config/servers");
+  },
+
+  configAddServer(
+    name: string,
+    config: Record<string, unknown>,
+    force?: boolean,
+  ): Promise<{ ok: true; name: string }> {
+    return call("/config/servers", {
+      method: "POST",
+      body: { name, config, force },
+    });
+  },
+
+  configRemoveServer(name: string): Promise<{ ok: true; name: string }> {
+    return call(`/config/servers/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    });
+  },
 };
 
 export { ApiError };

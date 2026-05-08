@@ -12,6 +12,8 @@ import {
 
 import { ExternalLink } from "lucide-react";
 
+import { AddServerDialog } from "@/components/add-server-dialog";
+
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { NavTabs, type NavKey } from "@/components/nav-tabs";
@@ -234,18 +236,21 @@ function NoServersScreen({
 }) {
   return (
     <div className="flex-1 grid place-items-center px-6 py-20">
-      <Empty
-        title={apiState === "offline" ? "API unreachable" : "No servers configured"}
-        description={
-          apiState === "offline"
-            ? "The dashboard couldn't reach /api. Start the server with `mcp-inspector serve` (or `pnpm dev -- serve --no-open`)."
-            : apiState === "error"
-              ? error ?? "API returned an error."
-              : "Add a server to .mcp.json in your cwd or home directory and reload."
-        }
-        actionLabel="Reload"
-        onAction={onRetry}
-      />
+      <div className="flex flex-col items-center gap-6">
+        <Empty
+          title={apiState === "offline" ? "API unreachable" : "No servers configured"}
+          description={
+            apiState === "offline"
+              ? "The dashboard couldn't reach /api. Start the server with `mcp-inspector serve` (or `pnpm dev -- serve --no-open`)."
+              : apiState === "error"
+                ? error ?? "API returned an error."
+                : "Add a server to .mcp.json in your cwd or home directory, use the button below, or reload."
+          }
+          actionLabel="Reload"
+          onAction={onRetry}
+        />
+        {apiState !== "offline" && <AddServerDialog onAdded={onRetry} />}
+      </div>
     </div>
   );
 }

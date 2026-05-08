@@ -28,7 +28,7 @@
  * always closed on process exit so child stdio processes are reaped.
  */
 
-import {createReadStream, promises as fs} from "node:fs";
+import {createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync, promises as fs} from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
@@ -38,7 +38,7 @@ import pc from "picocolors";
 import {connect, type Session} from "./client.js";
 import {loadConfigSync, type LoadedConfig} from "./config.js";
 import {errorMessage} from "./format.js";
-import {authFile} from "./paths.js";
+import {authFile, configDir} from "./paths.js";
 import {parseTarget, setLoadedConfig, targetId} from "./target.js";
 import {countResponseTokens} from "./tokens.js";
 
@@ -255,6 +255,67 @@ async function handleApi(
     const config = loadConfigSync(configOpts);
     setLoadedConfig(config);
     return send(200, summarizeServers(config));
+  }
+
+  // /api/config/servers — CRUD for the inspector-level config file
+  if (urlPath === "/api/config/servers" && method === "GET") {
+    try {
+      const obj = readInspectorConfig();
+      const servers = getServersRecord(obj);
+      return send(200, { path: inspectorConfigFile, servers });
+    } catch (e) {
+      return send(500, { error: errorMessage(e) });
+    }
+  }
+  if (urlPath === "/api/config/servers" && method === "POST") {
+    const body = await readJson(req).catch((e) => ({ __error: (e as Error).message }));
+    if ((body as { __error?: string }).__error) {
+      return send(400, { error: (body as { __error: string }).__error });
+    }
+    const { name: serverName, config: serverConfig, force } = body as {
+      name?: string;
+      config?: Record<string, unknown>;
+      force?: boolean;
+    };
+    if (typeof serverName !== "string" || !serverName.trim()) {
+      return send(400, { error: "missing `name`" });
+    }
+    if (!serverConfig || typeof serverConfig !== "object") {
+      return send(400, { error: "missing `config` object" });
+    }
+    if (!("command" in serverConfig) && !("url" in serverConfig)) {
+      return send(400, { error: "config must have `command` or `url`" });
+    }
+    try {
+      const obj = readInspectorConfig();
+      const servers = getServersRecord(obj);
+      if (serverName in servers && !force) {
+        return send(409, { error: `server "${serverName}" already exists` });
+      }
+      servers[serverName] = serverConfig;
+      obj.mcpServers = servers;
+      writeInspectorConfig(obj);
+      return send(201, { ok: true, name: serverName });
+    } catch (e) {
+      return send(500, { error: errorMessage(e) });
+    }
+  }
+  const configDeleteMatch = urlPath.match(/^\/api\/config\/servers\/([^/]+)$/);
+  if (configDeleteMatch && method === "DELETE") {
+    const serverName = decodeURIComponent(configDeleteMatch[1]!);
+    try {
+      const obj = readInspectorConfig();
+      const servers = getServersRecord(obj);
+      if (!(serverName in servers)) {
+        return send(404, { error: `server "${serverName}" not found` });
+      }
+      delete servers[serverName];
+      obj.mcpServers = servers;
+      writeInspectorConfig(obj);
+      return send(200, { ok: true, name: serverName });
+    } catch (e) {
+      return send(500, { error: errorMessage(e) });
+    }
   }
 
   // /api/servers/:name/...
@@ -718,4 +779,34 @@ function isENOENT(e: unknown): boolean {
     "code" in e &&
     (e as { code?: string }).code === "ENOENT"
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Inspector config file helpers                                       */
+/* ------------------------------------------------------------------ */
+
+const inspectorConfigFile = path.join(configDir(), "mcp.json");
+
+function readInspectorConfig(): Record<string, unknown> {
+  if (!existsSync(inspectorConfigFile)) return {};
+  const raw = readFileSync(inspectorConfigFile, "utf8");
+  const parsed = JSON.parse(raw);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("expected a JSON object at top level");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function writeInspectorConfig(obj: Record<string, unknown>): void {
+  mkdirSync(path.dirname(inspectorConfigFile), { recursive: true });
+  writeFileSync(inspectorConfigFile, JSON.stringify(obj, null, 2) + "\n");
+}
+
+function getServersRecord(obj: Record<string, unknown>): Record<string, unknown> {
+  const s = obj.mcpServers;
+  if (s === undefined) return {};
+  if (typeof s !== "object" || s === null || Array.isArray(s)) {
+    throw new Error("`mcpServers` must be an object");
+  }
+  return s as Record<string, unknown>;
 }
