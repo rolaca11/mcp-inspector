@@ -12,7 +12,6 @@ import type {
   ActivityResult,
   AuthStatus,
   CompleteResult,
-  DiscoverResult,
   GetPromptResult,
   ReadResourceResult,
   ToolResult,
@@ -145,8 +144,8 @@ export const api = {
   discover(
     name: string,
     signal?: AbortSignal,
-  ): Promise<ActivityResult<DiscoverResult>[]> {
-    return activityCall<DiscoverResult>(
+  ): Promise<ActivityResult[]> {
+    return activityCall(
       name,
       `/servers/${encodeURIComponent(name)}/discover`,
       signal ? { signal } : undefined,

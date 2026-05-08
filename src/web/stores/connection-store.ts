@@ -11,7 +11,16 @@
 import { create } from "zustand";
 
 import { ApiError, api } from "@/data/api";
-import type { DiscoverResult, MCPServer } from "@/data/types";
+import type {
+  DiscoverResult,
+  MCPPrompt,
+  MCPResource,
+  MCPResourceTemplate,
+  MCPServer,
+  MCPTool,
+  ServerCapabilities,
+  ServerInfo,
+} from "@/data/types";
 
 export type ConnectionState =
   | "idle"
@@ -93,24 +102,38 @@ async function runDiscover(
   try {
     const activities = await api.discover(serverName, ctrl.signal);
     if (ctrl.signal.aborted) return;
-    const a = activities[0];
-    if (a?.outcome === "ok" && a.result) {
+
+    const init = activities.find((a) => a.target === "initialize");
+    if (!init || init.outcome !== "ok" || !init.result) {
       set({
-        data: a.result,
-        lastDiscoveredAt: new Date().toISOString(),
-        connectionState: "connected",
-        loading: false,
-        pendingAuthUrl: null,
-      });
-    } else {
-      set({
-        error: a?.error ?? "discover returned no result",
+        error: init?.error ?? "discover failed",
         connectionState: "error",
         data: null,
         loading: false,
         pendingAuthUrl: null,
       });
+      return;
     }
+
+    const initResult = init.result as { server: ServerInfo | null; capabilities: ServerCapabilities };
+    const byTarget = (t: string) => activities.find((a) => a.target === t);
+
+    const data: DiscoverResult = {
+      server: initResult.server,
+      capabilities: initResult.capabilities,
+      tools: (byTarget("tools")?.outcome === "ok" ? byTarget("tools")!.result : []) as MCPTool[],
+      resources: (byTarget("resources")?.outcome === "ok" ? byTarget("resources")!.result : []) as MCPResource[],
+      resourceTemplates: (byTarget("templates")?.outcome === "ok" ? byTarget("templates")!.result : []) as MCPResourceTemplate[],
+      prompts: (byTarget("prompts")?.outcome === "ok" ? byTarget("prompts")!.result : []) as MCPPrompt[],
+    };
+
+    set({
+      data,
+      lastDiscoveredAt: new Date().toISOString(),
+      connectionState: "connected",
+      loading: false,
+      pendingAuthUrl: null,
+    });
   } catch (e) {
     if (ctrl.signal.aborted) return;
     if (e instanceof ApiError) {

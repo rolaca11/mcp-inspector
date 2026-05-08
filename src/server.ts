@@ -373,11 +373,8 @@ async function handleApi(
   try {
     if ((sub === "discover" || sub === "") && method === "GET") {
       await ctx.sessions.release(name, true);
-      const activity = await runActivity("discover", "discover", async () => {
-        const fresh = await ctx.sessions.acquire(name);
-        return actionDiscover(fresh);
-      });
-      return send(200, { activities: [activity] });
+      const activities = await actionDiscoverActivities(name, ctx.sessions);
+      return send(200, { activities });
     }
 
     const session = await ctx.sessions.acquire(name);
@@ -487,36 +484,49 @@ async function handleApi(
 /* Action helpers                                                      */
 /* ------------------------------------------------------------------ */
 
-async function actionDiscover(session: Session) {
-  const caps = session.client.getServerCapabilities() ?? {};
-  const version = session.client.getServerVersion() ?? null;
-  const instructions = session.client.getInstructions();
+async function actionDiscoverActivities(
+  name: string,
+  sessions: SessionPool,
+): Promise<ActivityEntry[]> {
+  const initActivity = await runActivity("discover", "initialize", async () => {
+    const session = await sessions.acquire(name);
+    const caps = session.client.getServerCapabilities() ?? {};
+    const version = session.client.getServerVersion() ?? null;
+    const instructions = session.client.getInstructions();
+    return { server: { ...version, instructions }, capabilities: caps };
+  });
 
-  const [resources, templates, tools, prompts] = await Promise.all([
-    caps.resources
-      ? safe(() => session.client.listResources()).then((r) => r?.resources ?? [])
-      : Promise.resolve([]),
-    caps.resources
-      ? safe(() => session.client.listResourceTemplates()).then(
-          (r) => r?.resourceTemplates ?? [],
-        )
-      : Promise.resolve([]),
+  if (initActivity.outcome === "error") {
+    return [initActivity];
+  }
+
+  const session = await sessions.acquire(name);
+  const caps = session.client.getServerCapabilities() ?? {};
+
+  const listActivities = await Promise.all([
     caps.tools
-      ? safe(() => session.client.listTools()).then((r) => r?.tools ?? [])
-      : Promise.resolve([]),
+      ? runActivity("discover", "tools", async () =>
+          (await session.client.listTools())?.tools ?? [],
+        )
+      : null,
+    caps.resources
+      ? runActivity("discover", "resources", async () =>
+          (await session.client.listResources())?.resources ?? [],
+        )
+      : null,
+    caps.resources
+      ? runActivity("discover", "templates", async () =>
+          (await session.client.listResourceTemplates())?.resourceTemplates ?? [],
+        )
+      : null,
     caps.prompts
-      ? safe(() => session.client.listPrompts()).then((r) => r?.prompts ?? [])
-      : Promise.resolve([]),
+      ? runActivity("discover", "prompts", async () =>
+          (await session.client.listPrompts())?.prompts ?? [],
+        )
+      : null,
   ]);
 
-  return {
-    server: {...version, instructions},
-    capabilities: caps,
-    resources,
-    resourceTemplates: templates,
-    tools,
-    prompts,
-  };
+  return [initActivity, ...listActivities.filter((a): a is ActivityEntry => a !== null)];
 }
 
 interface ActivityEntry {
@@ -560,14 +570,6 @@ async function runActivity(
 
 function errorActivity(kind: string, target: string, error: string): ActivityEntry {
   return { kind, target, outcome: "error", durationMs: 0, tokenCount: null, error };
-}
-
-async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
-  try {
-    return await fn();
-  } catch {
-    return null;
-  }
 }
 
 /**
