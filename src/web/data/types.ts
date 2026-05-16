@@ -1,7 +1,7 @@
 /**
- * UI types modeled on the MCP SDK shapes used in src/actions.ts and on what
- * `/api/servers/:name/discover` actually returns. Kept in their own file so
- * pages and the API client import the same definitions.
+ * UI types modeled on the MCP SDK shapes and on what the `servers.discover`
+ * tRPC procedure actually returns. Kept in their own file so pages and the API
+ * client import the same definitions.
  */
 
 export type Transport = "stdio" | "http" | "sse" | "streamable-http";

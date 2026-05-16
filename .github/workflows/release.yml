@@ -25,23 +25,17 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: bun run typecheck
 
       - name: Build
-        run: pnpm build
+        run: bun run build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

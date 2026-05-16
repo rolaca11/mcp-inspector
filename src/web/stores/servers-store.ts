@@ -1,6 +1,7 @@
 /**
  * Zustand store for the list of configured MCP servers, loaded from
- * `/api/servers`. Replaces the former `useServers()` React hook.
+ * the `servers.list` tRPC procedure. Replaces the former `useServers()` React
+ * hook.
  */
 
 import { create } from "zustand";

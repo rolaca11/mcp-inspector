@@ -1,10 +1,4 @@
-/**
- * Tiny client for the `mcp-inspector serve` HTTP API. Routes mirror
- * `src/server.ts`. Every action endpoint returns `{ activities: [...] }`
- * with server-computed metadata (kind, target, outcome, durationMs,
- * tokenCount). The client pushes these into the activity store so the
- * dashboard feed stays in sync.
- */
+import { TRPCClientError } from "@trpc/client";
 
 import { useActivityStore, type ActivityKind } from "@/stores/activity-store";
 import type {
@@ -17,12 +11,14 @@ import type {
   ToolResult,
   Transport,
 } from "./types";
+import { trpc } from "./trpc";
 
-const BASE = "/api";
+/* ------------------------------------------------------------------ */
+/* Error class (preserves the same interface consumers rely on)        */
+/* ------------------------------------------------------------------ */
 
 class ApiError extends Error {
   status: number;
-  /** The full JSON body returned by the server (e.g. `{ error, requestBody }`). */
   responseBody?: Record<string, unknown>;
   constructor(
     status: number,
@@ -36,67 +32,43 @@ class ApiError extends Error {
   }
 }
 
-interface CallInit {
-  method?: string;
-  headers?: Record<string, string>;
-  body?: unknown;
-  signal?: AbortSignal;
-}
-
-async function call<T>(path: string, init?: CallInit): Promise<T> {
-  const url = `${BASE}${path}`;
-  const method = init?.method ?? "GET";
-  const opts: RequestInit = {
-    method: init?.method,
-    headers: init?.headers,
-    signal: init?.signal,
-  };
-  if (init?.body !== undefined) {
-    opts.body =
-      typeof init.body === "string" ? init.body : JSON.stringify(init.body);
-    opts.headers = {
-      "content-type": "application/json",
-      ...(init.headers ?? {}),
+function wrapError(e: unknown): Error {
+  if (e instanceof TRPCClientError) {
+    const data = e.data as
+      | { code?: string; httpStatus?: number; [key: string]: unknown }
+      | undefined;
+    if (!data?.code) {
+      return new Error(e.message || "Network error");
+    }
+    const statusMap: Record<string, number> = {
+      BAD_REQUEST: 400,
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      INTERNAL_SERVER_ERROR: 500,
+      METHOD_NOT_SUPPORTED: 405,
     };
+    const responseBody =
+      typeof data === "object" && data !== null ? data : undefined;
+    return new ApiError(
+      data.httpStatus ?? statusMap[data.code] ?? 500,
+      e.message,
+      responseBody,
+    );
   }
-
-  let r: Response;
-  try {
-    r = await fetch(url, opts);
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") {
-      throw new Error(`${method} ${url}: request was aborted`);
-    }
-    throw new Error(`${method} ${url} failed: ${errorChain(e)}`);
+  if (e instanceof Error) {
+    return e;
   }
-
-  if (!r.ok) {
-    let msg = `${r.status} ${r.statusText}`;
-    let responseBody: Record<string, unknown> | undefined;
-    try {
-      const body = (await r.json()) as Record<string, unknown>;
-      responseBody = body;
-      if (typeof body?.error === "string") msg = body.error;
-    } catch {
-      /* response body was not JSON */
-    }
-    throw new ApiError(r.status, `${method} ${path}: ${msg}`, responseBody);
-  }
-  if (r.status === 204) return undefined as T;
-  return (await r.json()) as T;
+  return new Error(String(e));
 }
 
-/**
- * Calls an action endpoint that returns `{ activities: [...] }`, pushes
- * the server-computed activity entries into the client-side store, and
- * returns the activities array.
- */
-async function activityCall<T>(
+/* ------------------------------------------------------------------ */
+/* Activity helper                                                     */
+/* ------------------------------------------------------------------ */
+
+function pushActivities<T>(
   serverName: string,
-  path: string,
-  init?: CallInit,
-): Promise<ActivityResult<T>[]> {
-  const resp = await call<ActivitiesResponse<T>>(path, init);
+  resp: ActivitiesResponse<T>,
+): ActivityResult<T>[] {
   useActivityStore.getState().insert(
     resp.activities.map((a) => ({
       kind: a.kind as ActivityKind,
@@ -134,62 +106,87 @@ export interface ServersListResponse {
 
 export const api = {
   health(): Promise<{ ok: true }> {
-    return call("/health");
+    return trpc.health.check.query();
   },
 
   servers(): Promise<ServersListResponse> {
-    return call("/servers");
+    return trpc.servers.list.query() as Promise<ServersListResponse>;
   },
 
-  discover(
+  async discover(
     name: string,
     signal?: AbortSignal,
   ): Promise<ActivityResult[]> {
-    return activityCall(
-      name,
-      `/servers/${encodeURIComponent(name)}/discover`,
-      signal ? { signal } : undefined,
-    );
+    try {
+      const resp = await trpc.servers.discover.mutate(
+        { serverName: name },
+        { signal },
+      );
+      return pushActivities(name, resp as ActivitiesResponse);
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  callTool(
+  async callTool(
     name: string,
     body:
       | { name: string; arguments?: Record<string, unknown> }
       | Array<{ name: string; arguments?: Record<string, unknown> }>,
   ): Promise<ActivityResult<ToolResult>[]> {
-    return activityCall<ToolResult>(
-      name,
-      `/servers/${encodeURIComponent(name)}/tools/call`,
-      { method: "POST", body },
-    );
+    try {
+      const resp = await trpc.servers.callTool.mutate({
+        serverName: name,
+        items: body,
+      });
+      return pushActivities<ToolResult>(
+        name,
+        resp as ActivitiesResponse<ToolResult>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  readResource(
+  async readResource(
     name: string,
     body: { uri: string } | Array<{ uri: string }>,
   ): Promise<ActivityResult<ReadResourceResult>[]> {
-    return activityCall<ReadResourceResult>(
-      name,
-      `/servers/${encodeURIComponent(name)}/resources/read`,
-      { method: "POST", body },
-    );
+    try {
+      const resp = await trpc.servers.readResource.mutate({
+        serverName: name,
+        items: body,
+      });
+      return pushActivities<ReadResourceResult>(
+        name,
+        resp as ActivitiesResponse<ReadResourceResult>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  getPrompt(
+  async getPrompt(
     name: string,
     body:
       | { name: string; arguments?: Record<string, string> }
       | Array<{ name: string; arguments?: Record<string, string> }>,
   ): Promise<ActivityResult<GetPromptResult>[]> {
-    return activityCall<GetPromptResult>(
-      name,
-      `/servers/${encodeURIComponent(name)}/prompts/get`,
-      { method: "POST", body },
-    );
+    try {
+      const resp = await trpc.servers.getPrompt.mutate({
+        serverName: name,
+        items: body,
+      });
+      return pushActivities<GetPromptResult>(
+        name,
+        resp as ActivitiesResponse<GetPromptResult>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  complete(
+  async complete(
     name: string,
     body:
       | {
@@ -207,81 +204,100 @@ export const api = {
           context?: Record<string, string>;
         }>,
   ): Promise<ActivityResult<CompleteResult>[]> {
-    return activityCall<CompleteResult>(
-      name,
-      `/servers/${encodeURIComponent(name)}/complete`,
-      { method: "POST", body },
-    );
+    try {
+      const resp = await trpc.servers.complete.mutate({
+        serverName: name,
+        items: body,
+      });
+      return pushActivities<CompleteResult>(
+        name,
+        resp as ActivitiesResponse<CompleteResult>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  authStatus(name: string): Promise<AuthStatus> {
-    return call(`/servers/${encodeURIComponent(name)}/auth`);
+  async authStatus(name: string): Promise<AuthStatus> {
+    try {
+      return (await trpc.servers.authStatus.query({
+        serverName: name,
+      })) as AuthStatus;
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  /**
-   * Poll for a pending OAuth authorization URL. The server stashes it when
-   * the OAuth flow fires `onRedirect` so the web UI can open it in a new
-   * tab instead of the OS default browser. Returns `{ url: null }` when
-   * there is nothing pending; the URL is consumed (cleared) on read.
-   */
-  authUrl(name: string): Promise<{ url: string | null }> {
-    return call(`/servers/${encodeURIComponent(name)}/auth-url`);
+  async authUrl(name: string): Promise<{ url: string | null }> {
+    try {
+      return await trpc.servers.authUrl.query({ serverName: name });
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  authLogout(
+  async authLogout(
     name: string,
   ): Promise<ActivityResult<{ removed: boolean; file: string }>[]> {
-    return activityCall<{ removed: boolean; file: string }>(
-      name,
-      `/servers/${encodeURIComponent(name)}/auth`,
-      { method: "DELETE" },
-    );
+    try {
+      const resp = await trpc.servers.authLogout.mutate({
+        serverName: name,
+      });
+      return pushActivities<{ removed: boolean; file: string }>(
+        name,
+        resp as ActivitiesResponse<{ removed: boolean; file: string }>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  disconnect(name: string): Promise<ActivityResult<{ ok: true }>[]> {
-    return activityCall<{ ok: true }>(
-      name,
-      `/servers/${encodeURIComponent(name)}/disconnect`,
-      { method: "POST" },
-    );
+  async disconnect(name: string): Promise<ActivityResult<{ ok: true }>[]> {
+    try {
+      const resp = await trpc.servers.disconnect.mutate({
+        serverName: name,
+      });
+      return pushActivities<{ ok: true }>(
+        name,
+        resp as ActivitiesResponse<{ ok: true }>,
+      );
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
   /* Inspector config CRUD */
 
-  configServers(): Promise<{ path: string; servers: Record<string, unknown> }> {
-    return call("/config/servers");
+  async configServers(): Promise<{
+    path: string;
+    servers: Record<string, unknown>;
+  }> {
+    try {
+      return await trpc.config.list.query();
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  configAddServer(
+  async configAddServer(
     name: string,
     config: Record<string, unknown>,
     force?: boolean,
   ): Promise<{ ok: true; name: string }> {
-    return call("/config/servers", {
-      method: "POST",
-      body: { name, config, force },
-    });
+    try {
+      return await trpc.config.add.mutate({ name, config, force });
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 
-  configRemoveServer(name: string): Promise<{ ok: true; name: string }> {
-    return call(`/config/servers/${encodeURIComponent(name)}`, {
-      method: "DELETE",
-    });
+  async configRemoveServer(name: string): Promise<{ ok: true; name: string }> {
+    try {
+      return await trpc.config.remove.mutate({ name });
+    } catch (e) {
+      throw wrapError(e);
+    }
   },
 };
 
 export { ApiError };
-
-/* ------------------------------------------------------------------ */
-/* Tiny helpers                                                        */
-/* ------------------------------------------------------------------ */
-
-function errorChain(e: unknown): string {
-  const parts: string[] = [];
-  let cur: unknown = e;
-  while (cur instanceof Error) {
-    if (cur.message && !parts.includes(cur.message)) parts.push(cur.message);
-    cur = (cur as { cause?: unknown }).cause;
-  }
-  return parts.join(": ") || "unknown error";
-}

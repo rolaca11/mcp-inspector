@@ -1,10 +1,10 @@
 /**
  * Vite config for the dashboard UI. Source lives in `src/web/`, output is
  * emitted to `dist/web/` so that the CLI's `serve` subcommand can find it
- * next to `dist/cli.js` after a single `pnpm build`.
+ * next to `dist/cli.js` after a single `bun run build`.
  *
- * In dev mode (`pnpm dev:web`), Vite proxies `/api` to the CLI's HTTP server
- * — start that with `pnpm dev -- serve --no-open --no-ui` so the API is
+ * In dev mode (`bun run dev:ui`), Vite proxies `/api/trpc` to the CLI's HTTP server
+ * — start that with `bun run dev:cli -- serve --no-open --no-ui` so the API is
  * available while HMR runs.
  */
 
@@ -32,7 +32,7 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     proxy: {
-      "/api": { target: API_PROXY_TARGET, changeOrigin: true },
+      "/api/trpc": { target: API_PROXY_TARGET, changeOrigin: true },
     },
   },
   build: {

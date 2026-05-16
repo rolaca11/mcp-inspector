@@ -241,7 +241,7 @@ function NoServersScreen({
           title={apiState === "offline" ? "API unreachable" : "No servers configured"}
           description={
             apiState === "offline"
-              ? "The dashboard couldn't reach /api. Start the server with `mcp-inspector serve` (or `pnpm dev -- serve --no-open`)."
+              ? "The dashboard couldn't reach /api/trpc. Start the server with `mcp-inspector serve` (or `bun run dev:cli -- serve --no-open`)."
               : apiState === "error"
                 ? error ?? "API returned an error."
                 : "Add a server to .mcp.json in your cwd or home directory, use the button below, or reload."

@@ -6,8 +6,8 @@ front-ends backed by one set of primitives:
 - **CLI** — `mcp-inspector <verb> <target>` for scripts and pipelines.
 - **REPL** — `mcp-inspector connect <target>` for an interactive prompt.
 - **Web dashboard** — `mcp-inspector serve` boots a local HTTP server that
-  hosts the bundled React/Tailwind dashboard at `/` and a small JSON API at
-  `/api/*`. Same process, same OAuth state, same `.mcp.json`.
+  hosts the bundled React/Tailwind dashboard at `/` and the tRPC API at
+  `/api/trpc`. Same process, same OAuth state, same `.mcp.json`.
 
 Connect to MCP servers over **stdio** or **OAuth-protected Streamable HTTP**,
 discover their resources / resource templates / tools / prompts, call them,
@@ -45,11 +45,11 @@ npx @rolaca11/mcp-inspector discover everything
 ```sh
 git clone https://github.com/rolaca11/mcp-inspector.git
 cd mcp-inspector
-pnpm install      # one install — covers CLI and dashboard
-pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
+bun install       # one install - covers CLI and dashboard
+bun run build     # CLI bundle + Vite dashboard bundle
 ```
 
-`pnpm build` produces both:
+`bun run build` produces both:
 
 - `dist/cli.js` — the binary exposed as `mcp-inspector` via
   `package.json#bin`.
@@ -58,7 +58,7 @@ pnpm build        # tsc → dist/*.js  +  vite build → dist/web/
 To use globally from source:
 
 ```sh
-pnpm link --global
+bun link
 mcp-inspector --help
 ```
 
@@ -67,10 +67,10 @@ Or run without linking:
 ```sh
 node dist/cli.js --help
 # or during development:
-pnpm dev -- --help
+bun run dev:cli -- --help
 ```
 
-Requires Node ≥ 20.19.0 or ≥ 22.12.0.
+Requires Bun >= 1.2.0 for development scripts.
 
 ---
 
@@ -177,7 +177,7 @@ mcp-inspector auth logout         <target>
 mcp-inspector serve               [--port 8765]          # web dashboard at http://127.0.0.1:8765
                                   [--host 127.0.0.1]
                                   [--no-open]            # don't open the browser
-                                  [--no-ui]              # JSON API only
+                                  [--no-ui]              # tRPC API only
 ```
 
 Global flags (available on every leaf command):
@@ -287,8 +287,8 @@ resource-template variable names (lazily populated after connect).
 
 `mcp-inspector serve` boots a local HTTP server that exposes:
 
-- `/`        — the bundled React/Tailwind dashboard (`dist/web/`)
-- `/api/*`   — a small JSON API mirroring the CLI verbs in `actions.ts`
+- `/`         — the bundled React/Tailwind dashboard (`dist/web/`)
+- `/api/trpc` — the tRPC API used by the dashboard
 
 Same process, same OAuth state, same `.mcp.json`. Sessions are cached in
 memory and idle-evicted after five minutes; child stdio processes are reaped
@@ -298,26 +298,30 @@ on `SIGINT`/`SIGTERM`.
 mcp-inspector serve                 # http://127.0.0.1:8765, opens the browser
 mcp-inspector serve -p 4000
 mcp-inspector serve --no-open       # skip the browser launch
-mcp-inspector serve --no-ui         # API-only (handy when developing the UI with `pnpm dev:web`)
+mcp-inspector serve --no-ui         # API-only (handy when developing the UI with `bun run dev:ui`)
 ```
 
-API surface (every route maps to one action):
+API surface (procedures under `/api/trpc`):
 
 ```text
-GET    /api/health
-GET    /api/servers
-GET    /api/servers/:name/discover
-GET    /api/servers/:name/resources
-GET    /api/servers/:name/resources/templates
-POST   /api/servers/:name/resources/read     {uri}
-GET    /api/servers/:name/tools
-POST   /api/servers/:name/tools/call         {name, arguments?}
-GET    /api/servers/:name/prompts
-POST   /api/servers/:name/prompts/get        {name, arguments?}
-POST   /api/servers/:name/complete           {refType, ref, argument, value?, context?}
-GET    /api/servers/:name/auth
-DELETE /api/servers/:name/auth
-POST   /api/servers/:name/disconnect
+health.check
+servers.list
+servers.discover
+servers.listResources
+servers.listResourceTemplates
+servers.readResource
+servers.listTools
+servers.callTool
+servers.listPrompts
+servers.getPrompt
+servers.complete
+servers.authStatus
+servers.authLogout
+servers.authUrl
+servers.disconnect
+config.list
+config.add
+config.remove
 ```
 
 `:name` accepts either an alias from `.mcp.json` or a raw target (HTTP URL,
@@ -336,9 +340,9 @@ src/                  # CLI + REPL + web server (same TypeScript build)
 ├── paths.ts          # OAuth config-dir helpers
 ├── target.ts         # parse "target" string into transport spec
 ├── format.ts         # pretty-printers (resources, tools, prompts, …)
-├── actions.ts        # primitive actions used by CLI, REPL, and HTTP server
+├── actions.ts        # primitive actions used by CLI and REPL
 ├── repl.ts           # interactive readline REPL
-└── server.ts         # `mcp-inspector serve` — HTTP server hosting UI + JSON API
+└── server.ts         # `mcp-inspector serve` - HTTP server hosting UI + tRPC API
 
 web/                  # dashboard source (React 19 · Tailwind v4 · shadcn)
 ├── index.html
@@ -354,20 +358,20 @@ tsconfig.json         # CLI build (tsc → dist/*.js)
 vite.config.ts        # UI build (vite → dist/web/)
 ```
 
-CLI, REPL, and HTTP server all call `actions.ts` and share the same OAuth
-state and `.mcp.json` resolution.
+CLI and REPL call `actions.ts`; the dashboard server exposes equivalent tRPC
+procedures. All three share the same OAuth state and `.mcp.json` resolution.
 
 ---
 
 ## Development
 
 ```sh
-pnpm dev -- discover "npx -y @modelcontextprotocol/server-everything stdio"
+bun run dev:cli -- discover "npx -y @modelcontextprotocol/server-everything stdio"
 
 # Dashboard with HMR:
-pnpm dev -- serve --no-open --no-ui   # API on :8765 in one terminal
-pnpm dev:web                          # Vite dev server with /api proxy in another
+bun run dev:cli -- serve --no-open --no-ui   # API on :8765 in one terminal
+bun run dev:ui                                # Vite dev server with /api/trpc proxy in another
 
-pnpm typecheck                        # tsc + tsc -p web/tsconfig.app.json
-pnpm build                            # tsc → dist/*.js  +  vite → dist/web/
+bun run typecheck
+bun run build
 ```

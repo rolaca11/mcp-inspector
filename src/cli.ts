@@ -686,7 +686,7 @@ config
 program
   .command("serve")
   .description(
-    "Start the web dashboard. Hosts the bundled UI at /, the JSON API at /api/*.",
+    "Start the web dashboard. Hosts the bundled UI at / and the tRPC API at /api/trpc.",
   )
   .option("-p, --port <port>", "port to bind", "8765")
   .option("--host <host>", "interface to bind", "127.0.0.1")
