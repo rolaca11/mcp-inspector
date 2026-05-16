@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, ChevronRight, Loader2, RefreshCw, Tag, } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -210,10 +210,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       {open && hasDetail && (
         <div className="px-6 py-4 space-y-3">
           {entry.outcome === "error" && entry.error && !entry.response && (
-            <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-              <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-              <span className="break-all">{entry.error}</span>
-            </div>
+            <ErrorMessage error={entry.error} />
           )}
           {entry.response !== undefined && (
             <CodeBlock language="application/json" caption={entry.outcome === "error" ? "Error response" : "Response"}>
@@ -221,6 +218,43 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
             </CodeBlock>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function findJsonStart(s: string): number {
+  const brace = s.indexOf("{");
+  const bracket = s.indexOf("[");
+  if (brace === -1) return bracket;
+  if (bracket === -1) return brace;
+  return Math.min(brace, bracket);
+}
+
+function ErrorMessage({ error }: { error: string }) {
+  const { prefix, json } = useMemo(() => {
+    const idx = findJsonStart(error);
+    if (idx === -1) return { prefix: error, json: null };
+    try {
+      const parsed = JSON.parse(error.slice(idx));
+      return { prefix: error.slice(0, idx).trim(), json: JSON.stringify(parsed, null, 2) };
+    } catch {
+      return { prefix: error, json: null };
+    }
+  }, [error]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
+        <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
+        <span className="break-all">{prefix || error}</span>
+      </div>
+      {json && (
+        <CodeBlock language="application/json" caption="Error response">
+          {json}
+        </CodeBlock>
       )}
     </div>
   );
