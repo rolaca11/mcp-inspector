@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Controller } from "react-hook-form";
 
 import { CodeBlock } from "@/components/code-block";
+import { ErrorMessage } from "@/components/error-message";
 import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
@@ -294,7 +295,7 @@ function ResourcePreview({
         </CardHeader>
         <CardContent>
           {error ? (
-            <ErrorRow message={error} errorResponse={errorResponse} />
+            <ErrorMessage error={error} errorResponse={errorResponse} />
           ) : result ? (
             <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
           ) : (
@@ -474,7 +475,7 @@ function TemplatePreview({
         </CardHeader>
         <CardContent>
           {error ? (
-            <ErrorRow message={error} errorResponse={errorResponse} />
+            <ErrorMessage error={error} errorResponse={errorResponse} />
           ) : result ? (
             <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
           ) : (
@@ -578,27 +579,6 @@ function ResourceContentBlock({
   );
 }
 
-function ErrorRow({
-  message,
-  errorResponse,
-}: {
-  message: string;
-  errorResponse?: Record<string, unknown>;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-        <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-        <span className="break-all">{message}</span>
-      </div>
-      {errorResponse && (
-        <CodeBlock language="application/json" caption="error response">
-          {JSON.stringify(errorResponse, null, 2)}
-        </CodeBlock>
-      )}
-    </div>
-  );
-}
 
 function Loading() {
   return (

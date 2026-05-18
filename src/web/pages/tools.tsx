@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { CodeBlock } from "@/components/code-block";
+import { ErrorMessage } from "@/components/error-message";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -1027,19 +1028,7 @@ function JsonSubField({
 function ToolResultView({ state }: { state: CallState }) {
   const errorMsg = state.error ?? (state.activity?.outcome === "error" ? state.activity.error : null);
   if (errorMsg) {
-    return (
-      <div className="space-y-2">
-        <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-          <AlertCircle className="size-4 mt-0.5 text-destructive shrink-0" />
-          <span className="break-all">{errorMsg}</span>
-        </div>
-        {state.errorResponse && (
-          <CodeBlock language="application/json" caption="error response">
-            {JSON.stringify(state.errorResponse, null, 2)}
-          </CodeBlock>
-        )}
-      </div>
-    );
+    return <ErrorMessage error={errorMsg} errorResponse={state.errorResponse} />;
   }
   if (!state.activity?.result) {
     return (

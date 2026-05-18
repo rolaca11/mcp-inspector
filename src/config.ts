@@ -147,6 +147,7 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
     }
 
     const collected: Record<string, ServerConfig> = {};
+    const configFileDir = path.dirname(resolved);
     for (const [name, value] of Object.entries(mcpServers)) {
       const cfg = parseServerConfig(value);
       if (!cfg) {
@@ -155,6 +156,9 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
           message: `mcpServers.${name}: must be {command,args?,env?,cwd?} or {url,headers?,type?}`,
         });
         continue;
+      }
+      if ("command" in cfg && !cfg.cwd) {
+        cfg.cwd = configFileDir;
       }
       collected[name] = cfg;
       servers.set(name, { config: cfg, source: resolved, label });
