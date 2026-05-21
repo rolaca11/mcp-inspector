@@ -47,10 +47,11 @@ function summarizeServers(config: LoadedConfig) {
       serverCount: Object.keys(s.servers).length,
     })),
     errors: config.errors,
-    servers: Array.from(config.servers.entries()).map(
-      ([name, { config: cfg, source, label }]) => {
+    servers: Array.from(config.servers.values()).map(
+      ({ id, name, config: cfg, source, label }) => {
         const isHttp = "url" in cfg;
         return {
+          id,
           name,
           source,
           sourceLabel: label,

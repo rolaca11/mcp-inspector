@@ -89,7 +89,7 @@ export function CompletionsPage() {
       description="Ask the server to autocomplete an argument value. Useful for cascading dropdowns where one argument depends on another."
     >
       <CompletionsPlayground
-        serverName={server!.name}
+        serverName={server!.id}
         prompts={data.prompts}
         templates={data.resourceTemplates}
       />

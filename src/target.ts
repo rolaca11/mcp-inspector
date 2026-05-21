@@ -65,7 +65,7 @@ export function parseTarget(input: string, extraStdioArgs: string[] = []): Targe
   if (cachedConfig) {
     const named = cachedConfig.servers.get(trimmed);
     if (named) {
-      return resolveNamed(trimmed, named.config);
+      return resolveNamed(named.name, named.config, trimmed);
     }
   }
 
@@ -95,7 +95,7 @@ export function parseTarget(input: string, extraStdioArgs: string[] = []): Targe
   };
 }
 
-function resolveNamed(name: string, cfg: ServerConfig): TargetSpec {
+function resolveNamed(name: string, cfg: ServerConfig, raw = name): TargetSpec {
   if ("url" in cfg) {
     let url: URL;
     try {
@@ -103,7 +103,7 @@ function resolveNamed(name: string, cfg: ServerConfig): TargetSpec {
     } catch {
       throw new Error(`Named server "${name}" has invalid URL: ${cfg.url}`);
     }
-    const out: TargetSpec = { kind: "http", url, raw: name, name };
+    const out: TargetSpec = { kind: "http", url, raw, name };
     if (cfg.headers && Object.keys(cfg.headers).length > 0) {
       out.headers = cfg.headers;
     }
@@ -114,7 +114,7 @@ function resolveNamed(name: string, cfg: ServerConfig): TargetSpec {
     kind: "stdio",
     command: cfg.command,
     args: cfg.args ?? [],
-    raw: name,
+    raw,
     name,
   };
   if (cfg.env && Object.keys(cfg.env).length > 0) out.env = cfg.env;

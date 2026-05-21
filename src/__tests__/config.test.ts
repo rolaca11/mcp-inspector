@@ -47,6 +47,7 @@ describe("loadConfigSync", () => {
     expect(entry?.config).toEqual({
       command: "node",
       args: ["server.js"],
+      cwd: tmpDir,
     });
     expect(entry?.label).toBe("project");
   });
@@ -71,7 +72,7 @@ describe("loadConfigSync", () => {
     expect(entry?.label).toBe("global");
   });
 
-  it("cwd overrides home on name conflicts", () => {
+  it("keeps duplicate names from different config files", () => {
     const homeDir = path.join(tmpDir, "home");
     writeJson(path.join(homeDir, ".mcp.json"), {
       mcpServers: { srv: { url: "https://home.example.com" } },
@@ -80,12 +81,18 @@ describe("loadConfigSync", () => {
       mcpServers: { srv: { url: "https://project.example.com" } },
     });
     const result = loadConfigSync({ cwd: tmpDir, home: homeDir });
-    expect(result.servers.size).toBe(1);
-    const entry = result.servers.get("srv");
-    expect((entry?.config as { url: string }).url).toBe(
-      "https://project.example.com",
+    expect(result.servers.size).toBe(2);
+
+    const entries = Array.from(result.servers.values()).filter(
+      (entry) => entry.name === "srv",
     );
-    expect(entry?.label).toBe("project");
+    expect(entries).toHaveLength(2);
+    expect(entries.map((entry) => (entry.config as { url: string }).url)).toEqual([
+      "https://home.example.com",
+      "https://project.example.com",
+    ]);
+    expect(entries.map((entry) => entry.label)).toEqual(["global", "project"]);
+    expect(entries.every((entry) => entry.id.startsWith("srv#"))).toBe(true);
   });
 
   it("records error for invalid JSON", () => {
@@ -147,7 +154,7 @@ describe("loadConfigSync", () => {
     expect(result.errors[0]!.message).toMatch(/mcpServers\.bad/);
   });
 
-  it("loads extraFiles with highest precedence", () => {
+  it("loads extraFiles alongside project entries with the same name", () => {
     const extraFile = path.join(tmpDir, "extra.json");
     writeJson(extraFile, {
       mcpServers: { srv: { command: "extra-cmd" } },
@@ -160,9 +167,14 @@ describe("loadConfigSync", () => {
       home: path.join(tmpDir, "home"),
       extraFiles: [extraFile],
     });
-    const entry = result.servers.get("srv");
-    expect((entry?.config as { command: string }).command).toBe("extra-cmd");
-    expect(entry?.label).toBe("--config");
+    const entries = Array.from(result.servers.values()).filter(
+      (entry) => entry.name === "srv",
+    );
+    expect(entries.map((entry) => (entry.config as { command: string }).command)).toEqual([
+      "project-cmd",
+      "extra-cmd",
+    ]);
+    expect(entries.map((entry) => entry.label)).toEqual(["project", "--config"]);
   });
 
   it("parses full stdio config with env, cwd, type", () => {

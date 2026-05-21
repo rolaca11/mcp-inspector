@@ -9,6 +9,8 @@ export type Transport = "stdio" | "http" | "sse" | "streamable-http";
 export type SourceLabel = "inspector" | "global" | "project" | "--config";
 
 export interface MCPServer {
+  /** Unique identifier used in routes and API calls. */
+  id: string;
   /** Slug used in `.mcp.json#/mcpServers/<name>`. */
   name: string;
   title?: string;

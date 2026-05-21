@@ -52,14 +52,14 @@ export function ToolsPage() {
 
   const tools = data?.tools ?? [];
 
-  const storedName = server ? selectionStore.get(server.name, "tools") : undefined;
+  const storedName = server ? selectionStore.get(server.id, "tools") : undefined;
   const selectedName = storedName && tools.find((t) => t.name === storedName)
     ? storedName
     : (tools[0]?.name ?? null);
 
   const setSelectedName = React.useCallback(
     (name: string) => {
-      if (server) selectionStore.set(server.name, "tools", name);
+      if (server) selectionStore.set(server.id, "tools", name);
     },
     [server, selectionStore],
   );
@@ -144,7 +144,7 @@ export function ToolsPage() {
           </div>
         </div>
 
-        {selected && <ToolDetail key={selected.name} serverName={server!.name} tool={selected} />}
+        {selected && <ToolDetail key={selected.name} serverName={server!.id} tool={selected} />}
       </div>
     </PageShell>
   );
@@ -1128,4 +1128,3 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
     </CodeBlock>
   );
 }
-

@@ -13,10 +13,10 @@ function makeConfig(
 ): LoadedConfig {
   const map = new Map<
     string,
-    { config: ServerConfig; source: string; label: "project" }
+    { id: string; name: string; config: ServerConfig; source: string; label: "project" }
   >();
   for (const [name, config] of Object.entries(servers)) {
-    map.set(name, { config, source: "/test/.mcp.json", label: "project" });
+    map.set(name, { id: name, name, config, source: "/test/.mcp.json", label: "project" });
   }
   return { servers: map, sources: [], errors: [] };
 }

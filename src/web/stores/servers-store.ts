@@ -34,6 +34,7 @@ export const useServersStore = create<ServersState>((set) => ({
       if (thisRequest !== requestId) return; // stale
       set({
         servers: r.servers.map<MCPServer>((s) => ({
+          id: s.id,
           name: s.name,
           source: s.source,
           sourceLabel: (s.sourceLabel as MCPServer["sourceLabel"]) ?? "global",

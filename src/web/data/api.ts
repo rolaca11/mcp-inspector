@@ -92,6 +92,7 @@ export interface ServersListResponse {
   sources: Array<{ path: string; serverCount: number }>;
   errors: Array<{ path: string; message: string }>;
   servers: Array<{
+    id: string;
     name: string;
     source: string;
     sourceLabel?: string;

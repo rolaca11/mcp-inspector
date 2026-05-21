@@ -90,7 +90,7 @@ export function ResourcesPage() {
       }
     >
       <CombinedResourcesPanel
-        serverName={server!.name}
+        serverName={server!.id}
         resources={resources}
         templates={templates}
         query={query}

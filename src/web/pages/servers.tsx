@@ -41,10 +41,10 @@ export function ServersPage({
   const fetchServers = useServersStore((s) => s.fetchServers);
   const [removing, setRemoving] = React.useState<string | null>(null);
 
-  async function handleRemove(serverName: string) {
-    setRemoving(serverName);
+  async function handleRemove(server: MCPServer) {
+    setRemoving(server.id);
     try {
-      await api.configRemoveServer(serverName);
+      await api.configRemoveServer(server.name);
       await fetchServers();
     } catch {
       // errors are transient — next fetch will reflect reality
@@ -98,7 +98,7 @@ export function ServersPage({
           </CardHeader>
           <div className="divide-y divide-border/50">
             {list.map((s) => {
-              const isActive = s.name === active.name;
+              const isActive = s.id === active.id;
               const isInspector = s.sourceLabel === "inspector";
               const tone = isActive ? TONE[connection] : "muted";
               const statusLabel = !isActive
@@ -114,7 +114,7 @@ export function ServersPage({
                         : "disconnected";
               return (
                 <div
-                  key={s.name}
+                  key={s.id}
                   className={cn(
                     "flex w-full items-start gap-5 px-6 py-5 text-left transition-colors",
                     isActive ? "bg-accent/40" : "hover:bg-accent/20",
@@ -157,8 +157,8 @@ export function ServersPage({
                       variant="ghost"
                       size="icon"
                       className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive"
-                      disabled={removing === s.name}
-                      onClick={() => handleRemove(s.name)}
+                      disabled={removing === s.id}
+                      onClick={() => handleRemove(s)}
                     >
                       <Trash2 className="size-4" />
                     </Button>

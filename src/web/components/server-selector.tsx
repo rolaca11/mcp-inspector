@@ -41,6 +41,13 @@ export function ServerSelector({
   activeConnection,
   variant = "primary",
 }: ServerSelectorProps) {
+  const duplicateNames = new Set(
+    servers
+      .map((server) => server.name)
+      .filter((name, index, names) => names.indexOf(name) !== index),
+  );
+  const activeHasDuplicateName = duplicateNames.has(active.name);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -62,6 +69,11 @@ export function ServerSelector({
             className="text-muted-foreground"
           />
           <span className="font-medium leading-none">{active.name}</span>
+          {activeHasDuplicateName && (
+            <span className="max-w-28 truncate text-xs text-muted-foreground">
+              {active.sourceLabel}
+            </span>
+          )}
           <ChevronsUpDown className="size-3 text-muted-foreground/70 group-hover:text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
@@ -72,10 +84,10 @@ export function ServerSelector({
       >
         <DropdownMenuLabel>Named servers</DropdownMenuLabel>
         {servers.map((server) => {
-          const isActive = server.name === active.name;
+          const isActive = server.id === active.id;
           return (
             <DropdownMenuItem
-              key={server.name}
+              key={server.id}
               onSelect={() => onSelect(server)}
               className="items-start py-2"
             >
@@ -99,6 +111,11 @@ export function ServerSelector({
                 <div className="font-mono text-[11px] text-muted-foreground/80 truncate">
                   {server.target}
                 </div>
+                {duplicateNames.has(server.name) && (
+                  <div className="font-mono text-[10px] text-muted-foreground/70 truncate">
+                    {server.source}
+                  </div>
+                )}
               </div>
               {isActive && <Check className="size-4 text-success" />}
             </DropdownMenuItem>

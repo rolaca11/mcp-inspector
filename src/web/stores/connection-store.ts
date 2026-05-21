@@ -169,7 +169,7 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
 
   setServer(server: MCPServer) {
     const current = useConnectionStore.getState().server;
-    if (current?.name === server.name) {
+    if (current?.id === server.id) {
       // Same server -- just update the reference in case the object changed.
       set({ server });
       return;
@@ -185,21 +185,21 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
       loading: true,
       pendingAuthUrl: null,
     });
-    void runDiscover(server.name, true, set);
+    void runDiscover(server.id, true, set);
   },
 
   async rediscover() {
     const { server } = useConnectionStore.getState();
     if (!server) return;
     set({ loading: true });
-    await runDiscover(server.name, false, set);
+    await runDiscover(server.id, false, set);
   },
 
   async disconnect() {
     const { server } = useConnectionStore.getState();
     if (!server) return;
     try {
-      await api.disconnect(server.name);
+      await api.disconnect(server.id);
     } catch {
       /* ignore */
     }

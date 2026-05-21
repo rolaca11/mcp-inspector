@@ -31,6 +31,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 
@@ -68,12 +69,22 @@ export interface ConfigError {
 }
 
 export interface LoadedConfig {
-  /** Resolved name → config + provenance. CWD overrides home on conflicts. */
-  servers: Map<string, { config: ServerConfig; source: string; label: SourceLabel }>;
+  /** Resolved id → config + provenance. Duplicate names are source-qualified. */
+  servers: Map<string, LoadedServer>;
   /** Files actually read in load order (lowest precedence first). */
   sources: ConfigSource[];
   /** Files that existed but failed to parse / validate. */
   errors: ConfigError[];
+}
+
+export interface LoadedServer {
+  /** Unique identifier used for routing and tRPC calls. */
+  id: string;
+  /** Original key from `.mcp.json#/mcpServers`. */
+  name: string;
+  config: ServerConfig;
+  source: string;
+  label: SourceLabel;
 }
 
 export interface LoadConfigOptions {
@@ -89,7 +100,7 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
   const cwd = opts.cwd ?? process.cwd();
   const home = opts.home ?? os.homedir();
 
-  // Order matters: lowest precedence first, last wins on duplicates.
+  // Order matters for presentation: inspector → global → project → --config.
   // <configDir>/mcp.json (inspector) → ~/.claude.json (global) → ~/.mcp.json (global) → <cwd>/.mcp.json (project) → --config extras
   const candidates: Array<{ file: string; label: SourceLabel }> = [
     { file: path.join(configDir(), "mcp.json"), label: "inspector" },
@@ -99,7 +110,7 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
     ...(opts.extraFiles ?? []).map((f) => ({ file: f, label: "--config" as const })),
   ];
 
-  const servers = new Map<string, { config: ServerConfig; source: string; label: SourceLabel }>();
+  const loadedServers: Array<Omit<LoadedServer, "id">> = [];
   const sources: ConfigSource[] = [];
   const errors: ConfigError[] = [];
 
@@ -161,12 +172,34 @@ export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {
         cfg.cwd = configFileDir;
       }
       collected[name] = cfg;
-      servers.set(name, { config: cfg, source: resolved, label });
+      loadedServers.push({ name, config: cfg, source: resolved, label });
     }
     sources.push({ path: resolved, label, servers: collected });
   }
 
+  const servers = buildServerMap(loadedServers);
   return { servers, sources, errors };
+}
+
+function buildServerMap(entries: Array<Omit<LoadedServer, "id">>): Map<string, LoadedServer> {
+  const nameCounts = new Map<string, number>();
+  for (const entry of entries) {
+    nameCounts.set(entry.name, (nameCounts.get(entry.name) ?? 0) + 1);
+  }
+
+  const servers = new Map<string, LoadedServer>();
+  for (const entry of entries) {
+    const id =
+      nameCounts.get(entry.name) === 1
+        ? entry.name
+        : `${entry.name}#${shortSourceHash(entry.source)}`;
+    servers.set(id, { ...entry, id });
+  }
+  return servers;
+}
+
+function shortSourceHash(source: string): string {
+  return createHash("sha256").update(source).digest("hex").slice(0, 8);
 }
 
 function parseServerConfig(value: unknown): ServerConfig | null {

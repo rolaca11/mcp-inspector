@@ -43,7 +43,7 @@ export function AuthPage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await api.authStatus(server.name);
+      const r = await api.authStatus(server.id);
       setStatus(r);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
@@ -61,7 +61,7 @@ export function AuthPage() {
     setBusy("logout");
     setError(null);
     try {
-      await api.authLogout(server.name);
+      await api.authLogout(server.id);
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
@@ -77,7 +77,7 @@ export function AuthPage() {
     try {
       // Drop credentials, then trigger a discover so the server reconnects
       // (which will run the OAuth flow if the transport demands it).
-      await api.authLogout(server.name);
+      await api.authLogout(server.id);
       await rediscover();
       await load();
     } catch (e) {

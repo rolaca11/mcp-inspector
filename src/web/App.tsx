@@ -77,7 +77,7 @@ export default function App() {
     );
   }
 
-  const fallback = `/${encodeURIComponent(servers[0]!.name)}/overview`;
+  const fallback = `/${encodeURIComponent(servers[0]!.id)}/overview`;
 
   return (
     <TooltipProvider>
@@ -108,7 +108,7 @@ function ServerLayout() {
   const setServer = useConnectionStore((s) => s.setServer);
 
   const active = React.useMemo(
-    () => servers.find((s) => s.name === serverName) ?? null,
+    () => servers.find((s) => s.id === serverName) ?? null,
     [servers, serverName],
   );
 
@@ -120,7 +120,7 @@ function ServerLayout() {
   if (!active) {
     return (
       <Navigate
-        to={`/${encodeURIComponent(servers[0]!.name)}/overview`}
+        to={`/${encodeURIComponent(servers[0]!.id)}/overview`}
         replace
       />
     );
@@ -153,7 +153,7 @@ function ServerShell({
       // Preserve the current sub-route (e.g. `/old/tools` → `/new/tools`).
       const segments = location.pathname.split("/").filter(Boolean);
       const subPath = segments.slice(1).join("/") || "overview";
-      navigate(`/${encodeURIComponent(next.name)}/${subPath}`);
+      navigate(`/${encodeURIComponent(next.id)}/${subPath}`);
     },
     [navigate, location.pathname],
   );
@@ -182,7 +182,7 @@ function ServerShell({
         onConnect={rediscover}
         onRediscover={rediscover}
       >
-        <NavTabs serverName={active.name} counts={counts} />
+        <NavTabs serverName={active.id} counts={counts} />
       </Header>
 
       {pendingAuthUrl && (

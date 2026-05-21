@@ -18,7 +18,7 @@ export function OverviewPage() {
   const { server, data, connectionState: state, error, rediscover } =
     useConnectionStore();
   const activity = useActivityStore((s) => s.entries);
-  const activityForServer = activity.filter((a) => a.serverName === server?.name);
+  const activityForServer = activity.filter((a) => a.serverName === server?.id);
 
   if (!server) {
     return null;
@@ -223,4 +223,3 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
     </div>
   );
 }
-

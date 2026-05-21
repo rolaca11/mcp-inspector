@@ -442,9 +442,9 @@ function printServers(config: LoadedConfig, asJson: boolean) {
       sources: config.sources.map((s) => ({ path: s.path, label: s.label })),
       errors: config.errors,
       servers: Object.fromEntries(
-        Array.from(config.servers.entries()).map(([name, { config: c, source, label }]) => [
-          name,
-          { ...c, _source: source, _label: label },
+        Array.from(config.servers.values()).map(({ id, name, config: c, source, label }) => [
+          id,
+          { ...c, _name: name, _source: source, _label: label },
         ]),
       ),
     };
@@ -457,7 +457,7 @@ function printServers(config: LoadedConfig, asJson: boolean) {
     if (config.errors.length === 0) return;
   }
   if (config.sources.length > 0) {
-    console.log(pc.bold("Loaded files (in precedence order, last wins):"));
+    console.log(pc.bold("Loaded files:"));
     for (const s of config.sources) {
       const count = Object.keys(s.servers).length;
       console.log(`  ${s.path} ${pc.dim(`(${s.label}, ${count} server${count === 1 ? "" : "s"})`)}`);
@@ -473,7 +473,7 @@ function printServers(config: LoadedConfig, asJson: boolean) {
     console.log();
   }
 
-  const entries = Array.from(config.servers.entries());
+  const entries = Array.from(config.servers.values());
   if (entries.length === 0) {
     console.log(pc.dim("No named servers."));
     return;
@@ -481,9 +481,9 @@ function printServers(config: LoadedConfig, asJson: boolean) {
 
   console.log(pc.bold(`Named servers (${entries.length}):`));
   // Compute padding for the name column.
-  const nameWidth = Math.max(...entries.map(([n]) => n.length), 4);
-  for (const [name, { config: cfg, source, label }] of entries) {
-    const padded = name.padEnd(nameWidth);
+  const nameWidth = Math.max(...entries.map((e) => e.id.length), 4);
+  for (const { id, name, config: cfg, source, label } of entries) {
+    const padded = id.padEnd(nameWidth);
     if ("url" in cfg) {
       const kind = cfg.type ?? "http";
       console.log(`  ${pc.cyan(padded)}  ${cfg.url}  ${pc.dim(`[${kind}]`)}`);
@@ -493,7 +493,8 @@ function printServers(config: LoadedConfig, asJson: boolean) {
         `  ${pc.cyan(padded)}  ${cfg.command}${argsStr ? " " + argsStr : ""}  ${pc.dim("[stdio]")}`,
       );
     }
-    console.log(`  ${" ".repeat(nameWidth)}  ${pc.dim(`from ${source} (${label})`)}`);
+    const namePart = id === name ? "" : `name ${name}, `;
+    console.log(`  ${" ".repeat(nameWidth)}  ${pc.dim(`${namePart}from ${source} (${label})`)}`);
   }
 }
 
