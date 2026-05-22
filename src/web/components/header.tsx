@@ -36,6 +36,12 @@ export function Header({
     serverCount: count,
     label,
   }));
+  const sourceServers = servers.filter((server) => server.source === active.source);
+
+  function handleSourceSelect(path: string) {
+    const next = servers.find((server) => server.source === path);
+    if (next && next.id !== active.id) onSelect(next);
+  }
 
   return (
     <header className="border-b border-border/60 bg-chrome sticky top-0 z-40">
@@ -47,11 +53,11 @@ export function Header({
             <SourceSelector
               sources={sources}
               activePath={active.source}
-              onSelect={() => {}}
+              onSelect={handleSourceSelect}
             />
             <span aria-hidden className="select-none px-0.5">/</span>
             <ServerSelector
-              servers={servers}
+              servers={sourceServers}
               active={active}
               onSelect={onSelect}
               activeConnection={connection}
