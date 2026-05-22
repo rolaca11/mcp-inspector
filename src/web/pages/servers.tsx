@@ -79,97 +79,99 @@ export function ServersPage({
   return (
     <PageShell
       title="Servers"
-      description="Resolved view of every named server across your `.mcp.json` files. Project-local entries override user-global ones."
+      description="Resolved view of every named server across your `.mcp.json` files."
     >
-      <div className="columns-2">
-      {sources.map(([path, list]) => {
-        const isInspectorSource = list[0]?.sourceLabel === "inspector";
-        return (
-        <Card key={path}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderTree className="size-4 text-muted-foreground" />
-              <span className="font-mono text-foreground">{path}</span>
-            </CardTitle>
-            <CardDescription>
-              {list.length} server{list.length === 1 ? "" : "s"} loaded from this file.
-            </CardDescription>
-            {isInspectorSource && <CardAction>{addButton}</CardAction>}
-          </CardHeader>
-          <div className="divide-y divide-border/50">
-            {list.map((s) => {
-              const isActive = s.id === active.id;
-              const isInspector = s.sourceLabel === "inspector";
-              const tone = isActive ? TONE[connection] : "muted";
-              const statusLabel = !isActive
-                ? "select to inspect"
-                : connection === "connected" && lastDiscoveredAt
-                  ? `connected · discovered ${formatRelativeTime(lastDiscoveredAt)}`
-                  : connection === "connecting"
-                    ? "connecting…"
-                    : connection === "error"
-                      ? `error: ${error ?? "connection failed"}`
-                      : error
-                        ? `disconnected: ${error}`
-                        : "disconnected";
-              return (
-                <div
-                  key={s.id}
-                  className={cn(
-                    "flex w-full items-start gap-5 px-6 py-5 text-left transition-colors",
-                    isActive ? "bg-accent/40" : "hover:bg-accent/20",
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onSelect(s)}
-                    className="flex flex-1 items-start gap-5 min-w-0 cursor-pointer"
-                  >
-                    <StatusDot tone={tone} pulse={isActive && (connection === "connected" || connection === "connecting")} className="mt-2" />
-                    <div className="flex-1 min-w-0 space-y-2.5">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="text-base font-medium">{s.name}</span>
-                        {isActive && data?.server?.title && (
-                          <span className="text-sm text-muted-foreground">
-                            · {data.server.title}
-                          </span>
-                        )}
-                        <Badge variant="muted" className="font-mono">
-                          <TransportIcon transport={s.transport} />
-                          {transportLabel(s.transport)}
-                        </Badge>
-                        {isActive && data?.server?.version && (
-                          <Badge variant="muted" className="font-mono">
-                            {data.server.name}@{data.server.version}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="font-mono text-sm text-muted-foreground truncate">
-                        {s.target}
-                      </div>
-                      <div className="text-xs text-muted-foreground/80">
-                        {statusLabel}
-                      </div>
-                    </div>
-                  </button>
-                  {isInspector && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive"
-                      disabled={removing === s.id}
-                      onClick={() => handleRemove(s)}
+      <div className="columns-1 gap-5 xl:columns-2">
+        {sources.map(([path, list]) => {
+          const isInspectorSource = list[0]?.sourceLabel === "inspector";
+          return (
+            <Card key={path} className="mb-5 min-w-0 break-inside-avoid overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex min-w-0 items-center gap-2">
+                  <FolderTree className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-mono text-foreground">
+                    {path}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  {list.length} server{list.length === 1 ? "" : "s"} loaded from this file.
+                </CardDescription>
+                {isInspectorSource && <CardAction>{addButton}</CardAction>}
+              </CardHeader>
+              <div className="divide-y divide-border/50">
+                {list.map((s) => {
+                  const isActive = s.id === active.id;
+                  const isInspector = s.sourceLabel === "inspector";
+                  const tone = isActive ? TONE[connection] : "muted";
+                  const statusLabel = !isActive
+                    ? "select to inspect"
+                    : connection === "connected" && lastDiscoveredAt
+                      ? `connected · discovered ${formatRelativeTime(lastDiscoveredAt)}`
+                      : connection === "connecting"
+                        ? "connecting…"
+                        : connection === "error"
+                          ? `error: ${error ?? "connection failed"}`
+                          : error
+                            ? `disconnected: ${error}`
+                            : "disconnected";
+                  return (
+                    <div
+                      key={s.id}
+                      className={cn(
+                        "flex w-full items-start gap-5 px-6 py-5 text-left transition-colors",
+                        isActive ? "bg-accent/40" : "hover:bg-accent/20",
+                      )}
                     >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-        );
-      })}
+                      <button
+                        type="button"
+                        onClick={() => onSelect(s)}
+                        className="flex flex-1 items-start gap-5 min-w-0 cursor-pointer"
+                      >
+                        <StatusDot tone={tone} pulse={isActive && (connection === "connected" || connection === "connecting")} className="mt-2" />
+                        <div className="flex-1 min-w-0 space-y-2.5">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-base font-medium">{s.name}</span>
+                            {isActive && data?.server?.title && (
+                              <span className="text-sm text-muted-foreground">
+                                · {data.server.title}
+                              </span>
+                            )}
+                            <Badge variant="muted" className="font-mono">
+                              <TransportIcon transport={s.transport} />
+                              {transportLabel(s.transport)}
+                            </Badge>
+                            {isActive && data?.server?.version && (
+                              <Badge variant="muted" className="font-mono">
+                                {data.server.name}@{data.server.version}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="font-mono text-sm text-muted-foreground truncate">
+                            {s.target}
+                          </div>
+                          <div className="text-xs text-muted-foreground/80">
+                            {statusLabel}
+                          </div>
+                        </div>
+                      </button>
+                      {isInspector && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mt-1.5 shrink-0 text-muted-foreground hover:text-destructive"
+                          disabled={removing === s.id}
+                          onClick={() => handleRemove(s)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </PageShell>
   );
