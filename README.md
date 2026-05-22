@@ -176,6 +176,7 @@ mcp-inspector auth logout         <target>
 
 mcp-inspector serve               [--port 8765]          # web dashboard at http://127.0.0.1:8765
                                   [--host 127.0.0.1]
+                                  [--config a.json b.json]
                                   [--no-open]            # don't open the browser
                                   [--no-ui]              # tRPC API only
 ```
@@ -297,6 +298,7 @@ on `SIGINT`/`SIGTERM`.
 ```sh
 mcp-inspector serve                 # http://127.0.0.1:8765, opens the browser
 mcp-inspector serve -p 4000
+mcp-inspector serve --config team.json local.json
 mcp-inspector serve --no-open       # skip the browser launch
 mcp-inspector serve --no-ui         # API-only (handy when developing the UI with `bun run dev:ui`)
 ```

@@ -19,6 +19,7 @@ import pc from "picocolors";
 
 import * as actions from "./actions.js";
 import { connect } from "./client.js";
+import { appendConfigFiles } from "./config-files.js";
 import { loadConfigSync, type LoadedConfig, type ServerConfig } from "./config.js";
 import { configDir } from "./paths.js";
 import { runRepl } from "./repl.js";
@@ -691,7 +692,12 @@ program
   )
   .option("-p, --port <port>", "port to bind", "8765")
   .option("--host <host>", "interface to bind", "127.0.0.1")
-  .option("-c, --config <path>", "path to an .mcp.json file (repeatable, loaded with highest precedence)", (v: string, prev: string[]) => prev.concat([v]), [] as string[])
+  .option(
+    "-c, --config <paths...>",
+    "path(s) to .mcp.json files (repeatable; loaded after defaults)",
+    appendConfigFiles,
+    [] as string[],
+  )
   .option("--no-open", "don't open the dashboard in the default browser")
   .option("--no-ui", "expose the API only — skip serving the static UI")
   .option("-q, --quiet", "suppress informational logs")
