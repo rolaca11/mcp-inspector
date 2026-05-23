@@ -9,7 +9,7 @@
     "dev": "vite build && electron .",
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "dist": "electron-builder --publish never",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
