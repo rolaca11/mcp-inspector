@@ -92,13 +92,13 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
-      - name: Setup Flatpak builder
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      - name: Install Flatpak
         if: matrix.platform == 'linux'
-        with:
-          bundle: palette.flatpak
-          manifest-path: org.gnome.zbrown.Palette.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --noninteractive --user flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 org.electronjs.Electron2.BaseApp//24.08
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -117,6 +117,7 @@ jobs:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
             packages/electron/release/*.AppImage
+            packages/electron/release/*.flatpak
             packages/electron/release/*.dmg
             packages/electron/release/*.zip
             packages/electron/release/*.exe
