@@ -17,11 +17,11 @@ import { fileURLToPath } from "node:url";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import pc from "picocolors";
 
-import { connect, type Session } from "./client.js";
-import { loadConfigSync } from "./config.js";
-import { errorMessage } from "./format.js";
-import { setLoadedConfig } from "./target.js";
-import { appRouter } from "./trpc/router.js";
+import { connect, type Session } from "@rolaca11/mcp-inspector-core/client";
+import { loadConfigSync } from "@rolaca11/mcp-inspector-core/config";
+import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
+import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
+import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
 
 /* ------------------------------------------------------------------ */
 /* Pending auth URLs (serve-mode: sent to the web UI instead of        */
@@ -36,8 +36,8 @@ const pendingAuthUrls = new Map<string, string>();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DEFAULT_STATIC_DIR = path.resolve(__dirname, "./web");
-const DEV_STATIC_DIR = path.resolve(__dirname, "../dist/web");
+const DEFAULT_STATIC_DIR = path.resolve(__dirname, "../../web/dist");
+const DEV_STATIC_DIR = path.resolve(__dirname, "../../web/dist");
 
 const SESSION_IDLE_MS = 5 * 60 * 1000;
 

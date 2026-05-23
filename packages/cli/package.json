@@ -1,0 +1,54 @@
+{
+  "name": "@rolaca11/mcp-inspector",
+  "version": "1.0.0-RC4",
+  "description": "MCP client for discovering and exercising resources, tools, prompts, and completions over stdio or OAuth-protected HTTP. Ships with a CLI, an interactive REPL, and a web dashboard served by `mcp-inspector serve`.",
+  "type": "module",
+  "bin": {
+    "mcp-inspector": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "bun src/cli.ts",
+    "start": "bun dist/cli.js",
+    "serve": "bun dist/cli.js serve",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "client",
+    "oauth",
+    "inspector",
+    "dashboard"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolaca11/mcp-inspector.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@rolaca11/mcp-inspector-core": "workspace:*",
+    "@trpc/server": "^11.17.0",
+    "commander": "^14.0.3",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "shell-quote": "^1.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/shell-quote": "^1.7.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}

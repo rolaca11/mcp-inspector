@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
-import pkg from "./package.json" with { type: "json" };
 
 export default defineConfig({
   define: {
-    __PKG_VERSION__: JSON.stringify(pkg.version),
+    __PKG_VERSION__: JSON.stringify(
+      process.env.npm_package_version ?? "0.0.0-dev",
+    ),
   },
   build: {
     lib: {

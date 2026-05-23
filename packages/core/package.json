@@ -1,0 +1,42 @@
+{
+  "name": "@rolaca11/mcp-inspector-core",
+  "version": "1.0.0-RC4",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.ts",
+    "./actions": "./src/actions.ts",
+    "./config": "./src/config.ts",
+    "./config-files": "./src/config-files.ts",
+    "./oauth": "./src/oauth.ts",
+    "./target": "./src/target.ts",
+    "./paths": "./src/paths.ts",
+    "./tokens": "./src/tokens.ts",
+    "./format": "./src/format.ts",
+    "./version": "./src/version.ts",
+    "./trpc/router": "./src/trpc/router.ts",
+    "./trpc/trpc": "./src/trpc/trpc.ts",
+    "./trpc/activity": "./src/trpc/activity.ts",
+    "./trpc/schemas": "./src/trpc/schemas.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@trpc/server": "^11.17.0",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "shell-quote": "^1.8.3",
+    "tiktoken": "^1.0.22",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/shell-quote": "^1.7.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

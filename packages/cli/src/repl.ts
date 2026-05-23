@@ -8,9 +8,9 @@ import readline from "node:readline";
 import { parse as shellParse } from "shell-quote";
 import pc from "picocolors";
 
-import * as actions from "./actions.js";
-import { errorMessage, extractTemplateVars } from "./format.js";
-import type { Session } from "./client.js";
+import * as actions from "@rolaca11/mcp-inspector-core/actions";
+import { errorMessage, extractTemplateVars } from "@rolaca11/mcp-inspector-core/format";
+import type { Session } from "@rolaca11/mcp-inspector-core/client";
 
 const HELP = `
 ${pc.bold("Available commands:")}

@@ -1,100 +1,22 @@
 {
-  "name": "@rolaca11/mcp-inspector",
+  "name": "@rolaca11/mcp-inspector-root",
   "version": "1.0.0-RC4",
-  "description": "MCP client for discovering and exercising resources, tools, prompts, and completions over stdio or OAuth-protected HTTP. Ships with a CLI, an interactive REPL, and a web dashboard served by `mcp-inspector serve`.",
+  "private": true,
   "type": "module",
-  "bin": {
-    "mcp-inspector": "dist/cli.js"
-  },
-  "files": [
-    "dist",
-    "README.md"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
     "build": "bun run build:cli && bun run build:web",
-    "build:cli": "vite build --config vite.config.cli.ts",
-    "build:web": "vite build",
-    "dev:cli": "bun src/cli.ts",
-    "dev:ui": "vite",
-    "serve": "bun dist/cli.js serve",
-    "start": "bun dist/cli.js",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "bun run clean && bun run build",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "publishConfig": {
-    "access": "public"
+    "build:cli": "bun run --filter @rolaca11/mcp-inspector build",
+    "build:web": "bun run --filter @rolaca11/mcp-inspector-web build",
+    "dev:cli": "bun run --filter @rolaca11/mcp-inspector dev",
+    "dev:ui": "bun run --filter @rolaca11/mcp-inspector-web dev",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter '*' test",
+    "clean": "rm -rf packages/*/dist"
   },
   "engines": {
     "bun": ">=1.2.0"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "cli",
-    "client",
-    "oauth",
-    "inspector",
-    "dashboard"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/rolaca11/mcp-inspector.git"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "@tiptap/extension-code-block-lowlight": "^3.22.5",
-    "@tiptap/extension-document": "^3.22.5",
-    "@tiptap/extension-text": "^3.22.5",
-    "@tiptap/react": "^3.22.5",
-    "@trpc/client": "^11.17.0",
-    "@trpc/server": "^11.17.0",
-    "commander": "^14.0.3",
-    "highlight.js": "^11.11.1",
-    "lowlight": "^3.3.0",
-    "open": "^11.0.0",
-    "picocolors": "^1.1.1",
-    "react-markdown": "^10.1.0",
-    "shell-quote": "^1.8.3",
-    "tiktoken": "^1.0.22",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@radix-ui/react-avatar": "^1.1.10",
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-dropdown-menu": "^2.1.16",
-    "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-popover": "^1.1.15",
-    "@radix-ui/react-scroll-area": "^1.2.10",
-    "@radix-ui/react-select": "^2.2.6",
-    "@radix-ui/react-separator": "^1.1.8",
-    "@radix-ui/react-slot": "^1.2.4",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@radix-ui/react-tooltip": "^1.2.8",
-    "@tailwindcss/vite": "^4.1.13",
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "@types/shell-quote": "^1.7.5",
-    "@vitejs/plugin-react": "^6.0.1",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "lucide-react": "^0.468.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-hook-form": "^7.75.0",
-    "react-router-dom": "^7.14.2",
-    "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.13",
-    "tw-animate-css": "^1.4.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5",
-    "zustand": "^5.0.12"
   }
 }

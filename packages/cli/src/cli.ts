@@ -17,15 +17,15 @@ import path from "node:path";
 import { Command, Option } from "commander";
 import pc from "picocolors";
 
-import * as actions from "./actions.js";
-import { connect } from "./client.js";
-import { appendConfigFiles } from "./config-files.js";
-import { loadConfigSync, type LoadedConfig, type ServerConfig } from "./config.js";
-import { configDir } from "./paths.js";
+import * as actions from "@rolaca11/mcp-inspector-core/actions";
+import { connect } from "@rolaca11/mcp-inspector-core/client";
+import { appendConfigFiles } from "@rolaca11/mcp-inspector-core/config-files";
+import { loadConfigSync, type LoadedConfig, type ServerConfig } from "@rolaca11/mcp-inspector-core/config";
+import { configDir } from "@rolaca11/mcp-inspector-core/paths";
 import { runRepl } from "./repl.js";
-import { errorMessage } from "./format.js";
-import { parseTarget, setLoadedConfig } from "./target.js";
-import { VERSION } from "./version.js";
+import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
+import { parseTarget, setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
+import { VERSION } from "@rolaca11/mcp-inspector-core/version";
 
 interface GlobalOpts {
   json?: boolean;

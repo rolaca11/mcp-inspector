@@ -79,7 +79,7 @@ describe("HTTP server", () => {
   it("health.check returns ok via HTTP", async () => {
     const res = await fetch(`${serverUrl}/api/trpc/health.check`);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.result.data).toEqual({ ok: true });
   });
 
@@ -87,7 +87,7 @@ describe("HTTP server", () => {
     const res = await fetch(`${serverUrl}/api/health`);
     expect(res.status).toBe(404);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.message).toContain("/api/trpc");
   });
 
@@ -95,7 +95,7 @@ describe("HTTP server", () => {
     const res = await fetch(`${serverUrl}/api`);
     expect(res.status).toBe(404);
     expect(res.headers.get("content-type")).toContain("application/json");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.message).toContain("/api/trpc");
   });
 
@@ -106,7 +106,7 @@ describe("HTTP server", () => {
   it("servers.list returns server summary via HTTP", async () => {
     const res = await fetch(`${serverUrl}/api/trpc/servers.list`);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.result.data).toHaveProperty("servers");
     expect(body.result.data).toHaveProperty("sources");
   });
@@ -118,7 +118,7 @@ describe("HTTP server", () => {
   it("config.list returns empty initially via HTTP", async () => {
     const res = await fetch(`${serverUrl}/api/trpc/config.list`);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.result.data.servers).toEqual({});
   });
 
@@ -133,12 +133,12 @@ describe("HTTP server", () => {
       }),
     });
     expect(addRes.status).toBe(200);
-    const addBody = await addRes.json();
+    const addBody = (await addRes.json()) as any;
     expect(addBody.result.data.ok).toBe(true);
 
     // Verify it exists
     const listRes = await fetch(`${serverUrl}/api/trpc/config.list`);
-    const listBody = await listRes.json();
+    const listBody = (await listRes.json()) as any;
     expect(listBody.result.data.servers).toHaveProperty("http-test-server");
 
     // Remove
@@ -151,7 +151,7 @@ describe("HTTP server", () => {
 
     // Verify it's gone
     const listRes2 = await fetch(`${serverUrl}/api/trpc/config.list`);
-    const listBody2 = await listRes2.json();
+    const listBody2 = (await listRes2.json()) as any;
     expect(listBody2.result.data.servers).not.toHaveProperty(
       "http-test-server",
     );
