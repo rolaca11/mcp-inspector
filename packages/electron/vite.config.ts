@@ -5,6 +5,7 @@ export default defineConfig({
     __PKG_VERSION__: JSON.stringify(
       process.env.npm_package_version ?? "0.0.0-dev",
     ),
+    "process.env": "process.env",
   },
   build: {
     rollupOptions: {

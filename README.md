@@ -1,6 +1,6 @@
 # @rolaca11/mcp-inspector
 
-A [Model Context Protocol](https://modelcontextprotocol.io) client with three
+A [Model Context Protocol](https://modelcontextprotocol.io) client with four
 front-ends backed by one set of primitives:
 
 - **CLI** — `mcp-inspector <verb> <target>` for scripts and pipelines.
@@ -8,6 +8,8 @@ front-ends backed by one set of primitives:
 - **Web dashboard** — `mcp-inspector serve` boots a local HTTP server that
   hosts the bundled React/Tailwind dashboard at `/` and the tRPC API at
   `/api/trpc`. Same process, same OAuth state, same `.mcp.json`.
+- **Electron app** — native desktop app wrapping the same dashboard and tRPC
+  server. Available as a downloadable installer for macOS, Windows, and Linux.
 
 Connect to MCP servers over **stdio** or **OAuth-protected Streamable HTTP**,
 discover their resources / resource templates / tools / prompts, call them,
@@ -19,58 +21,20 @@ Built on the official [`@modelcontextprotocol/sdk`](https://www.npmjs.com/packag
 
 ## Install
 
-### From npm (recommended)
+### With bun (recommended)
 
 ```sh
-npm install -g @rolaca11/mcp-inspector
-```
-
-Or with pnpm:
-
-```sh
-pnpm add -g @rolaca11/mcp-inspector
+bun add -g @rolaca11/mcp-inspector
 ```
 
 This gives you the `mcp-inspector` command globally.
 
-### One-off usage with npx
+### One-off usage with bunx
 
 ```sh
-npx @rolaca11/mcp-inspector --help
-npx @rolaca11/mcp-inspector discover everything
+bunx @rolaca11/mcp-inspector --help
+bunx @rolaca11/mcp-inspector discover everything
 ```
-
-### From source
-
-```sh
-git clone https://github.com/rolaca11/mcp-inspector.git
-cd mcp-inspector
-bun install       # one install - covers CLI and dashboard
-bun run build     # CLI bundle + Vite dashboard bundle
-```
-
-`bun run build` produces both:
-
-- `dist/cli.js` — the binary exposed as `mcp-inspector` via
-  `package.json#bin`.
-- `dist/web/` — the static dashboard bundle that `mcp-inspector serve` loads.
-
-To use globally from source:
-
-```sh
-bun link
-mcp-inspector --help
-```
-
-Or run without linking:
-
-```sh
-node dist/cli.js --help
-# or during development:
-bun run dev:cli -- --help
-```
-
-Requires Bun >= 1.2.0 for development scripts.
 
 ---
 
@@ -135,9 +99,9 @@ Loaded files (in precedence order, last wins):
 Named servers (3):
   everything  npx -y @modelcontextprotocol/server-everything stdio  [stdio]
               from /current/dir/.mcp.json
-  remote      https://example.com/mcp                                [http]
+  remote      https://example.com/mcp                               [http]
               from /current/dir/.mcp.json
-  legacy      npx legacy-mcp-server                                  [stdio]
+  legacy      npx legacy-mcp-server                                 [stdio]
               from /home/me/.mcp.json
 ```
 
@@ -333,35 +297,51 @@ or a quoted stdio command).
 
 ## Project layout
 
+The repo is a Bun monorepo with four packages:
+
 ```
-src/                  # CLI + REPL + web server (same TypeScript build)
-├── cli.ts            # commander entry point — wires every subcommand
-├── client.ts         # connect() — picks transport, runs OAuth flow with retry
-├── oauth.ts          # FileOAuthProvider + loopback callback server
-├── config.ts         # .mcp.json loader (cwd + home, with merging)
-├── paths.ts          # OAuth config-dir helpers
-├── target.ts         # parse "target" string into transport spec
-├── format.ts         # pretty-printers (resources, tools, prompts, …)
-├── actions.ts        # primitive actions used by CLI and REPL
-├── repl.ts           # interactive readline REPL
-└── server.ts         # `mcp-inspector serve` - HTTP server hosting UI + tRPC API
-
-web/                  # dashboard source (React 19 · Tailwind v4 · shadcn)
-├── index.html
-├── public/
-└── src/
-    ├── App.tsx
-    ├── components/   # header, nav-tabs, status-dot, code-block, ui/* …
-    ├── pages/        # overview, resources, tools, prompts, completions, auth, servers
-    ├── data/         # api client + types + fixture fallback
-    └── hooks/
-
-tsconfig.json         # CLI build (tsc → dist/*.js)
-vite.config.ts        # UI build (vite → dist/web/)
+packages/
+├── core/                 # shared library — all other packages depend on this
+│   └── src/
+│       ├── client.ts     # connect() — picks transport, runs OAuth flow with retry
+│       ├── actions.ts    # primitive actions used by CLI, REPL, and tRPC
+│       ├── config.ts     # .mcp.json loader (cwd + home, with merging)
+│       ├── oauth.ts      # FileOAuthProvider + loopback callback server
+│       ├── target.ts     # parse "target" string into transport spec
+│       ├── format.ts     # pretty-printers (resources, tools, prompts, …)
+│       ├── paths.ts      # OAuth config-dir helpers
+│       ├── tokens.ts     # token helpers
+│       ├── trpc/         # tRPC router, schemas, and activity tracking
+│       └── __tests__/    # vitest unit tests
+│
+├── cli/                  # CLI + REPL + HTTP server → published as @rolaca11/mcp-inspector
+│   └── src/
+│       ├── cli.ts        # commander entry point — wires every subcommand
+│       ├── repl.ts       # interactive readline REPL
+│       └── server.ts     # `mcp-inspector serve` — hosts UI + tRPC API
+│
+├── web/                  # React 19 dashboard (Tailwind v4 · shadcn/ui)
+│   ├── index.html
+│   ├── public/
+│   └── src/
+│       ├── App.tsx
+│       ├── pages/        # overview, resources, tools, prompts, completions, auth, servers
+│       ├── components/   # header, nav-tabs, status-dot, code-block, ui/* …
+│       ├── stores/       # Zustand state (activity, connection, results, …)
+│       ├── data/         # tRPC client + types
+│       ├── hooks/
+│       └── lib/          # utilities, schema builder
+│
+└── electron/             # native desktop app
+    ├── src/
+    │   ├── main.ts       # Electron main process — embeds tRPC server
+    │   └── preload.ts    # IPC preload script
+    └── electron-builder.yml
 ```
 
-CLI and REPL call `actions.ts`; the dashboard server exposes equivalent tRPC
-procedures. All three share the same OAuth state and `.mcp.json` resolution.
+Core exports are consumed by all other packages. CLI and REPL call
+`actions.ts`; the web dashboard and Electron app use the tRPC router. All
+four share the same OAuth state and `.mcp.json` resolution.
 
 ---
 
@@ -372,8 +352,13 @@ bun run dev:cli -- discover "npx -y @modelcontextprotocol/server-everything stdi
 
 # Dashboard with HMR:
 bun run dev:cli -- serve --no-open --no-ui   # API on :8765 in one terminal
-bun run dev:ui                                # Vite dev server with /api/trpc proxy in another
+bun run dev:ui                                # Vite dev server on :5173 with /api/trpc proxy
 
-bun run typecheck
-bun run build
+# Electron:
+bun run dev:electron                          # launches the desktop app in dev mode
+
+bun run typecheck    # type-check all packages
+bun run test         # run tests across all packages
+bun run build        # production build (web + CLI)
+bun run clean        # rm -rf packages/*/dist
 ```

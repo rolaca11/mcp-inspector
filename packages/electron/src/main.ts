@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, protocol } from "electron";
+import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +10,26 @@ import { loadConfigSync } from "@rolaca11/mcp-inspector-core/config";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
 
+// Packaged Electron apps launched from a desktop environment inherit a minimal
+// PATH that is missing user-installed tools (node, npx, etc.) which are often
+// set up in .bashrc (nvm, fnm, volta). We run the user's shell interactively
+// to pick up those additions, using a marker so we can extract PATH from any
+// other output the shell may produce.
+if (app.isPackaged && process.platform !== "win32") {
+  try {
+    const shell = process.env.SHELL || "/bin/bash";
+    const marker = `__mcp_path_${process.pid}__`;
+    const out = execFileSync(
+      shell,
+      ["-i", "-c", `echo "${marker}\${PATH}${marker}"`],
+      { encoding: "utf-8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"] },
+    );
+    const m = out.match(new RegExp(`${marker}(.+?)${marker}`));
+    if (m?.[1]) process.env.PATH = m[1];
+  } catch {
+    // Keep the existing PATH if the shell fails.
+  }
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
