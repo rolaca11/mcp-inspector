@@ -44,8 +44,14 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ inputs.tag != '' }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          registry-url: "https://registry.npmjs.org"
+
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --provenance --access public
+        working-directory: packages/cli
 
   electron:
     name: Electron (${{ matrix.platform }})
