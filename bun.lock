@@ -7,19 +7,22 @@
     },
     "packages/cli": {
       "name": "@rolaca11/mcp-inspector",
-      "version": "1.0.0-RC4",
+      "version": "1.0.0-RC5",
       "bin": {
         "mcp-inspector": "dist/cli.js",
       },
       "dependencies": {
-        "@rolaca11/mcp-inspector-core": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "@trpc/server": "^11.17.0",
         "commander": "^14.0.3",
         "open": "^11.0.0",
         "picocolors": "^1.1.1",
         "shell-quote": "^1.8.3",
+        "tiktoken": "^1.0.22",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
+        "@rolaca11/mcp-inspector-core": "workspace:*",
         "@types/node": "^25.6.0",
         "@types/shell-quote": "^1.7.5",
         "typescript": "^6.0.3",
@@ -29,7 +32,7 @@
     },
     "packages/core": {
       "name": "@rolaca11/mcp-inspector-core",
-      "version": "1.0.0-RC4",
+      "version": "1.0.0-RC5",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@trpc/server": "^11.17.0",
@@ -48,7 +51,7 @@
     },
     "packages/web": {
       "name": "@rolaca11/mcp-inspector-web",
-      "version": "1.0.0-RC4",
+      "version": "1.0.0-RC5",
       "dependencies": {
         "@rolaca11/mcp-inspector-core": "workspace:*",
         "@tiptap/extension-code-block-lowlight": "^3.22.5",

@@ -36,7 +36,7 @@ const pendingAuthUrls = new Map<string, string>();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DEFAULT_STATIC_DIR = path.resolve(__dirname, "../../web/dist");
+const DEFAULT_STATIC_DIR = path.resolve(__dirname, "./web");
 const DEV_STATIC_DIR = path.resolve(__dirname, "../../web/dist");
 
 const SESSION_IDLE_MS = 5 * 60 * 1000;

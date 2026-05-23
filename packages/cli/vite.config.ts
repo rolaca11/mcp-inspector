@@ -18,7 +18,8 @@ export default defineConfig({
     minify: false,
     target: "node20",
     rollupOptions: {
-      external: [/^[^./]/],
+      external: (id) =>
+        /^[^./]/.test(id) && !id.startsWith("@rolaca11/mcp-inspector-core"),
       output: {
         banner: "#!/usr/bin/env node",
         codeSplitting: false,
