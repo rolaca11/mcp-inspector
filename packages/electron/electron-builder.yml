@@ -1,4 +1,4 @@
-appId: com.rolaca11.mcp-inspector
+appId: dev.ropi.mcp-inspector
 productName: MCP Inspector
 directories:
   output: release
