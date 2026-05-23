@@ -21,4 +21,5 @@ win:
 linux:
   target:
     - AppImage
+  artifactName: "${productName}.${ext}"
   category: Development
