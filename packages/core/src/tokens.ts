@@ -6,13 +6,12 @@
  * Runs entirely locally (no network calls, no API key required).
  */
 
-import { get_encoding, type Tiktoken } from "tiktoken";
+import {encoding_for_model, type Tiktoken} from "tiktoken";
 
-// Claude models use the cl100k_base encoding.
 let _enc: Tiktoken | undefined;
 
 function getEncoder(): Tiktoken {
-  _enc ??= get_encoding("cl100k_base");
+  _enc ??= encoding_for_model("gpt-5-chat-latest");
   return _enc;
 }
 
