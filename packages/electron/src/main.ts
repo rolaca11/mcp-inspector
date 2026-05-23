@@ -194,6 +194,7 @@ async function createWindow(): Promise<void> {
     height: 800,
     frame: false,
     backgroundColor: "#09090b",
+    icon: path.join(__dirname, "../build/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
