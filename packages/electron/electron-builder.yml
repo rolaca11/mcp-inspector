@@ -21,5 +21,4 @@ win:
 linux:
   target:
     - AppImage
-    - flatpak
   category: Development
