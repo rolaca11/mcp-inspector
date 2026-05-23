@@ -111,6 +111,10 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
+      - name: Create Linux archive
+        if: matrix.platform == 'linux'
+        run: tar -czf packages/electron/release/mcp-inspector-linux-x86_64.tar.gz -C packages/electron/release linux-unpacked
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
@@ -118,6 +122,7 @@ jobs:
           files: |
             packages/electron/release/*.AppImage
             packages/electron/release/*.flatpak
+            packages/electron/release/*.tar.gz
             packages/electron/release/*.dmg
             packages/electron/release/*.zip
             packages/electron/release/*.exe
