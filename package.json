@@ -10,8 +10,11 @@
     "build": "bun run build:web && bun run build:cli",
     "build:cli": "bun run --filter @rolaca11/mcp-inspector build",
     "build:web": "bun run --filter @rolaca11/mcp-inspector-web build",
+    "build:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron build",
     "dev:cli": "bun run --filter @rolaca11/mcp-inspector dev",
     "dev:ui": "bun run --filter @rolaca11/mcp-inspector-web dev",
+    "dev:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron dev",
+    "dist:electron": "bun run build:electron && bun run --filter @rolaca11/mcp-inspector-electron dist",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
     "clean": "rm -rf packages/*/dist"

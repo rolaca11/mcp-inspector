@@ -1,4 +1,4 @@
-import {Loader2, Plug, RefreshCw,} from "lucide-react";
+import {Loader2, Plug, RefreshCw, X,} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Logo} from "@/components/logo";
 import {ServerSelector} from "@/components/server-selector";
@@ -77,6 +77,15 @@ export function Header({
           onConnect={onConnect}
           onRediscover={onRediscover}
         />
+        {window.location.protocol === "app:" && (
+          <button
+            type="button"
+            onClick={() => window.close()}
+            className="ml-auto inline-flex items-center justify-center p-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
       {children}
     </header>

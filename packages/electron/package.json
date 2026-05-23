@@ -1,0 +1,32 @@
+{
+  "name": "@rolaca11/mcp-inspector-electron",
+  "version": "1.0.0-RC6",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build && electron .",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@trpc/server": "^11.17.0",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "shell-quote": "^1.8.3",
+    "tiktoken": "^1.0.22",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@rolaca11/mcp-inspector-core": "workspace:*",
+    "@types/node": "^25.6.0",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
+  }
+}
