@@ -45,6 +45,7 @@ jobs:
           prerelease: ${{ inputs.tag != '' }}
 
   publish:
+    if: false # TODO: npmjs automated publish
     name: Publish to npm
     needs: build
     runs-on: ubuntu-latest
@@ -90,6 +91,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Flatpak builder
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        if: matrix.platform == 'linux'
+        with:
+          bundle: palette.flatpak
+          manifest-path: org.gnome.zbrown.Palette.yml
+          cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
