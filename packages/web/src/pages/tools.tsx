@@ -39,9 +39,12 @@ import {
   partialCoerce,
   reverseCoerceArguments,
   resolveSchemaRefs,
+  resolveSchemaPropertyRef,
+  resolveSchemaType,
+  schemaAlternativeOptions,
 } from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
-import type { ActivityResult, MCPTool, MCPToolSchemaProperty, ToolResult } from "@/data/types";
+import type { ActivityResult, MCPTool, MCPToolSchema, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
 
@@ -320,6 +323,7 @@ function ToolDetail({
                     prop={prop}
                     required={required.has(name)}
                     control={form.control}
+                    rootSchema={resolvedSchema}
                   />
                 ))}
               </div>
@@ -393,16 +397,18 @@ function ArgField({
   prop,
   required,
   control,
+  rootSchema,
 }: {
   name: string;
   prop: MCPToolSchemaProperty;
   required: boolean;
   control: Control<FieldValues>;
+  rootSchema: MCPToolSchema;
 }) {
-  const type = Array.isArray(prop.type) ? prop.type.join("|") : (prop.type ?? "any");
-  const resolvedType = Array.isArray(prop.type)
-    ? prop.type.find((t) => t !== "null") ?? prop.type[0]
-    : prop.type;
+  const resolvedProp = resolveSchemaPropertyRef(prop, rootSchema);
+  const alternatives = schemaAlternativeOptions(resolvedProp);
+  const type = schemaTypeDisplay(resolvedProp);
+  const resolvedType = resolveSchemaType(resolvedProp);
 
   return (
     <Controller
@@ -424,12 +430,18 @@ function ArgField({
               </span>
             )}
           </Label>
-          {prop.description && <MarkdownDescription className="flex-1 text-muted-foreground/80 ms-4">{prop.description}</MarkdownDescription>}
-          {prop.enum ? (
+          {resolvedProp.description && <MarkdownDescription className="flex-1 text-muted-foreground/80 ms-4">{resolvedProp.description}</MarkdownDescription>}
+          {alternatives ? (
+            <StructuredArgFieldWrapper
+              field={field}
+              prop={resolvedProp}
+              rootSchema={rootSchema}
+            />
+          ) : resolvedProp.enum ? (
             <div className="flex flex-wrap gap-1.5 ms-4">
-              {prop.enum.map((opt) => {
+              {resolvedProp.enum.map((opt) => {
                 const selected = field.value === String(opt);
-                const nullable = Array.isArray(prop.type) && prop.type.includes("null");
+                const nullable = Array.isArray(resolvedProp.type) && resolvedProp.type.includes("null");
                 return (
                   <button
                     key={String(opt)}
@@ -451,7 +463,7 @@ function ArgField({
             <div className="flex gap-1.5 ms-4">
               {["true", "false"].map((opt) => {
                 const selected = field.value === opt;
-                const nullable = Array.isArray(prop.type) && prop.type.includes("null");
+                const nullable = Array.isArray(resolvedProp.type) && resolvedProp.type.includes("null");
                 return (
                   <button
                     key={opt}
@@ -469,10 +481,18 @@ function ArgField({
                 );
               })}
             </div>
-          ) : resolvedType === "object" && prop.properties ? (
-            <ObjectArgFieldWrapper field={field} prop={prop} />
-          ) : resolvedType === "array" && prop.items && typeof prop.items === "object" && !Array.isArray(prop.items) ? (
-            <ArrayArgFieldWrapper field={field} prop={prop} />
+          ) : resolvedType === "object" && resolvedProp.properties ? (
+            <ObjectArgFieldWrapper
+              field={field}
+              prop={resolvedProp}
+              rootSchema={rootSchema}
+            />
+          ) : resolvedType === "array" && resolvedProp.items && typeof resolvedProp.items === "object" && !Array.isArray(resolvedProp.items) ? (
+            <ArrayArgFieldWrapper
+              field={field}
+              prop={resolvedProp}
+              rootSchema={rootSchema}
+            />
           ) : resolvedType === "object" || resolvedType === "array" ? (
             <Textarea
               value={field.value ?? ""}
@@ -489,8 +509,8 @@ function ArgField({
               onChange={(e) => field.onChange(e.target.value)}
               onBlur={field.onBlur}
               placeholder={
-                prop.default !== undefined
-                  ? `default: ${String(prop.default)}`
+                resolvedProp.default !== undefined
+                  ? `default: ${String(resolvedProp.default)}`
                   : resolvedType === "number" || resolvedType === "integer"
                     ? "0"
                     : "value"
@@ -504,6 +524,282 @@ function ArgField({
         </div>
       )}
     />
+  );
+}
+
+type AlternativeSet = NonNullable<ReturnType<typeof schemaAlternativeOptions>>;
+
+function schemaTypeDisplay(schema: MCPToolSchemaProperty): string {
+  const alternatives = schemaAlternativeOptions(schema);
+  if (alternatives) return alternatives.kind;
+  if (schema.const !== undefined) return "const";
+  if (Array.isArray(schema.type)) return schema.type.join("|");
+  return resolveSchemaType(schema) ?? "any";
+}
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseStructuredValue(value: string): unknown {
+  if (!value) return undefined;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+function serializeStructuredValue(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  return JSON.stringify(value);
+}
+
+function StructuredArgFieldWrapper({
+  field,
+  prop,
+  rootSchema,
+}: {
+  field: { value: string; onChange: (v: string) => void; onBlur: () => void };
+  prop: MCPToolSchemaProperty;
+  rootSchema: MCPToolSchema;
+}) {
+  const parsed = React.useMemo(
+    () => parseStructuredValue(field.value),
+    [field.value],
+  );
+
+  const onChange = React.useCallback(
+    (value: unknown) => {
+      field.onChange(serializeStructuredValue(value));
+    },
+    [field],
+  );
+
+  return (
+    <div className="ms-4">
+      <ValueField
+        value={parsed}
+        onChange={onChange}
+        onBlur={field.onBlur}
+        schema={prop}
+        rootSchema={rootSchema}
+      />
+    </div>
+  );
+}
+
+function schemaProperties(
+  schema: MCPToolSchemaProperty,
+  rootSchema: MCPToolSchema,
+): Record<string, MCPToolSchemaProperty> {
+  const resolved = resolveSchemaPropertyRef(schema, rootSchema);
+  return resolved.properties ?? {};
+}
+
+function alternativeDiscriminator(
+  schema: MCPToolSchemaProperty,
+  rootSchema: MCPToolSchema,
+): { name: string; value: unknown; values: unknown[]; label: string } | null {
+  const properties = schemaProperties(schema, rootSchema);
+  const preferred = ["type", "operator", "kind", "name"];
+  const entries = Object.entries(properties);
+  const ordered = [
+    ...preferred
+      .map((name) => {
+        const prop = properties[name];
+        return prop ? ([name, prop] as const) : null;
+      })
+      .filter((entry): entry is readonly [string, MCPToolSchemaProperty] => entry !== null),
+    ...entries.filter(([name]) => !preferred.includes(name)),
+  ];
+
+  for (const [name, prop] of ordered) {
+    const resolved = resolveSchemaPropertyRef(prop, rootSchema);
+    if (resolved.const !== undefined) {
+      return {
+        name,
+        value: resolved.const,
+        values: [resolved.const],
+        label: `${name}: ${String(resolved.const)}`,
+      };
+    }
+    if (resolved.enum && resolved.enum.length > 0) {
+      const first = resolved.enum[0];
+      if (first === undefined) continue;
+      return {
+        name,
+        value: first,
+        values: resolved.enum,
+        label: `${name}: ${resolved.enum.map(String).join(" | ")}`,
+      };
+    }
+  }
+
+  return null;
+}
+
+function alternativeLabel(
+  schema: MCPToolSchemaProperty,
+  index: number,
+  rootSchema: MCPToolSchema,
+): string {
+  if (typeof schema.title === "string" && schema.title.trim()) return schema.title;
+  const discriminator = alternativeDiscriminator(schema, rootSchema);
+  if (discriminator) return discriminator.label;
+  if (typeof schema.description === "string" && schema.description.trim()) {
+    return schema.description.length > 72
+      ? `${schema.description.slice(0, 69)}...`
+      : schema.description;
+  }
+  return `Option ${index + 1}`;
+}
+
+function alternativeMatchScore(
+  schema: MCPToolSchemaProperty,
+  value: unknown,
+  rootSchema: MCPToolSchema,
+): number {
+  const resolved = resolveSchemaPropertyRef(schema, rootSchema);
+  if (resolved.const !== undefined) return value === resolved.const ? 4 : 0;
+  if (resolved.enum) return resolved.enum.some((item) => item === value) ? 3 : 0;
+
+  const discriminator = alternativeDiscriminator(resolved, rootSchema);
+  if (discriminator && isRecordValue(value)) {
+    return discriminator.values.some((item) => item === value[discriminator.name])
+      ? 5
+      : 0;
+  }
+
+  const type = resolveSchemaType(resolved);
+  if (type === "object" && isRecordValue(value)) return 1;
+  if (type === "array" && Array.isArray(value)) return 1;
+  if ((type === "string" || type === "number" || type === "boolean") && typeof value === type) {
+    return 1;
+  }
+  return 0;
+}
+
+function selectedAlternativeIndex(
+  options: MCPToolSchemaProperty[],
+  value: unknown,
+  rootSchema: MCPToolSchema,
+): number | null {
+  let bestIndex: number | null = null;
+  let bestScore = 0;
+
+  options.forEach((option, index) => {
+    const score = alternativeMatchScore(option, value, rootSchema);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  return bestScore > 1 ? bestIndex : null;
+}
+
+function defaultForAlternative(
+  schema: MCPToolSchemaProperty,
+  rootSchema: MCPToolSchema,
+): unknown {
+  const resolved = resolveSchemaPropertyRef(schema, rootSchema);
+  if (resolved.default !== undefined) return resolved.default;
+  if (resolved.const !== undefined) return resolved.const;
+
+  const type = resolveSchemaType(resolved);
+  if (type === "object") {
+    const value: Record<string, unknown> = {};
+    const discriminator = alternativeDiscriminator(resolved, rootSchema);
+    if (discriminator) value[discriminator.name] = discriminator.value;
+    for (const [name, prop] of Object.entries(resolved.properties ?? {})) {
+      const child = resolveSchemaPropertyRef(prop, rootSchema);
+      if (child.default !== undefined) value[name] = child.default;
+      if (child.const !== undefined) value[name] = child.const;
+    }
+    return value;
+  }
+  return defaultForSchema(resolved, rootSchema);
+}
+
+function AlternativeField({
+  value,
+  onChange,
+  onBlur,
+  rootSchema,
+  alternatives,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  onBlur: () => void;
+  rootSchema: MCPToolSchema;
+  alternatives: AlternativeSet;
+}) {
+  const matchedIndex = selectedAlternativeIndex(
+    alternatives.options,
+    value,
+    rootSchema,
+  );
+  const [manualIndex, setManualIndex] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (matchedIndex != null) setManualIndex(null);
+  }, [matchedIndex]);
+  React.useEffect(() => {
+    if (value === undefined || value === null) setManualIndex(null);
+  }, [value]);
+
+  const selectedIndex = matchedIndex ?? manualIndex;
+  const selectedSchema =
+    selectedIndex == null ? null : alternatives.options[selectedIndex];
+
+  return (
+    <div className="space-y-2">
+      <select
+        value={selectedIndex == null ? "" : String(selectedIndex)}
+        onChange={(event) => {
+          const index = event.target.value === "" ? null : Number(event.target.value);
+          if (index == null) {
+            setManualIndex(null);
+            onChange(undefined);
+            return;
+          }
+          setManualIndex(index);
+          const option = alternatives.options[index];
+          if (option) onChange(defaultForAlternative(option, rootSchema));
+        }}
+        onBlur={onBlur}
+        className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs font-mono text-foreground outline-none transition-colors focus-visible:border-ring"
+      >
+        <option value="">Select {alternatives.kind}</option>
+        {alternatives.options.map((option, index) => (
+          <option key={index} value={index}>
+            {alternativeLabel(option, index, rootSchema)}
+          </option>
+        ))}
+      </select>
+      {selectedSchema && (
+        <ValueField
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          schema={selectedSchema}
+          rootSchema={rootSchema}
+        />
+      )}
+    </div>
+  );
+}
+
+function isComplexSchema(
+  schema: MCPToolSchemaProperty,
+  rootSchema: MCPToolSchema,
+): boolean {
+  const resolved = resolveSchemaPropertyRef(schema, rootSchema);
+  const type = resolveSchemaType(resolved);
+  return Boolean(
+    schemaAlternativeOptions(resolved) ||
+      (type === "object" && resolved.properties) ||
+      type === "array",
   );
 }
 
@@ -526,9 +822,11 @@ function parseObjectValue(value: string): Record<string, unknown> {
 function ObjectArgFieldWrapper({
   field,
   prop,
+  rootSchema,
 }: {
   field: { value: string; onChange: (v: string) => void; onBlur: () => void };
   prop: MCPToolSchemaProperty;
+  rootSchema: MCPToolSchema;
 }) {
   const parsed = React.useMemo(
     () => parseObjectValue(field.value),
@@ -551,6 +849,7 @@ function ObjectArgFieldWrapper({
       onBlur={field.onBlur}
       properties={prop.properties!}
       requiredSet={new Set(prop.required ?? [])}
+      rootSchema={rootSchema}
     />
   );
 }
@@ -561,12 +860,14 @@ function ObjectFields({
   onBlur,
   properties,
   requiredSet,
+  rootSchema,
 }: {
   value: Record<string, unknown>;
   onChange: (obj: Record<string, unknown>) => void;
   onBlur: () => void;
   properties: Record<string, MCPToolSchemaProperty>;
   requiredSet: Set<string>;
+  rootSchema: MCPToolSchema;
 }) {
   const handleChange = React.useCallback(
     (name: string, subValue: unknown) => {
@@ -592,6 +893,7 @@ function ObjectFields({
           value={value[name]}
           onChange={(v) => handleChange(name, v)}
           onBlur={onBlur}
+          rootSchema={rootSchema}
         />
       ))}
     </div>
@@ -608,11 +910,15 @@ function parseArrayValue(value: string): unknown[] {
   }
 }
 
-function defaultForSchema(schema: MCPToolSchemaProperty): unknown {
-  if (schema.default !== undefined) return schema.default;
-  const type = Array.isArray(schema.type)
-    ? schema.type.find((t) => t !== "null") ?? schema.type[0]
-    : schema.type;
+function defaultForSchema(
+  schema: MCPToolSchemaProperty,
+  rootSchema: MCPToolSchema,
+): unknown {
+  const resolved = resolveSchemaPropertyRef(schema, rootSchema);
+  if (resolved.default !== undefined) return resolved.default;
+  if (resolved.const !== undefined) return resolved.const;
+  if (schemaAlternativeOptions(resolved)) return {};
+  const type = resolveSchemaType(resolved);
   switch (type) {
     case "boolean":
       return false;
@@ -631,9 +937,11 @@ function defaultForSchema(schema: MCPToolSchemaProperty): unknown {
 function ArrayArgFieldWrapper({
   field,
   prop,
+  rootSchema,
 }: {
   field: { value: string; onChange: (v: string) => void; onBlur: () => void };
   prop: MCPToolSchemaProperty;
+  rootSchema: MCPToolSchema;
 }) {
   const parsed = React.useMemo(
     () => parseArrayValue(field.value),
@@ -653,6 +961,7 @@ function ArrayArgFieldWrapper({
       onChange={onChange}
       onBlur={field.onBlur}
       itemSchema={prop.items as MCPToolSchemaProperty}
+      rootSchema={rootSchema}
     />
   );
 }
@@ -662,11 +971,13 @@ function ArrayFields({
   onChange,
   onBlur,
   itemSchema,
+  rootSchema,
 }: {
   value: unknown[];
   onChange: (arr: unknown[]) => void;
   onBlur: () => void;
   itemSchema: MCPToolSchemaProperty;
+  rootSchema: MCPToolSchema;
 }) {
   const handleItemChange = React.useCallback(
     (index: number, itemValue: unknown) => {
@@ -685,13 +996,10 @@ function ArrayFields({
   );
 
   const handleAdd = React.useCallback(() => {
-    onChange([...value, defaultForSchema(itemSchema)]);
-  }, [value, onChange, itemSchema]);
+    onChange([...value, defaultForSchema(itemSchema, rootSchema)]);
+  }, [value, onChange, itemSchema, rootSchema]);
 
-  const itemType = Array.isArray(itemSchema.type)
-    ? itemSchema.type.find((t) => t !== "null") ?? itemSchema.type[0]
-    : itemSchema.type;
-  const isComplex = (itemType === "object" && itemSchema.properties) || itemType === "array";
+  const isComplex = isComplexSchema(itemSchema, rootSchema);
 
   return (
     <div className="space-y-2 rounded-md border border-border/40 bg-black/10 p-3 ms-4">
@@ -722,6 +1030,7 @@ function ArrayFields({
                 onChange={(v) => handleItemChange(index, v)}
                 onBlur={onBlur}
                 schema={itemSchema}
+                rootSchema={rootSchema}
               />
             </>
           ) : (
@@ -735,6 +1044,7 @@ function ArrayFields({
                   onChange={(v) => handleItemChange(index, v)}
                   onBlur={onBlur}
                   schema={itemSchema}
+                  rootSchema={rootSchema}
                 />
               </div>
               <button
@@ -765,15 +1075,17 @@ function ValueField({
   onChange,
   onBlur,
   schema,
+  rootSchema,
 }: {
   value: unknown;
   onChange: (v: unknown) => void;
   onBlur: () => void;
   schema: MCPToolSchemaProperty;
+  rootSchema: MCPToolSchema;
 }) {
-  const resolvedType = Array.isArray(schema.type)
-    ? schema.type.find((t) => t !== "null") ?? schema.type[0]
-    : schema.type;
+  const resolvedSchema = resolveSchemaPropertyRef(schema, rootSchema);
+  const alternatives = schemaAlternativeOptions(resolvedSchema);
+  const resolvedType = resolveSchemaType(resolvedSchema);
 
   const stringValue =
     value === undefined || value === null
@@ -782,11 +1094,41 @@ function ValueField({
         ? JSON.stringify(value)
         : String(value);
 
-  if (schema.enum) {
-    const nullable = Array.isArray(schema.type) && schema.type.includes("null");
+  if (alternatives) {
+    return (
+      <AlternativeField
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        rootSchema={rootSchema}
+        alternatives={alternatives}
+      />
+    );
+  }
+
+  if (resolvedSchema.const !== undefined) {
+    const selected = value === resolvedSchema.const;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(resolvedSchema.const)}
+        className={cn(
+          "rounded-md border px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer",
+          selected
+            ? "border-success/40 bg-success/10 text-success"
+            : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+        )}
+      >
+        {String(resolvedSchema.const)}
+      </button>
+    );
+  }
+
+  if (resolvedSchema.enum) {
+    const nullable = Array.isArray(resolvedSchema.type) && resolvedSchema.type.includes("null");
     return (
       <div className="flex flex-wrap gap-1">
-        {schema.enum.map((opt) => {
+        {resolvedSchema.enum.map((opt) => {
           const selected = stringValue === String(opt);
           return (
             <button
@@ -809,7 +1151,7 @@ function ValueField({
   }
 
   if (resolvedType === "boolean") {
-    const nullable = Array.isArray(schema.type) && schema.type.includes("null");
+    const nullable = Array.isArray(resolvedSchema.type) && resolvedSchema.type.includes("null");
     return (
       <div className="flex gap-1">
         {[true, false].map((opt) => {
@@ -834,7 +1176,7 @@ function ValueField({
     );
   }
 
-  if (resolvedType === "object" && schema.properties) {
+  if (resolvedType === "object" && resolvedSchema.properties) {
     return (
       <ObjectFields
         value={
@@ -846,24 +1188,26 @@ function ValueField({
         }
         onChange={onChange as (obj: Record<string, unknown>) => void}
         onBlur={onBlur}
-        properties={schema.properties}
-        requiredSet={new Set(schema.required ?? [])}
+        properties={resolvedSchema.properties}
+        requiredSet={new Set(resolvedSchema.required ?? [])}
+        rootSchema={rootSchema}
       />
     );
   }
 
   if (
     resolvedType === "array" &&
-    schema.items &&
-    typeof schema.items === "object" &&
-    !Array.isArray(schema.items)
+    resolvedSchema.items &&
+    typeof resolvedSchema.items === "object" &&
+    !Array.isArray(resolvedSchema.items)
   ) {
     return (
       <ArrayFields
         value={Array.isArray(value) ? (value as unknown[]) : []}
         onChange={onChange as (arr: unknown[]) => void}
         onBlur={onBlur}
-        itemSchema={schema.items as MCPToolSchemaProperty}
+        itemSchema={resolvedSchema.items as MCPToolSchemaProperty}
+        rootSchema={rootSchema}
       />
     );
   }
@@ -903,8 +1247,8 @@ function ValueField({
       }}
       onBlur={onBlur}
       placeholder={
-        schema.default !== undefined
-          ? `default: ${String(schema.default)}`
+        resolvedSchema.default !== undefined
+          ? `default: ${String(resolvedSchema.default)}`
           : resolvedType === "number" || resolvedType === "integer"
             ? "0"
             : "value"
@@ -921,6 +1265,7 @@ function ObjectPropertyField({
   value,
   onChange,
   onBlur,
+  rootSchema,
 }: {
   name: string;
   prop: MCPToolSchemaProperty;
@@ -928,10 +1273,10 @@ function ObjectPropertyField({
   value: unknown;
   onChange: (v: unknown) => void;
   onBlur: () => void;
+  rootSchema: MCPToolSchema;
 }) {
-  const typeDisplay = Array.isArray(prop.type)
-    ? prop.type.join("|")
-    : (prop.type ?? "any");
+  const resolvedProp = resolveSchemaPropertyRef(prop, rootSchema);
+  const typeDisplay = schemaTypeDisplay(resolvedProp);
 
   return (
     <div className="space-y-1.5">
@@ -951,14 +1296,15 @@ function ObjectPropertyField({
           </span>
         )}
       </Label>
-      {prop.description && (
-        <MarkdownDescription className="text-muted-foreground/80 text-xs">{prop.description}</MarkdownDescription>
+      {resolvedProp.description && (
+        <MarkdownDescription className="text-muted-foreground/80 text-xs">{resolvedProp.description}</MarkdownDescription>
       )}
       <ValueField
         value={value}
         onChange={onChange}
         onBlur={onBlur}
-        schema={prop}
+        schema={resolvedProp}
+        rootSchema={rootSchema}
       />
     </div>
   );

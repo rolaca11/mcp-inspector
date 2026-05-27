@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { MCPToolSchema, MCPToolSchemaProperty } from "@/data/types";
 
+const COMBINATOR_KEYS = ["oneOf", "anyOf", "allOf"] as const;
+
 function resolveJsonPointer(root: Record<string, unknown>, pointer: string): unknown {
   const path = pointer.replace(/^#\//, "").split("/").map(s =>
     s.replace(/~1/g, "/").replace(/~0/g, "~"),
@@ -38,7 +40,7 @@ function resolveRefsDeep(
 ): Record<string, unknown> {
   let result = node;
   if ("$ref" in result) {
-    result = resolveRefNode(result, root, new Set(seen));
+    result = resolveRefNode(result, root, seen);
   }
 
   const out: Record<string, unknown> = {};
@@ -80,22 +82,86 @@ export function resolveSchemaRefs(schema: MCPToolSchema): MCPToolSchema {
   return resolved as unknown as MCPToolSchema;
 }
 
-function resolveType(prop: MCPToolSchemaProperty): string | undefined {
+export function resolveSchemaPropertyRef(
+  prop: MCPToolSchemaProperty,
+  root: MCPToolSchema,
+): MCPToolSchemaProperty {
+  if (typeof prop["$ref"] !== "string") return prop;
+  return resolveRefsDeep(
+    prop as unknown as Record<string, unknown>,
+    root as unknown as Record<string, unknown>,
+    new Set(),
+  ) as unknown as MCPToolSchemaProperty;
+}
+
+export function schemaAlternativeOptions(
+  prop: MCPToolSchemaProperty,
+): { kind: "oneOf" | "anyOf"; options: MCPToolSchemaProperty[] } | null {
+  for (const key of ["oneOf", "anyOf"] as const) {
+    const value = prop[key];
+    if (!Array.isArray(value)) continue;
+    const options = value.filter(
+      (item): item is MCPToolSchemaProperty =>
+        item != null && typeof item === "object" && !Array.isArray(item),
+    );
+    if (options.length > 0) return { kind: key, options };
+  }
+  return null;
+}
+
+function schemaCombinatorOptions(prop: MCPToolSchemaProperty): MCPToolSchemaProperty[] {
+  for (const key of COMBINATOR_KEYS) {
+    const value = prop[key];
+    if (!Array.isArray(value)) continue;
+    return value.filter(
+      (item): item is MCPToolSchemaProperty =>
+        item != null && typeof item === "object" && !Array.isArray(item),
+    );
+  }
+  return [];
+}
+
+export function resolveSchemaType(prop: MCPToolSchemaProperty): string | undefined {
   if (Array.isArray(prop.type)) {
     return prop.type.find((t) => t !== "null") ?? prop.type[0];
   }
-  return prop.type;
+  if (prop.type) return prop.type;
+  if (prop.properties) return "object";
+  if (prop.items) return "array";
+  if (prop.const !== undefined) return typeof prop.const;
+
+  const alternatives = schemaCombinatorOptions(prop);
+  if (alternatives.length > 0) {
+    const types = alternatives
+      .map(resolveSchemaType)
+      .filter((type): type is string => Boolean(type));
+    const unique = new Set(types);
+    if (unique.size === 1) return types[0] ?? undefined;
+    if (unique.has("object")) return "object";
+    if (unique.has("array")) return "array";
+  }
+
+  return undefined;
 }
 
 function isNullable(prop: MCPToolSchemaProperty): boolean {
   return Array.isArray(prop.type) && prop.type.includes("null");
 }
 
+function parseJsonString(value: string, ctx: z.RefinementCtx): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    ctx.addIssue({ code: "custom", message: "invalid JSON" });
+    return z.NEVER;
+  }
+}
+
 function mcpPropertyToZod(
   prop: MCPToolSchemaProperty,
   required: boolean,
 ): z.ZodType {
-  const type = resolveType(prop);
+  const type = resolveSchemaType(prop);
   let schema: z.ZodType;
 
   if (prop.enum) {
@@ -121,12 +187,7 @@ function mcpPropertyToZod(
         schema = z
           .string()
           .transform((v, ctx) => {
-            try {
-              return JSON.parse(v) as unknown;
-            } catch {
-              ctx.addIssue({ code: "custom", message: "invalid JSON" });
-              return z.NEVER;
-            }
+            return parseJsonString(v, ctx);
           })
           .pipe(z.record(z.string(), z.unknown()));
         break;
@@ -134,12 +195,7 @@ function mcpPropertyToZod(
         schema = z
           .string()
           .transform((v, ctx) => {
-            try {
-              return JSON.parse(v) as unknown;
-            } catch {
-              ctx.addIssue({ code: "custom", message: "invalid JSON" });
-              return z.NEVER;
-            }
+            return parseJsonString(v, ctx);
           })
           .pipe(z.array(z.unknown()));
         break;
@@ -229,7 +285,7 @@ export function partialCoerce(
       continue;
     }
 
-    const type = resolveType(prop);
+    const type = resolveSchemaType(prop);
     switch (type) {
       case "number":
       case "integer": {
