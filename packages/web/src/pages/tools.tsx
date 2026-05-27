@@ -333,6 +333,7 @@ function ToolDetail({
                 onBlur={onJsonBlur}
                 error={jsonError}
                 label="--args"
+                pasteable
               />
             </div>
           )}

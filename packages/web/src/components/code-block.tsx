@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Minimize2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { JsonTree } from "@/components/json-tree";
@@ -22,6 +22,7 @@ export function CodeBlock({
   caption,
 }: CodeBlockProps) {
   const [copied, setCopied] = React.useState(false);
+  const [copiedMinified, setCopiedMinified] = React.useState(false);
 
   const onCopy = React.useCallback(() => {
     void navigator.clipboard.writeText(children).then(() => {
@@ -31,6 +32,7 @@ export function CodeBlock({
   }, [children]);
 
   const isJson =
+    language === "json" ||
     language === "application/json" ||
     language?.endsWith("+json");
 
@@ -43,9 +45,23 @@ export function CodeBlock({
     }
   }, [isJson, children]);
 
+  const minifiedJson = React.useMemo(() => {
+    if (jsonData === undefined) return null;
+    return JSON.stringify(jsonData);
+  }, [jsonData]);
+
+  const onCopyMinified = React.useCallback(() => {
+    if (minifiedJson == null) return;
+    void navigator.clipboard.writeText(minifiedJson).then(() => {
+      setCopiedMinified(true);
+      setTimeout(() => setCopiedMinified(false), 1200);
+    });
+  }, [minifiedJson]);
+
   const isTreeView = jsonData !== undefined;
   const hasCollapsibles =
     isTreeView && typeof jsonData === "object" && jsonData !== null;
+  const canCopyMinified = copyable && minifiedJson != null;
 
   const [treeKey, setTreeKey] = React.useState(0);
   const [defaultCollapsed, setDefaultCollapsed] = React.useState(false);
@@ -67,12 +83,12 @@ export function CodeBlock({
 
   return (
     <div className={cn("group rounded-lg border border-border/60 bg-card/40 overflow-hidden", className)}>
-      {(caption || language || copyable) && (
-        <div className="flex items-center justify-between border-b border-border/60 px-4 py-2 text-xs text-muted-foreground/80 font-mono">
-          <span className="truncate">
+      {(caption || language || copyable || canCopyMinified) && (
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-2 text-xs text-muted-foreground/80 font-mono">
+          <span className="min-w-0 truncate">
             {caption ?? language ?? ""}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {hasCollapsibles && (
               <>
                 <button
@@ -107,6 +123,26 @@ export function CodeBlock({
                   <>
                     <Copy className="size-3" />
                     <span>copy</span>
+                  </>
+                )}
+              </button>
+            )}
+            {canCopyMinified && (
+              <button
+                type="button"
+                onClick={onCopyMinified}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-muted/70 hover:text-foreground cursor-pointer"
+                aria-label="Copy minified JSON"
+              >
+                {copiedMinified ? (
+                  <>
+                    <Check className="size-3 text-success" />
+                    <span>copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Minimize2 className="size-3" />
+                    <span>copy minified</span>
                   </>
                 )}
               </button>

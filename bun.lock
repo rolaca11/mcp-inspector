@@ -7,7 +7,7 @@
     },
     "packages/cli": {
       "name": "@rolaca11/mcp-inspector",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "bin": {
         "mcp-inspector": "dist/cli.js",
       },
@@ -32,7 +32,7 @@
     },
     "packages/core": {
       "name": "@rolaca11/mcp-inspector-core",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@trpc/server": "^11.17.0",
@@ -51,7 +51,7 @@
     },
     "packages/electron": {
       "name": "@rolaca11/mcp-inspector-electron",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@trpc/server": "^11.17.0",
@@ -72,7 +72,7 @@
     },
     "packages/web": {
       "name": "@rolaca11/mcp-inspector-web",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "dependencies": {
         "@rolaca11/mcp-inspector-core": "workspace:*",
         "@tiptap/extension-code-block-lowlight": "^3.22.5",
