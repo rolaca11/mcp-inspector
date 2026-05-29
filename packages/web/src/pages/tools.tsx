@@ -45,6 +45,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { CodeBlock } from "@/components/code-block";
 import { ErrorMessage } from "@/components/error-message";
@@ -67,6 +72,36 @@ import { api, ApiError, type SavedForm } from "@/data/api";
 import type { ActivityResult, MCPTool, MCPToolSchema, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
+
+type ZodIssueLike = {
+  code: string;
+  message: string;
+  values?: readonly unknown[];
+  expected?: string;
+  input?: unknown;
+};
+
+/** Turn a zod issue into a short, tooltip-friendly message. */
+function conciseIssueMessage(issue: ZodIssueLike): string {
+  switch (issue.code) {
+    case "invalid_value": {
+      const values = issue.values ?? [];
+      if (values.length === 0) return "Invalid option";
+      if (values.length <= 4) {
+        return `must be one of: ${values.map(String).join(", ")}`;
+      }
+      return `must be one of ${values.length} allowed values`;
+    }
+    case "invalid_type":
+      return issue.input === undefined
+        ? "Required"
+        : `must be a ${issue.expected ?? "valid value"}`;
+    case "too_small":
+      return "Required";
+    default:
+      return issue.message;
+  }
+}
 
 export function ToolsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -314,6 +349,23 @@ function ToolDetail({
   const hasArgs = Object.keys(properties).length > 0;
   const canCall = !callState.loading && formState.isValid;
 
+  // Validate the watched values directly against the schema so the tooltip can
+  // describe the issues without touching react-hook-form's error state (which
+  // would surface inline errors under each field).
+  const validationIssues = React.useMemo(() => {
+    const parsed = schema.safeParse(watchedValues);
+    if (parsed.success) return [];
+    const seen = new Set<string>();
+    const issues: { name: string; message: string }[] = [];
+    for (const issue of parsed.error.issues) {
+      const name = issue.path.length > 0 ? String(issue.path[0]) : "(form)";
+      if (seen.has(name)) continue;
+      seen.add(name);
+      issues.push({ name, message: conciseIssueMessage(issue) });
+    }
+    return issues;
+  }, [schema, watchedValues]);
+
   return (
     <div className="space-y-5 min-w-0">
       <Card>
@@ -358,18 +410,38 @@ function ToolDetail({
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="success"
-              onClick={onCall}
-              disabled={!canCall}
-            >
-              {callState.loading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Play className="size-4" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* span wrapper so the tooltip still receives hover events while the button is disabled */}
+                <span className="inline-flex">
+                  <Button
+                    variant="success"
+                    onClick={onCall}
+                    disabled={!canCall}
+                    className={!canCall ? "pointer-events-none" : undefined}
+                  >
+                    {callState.loading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
+                    Call tool
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!callState.loading && validationIssues.length > 0 && (
+                <TooltipContent className="max-w-xs">
+                  <p className="font-medium">Fix the following to call this tool:</p>
+                  <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                    {validationIssues.map((issue) => (
+                      <li key={issue.name}>
+                        <span className="font-mono">{issue.name}</span>: {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
               )}
-              Call tool
-            </Button>
+            </Tooltip>
             {hasArgs && (
               <SavedFormsControls
                 serverName={serverName}

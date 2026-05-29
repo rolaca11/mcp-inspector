@@ -175,7 +175,13 @@ function mcpPropertyToZod(
         if (type === "integer") num = num.int();
         if (prop.minimum != null) num = num.min(prop.minimum);
         if (prop.maximum != null) num = num.max(prop.maximum);
-        schema = num;
+        // z.coerce.number() turns "" into 0, so a required numeric field would
+        // otherwise pass when left blank. Map the empty string to undefined so
+        // it fails validation instead of silently becoming 0.
+        schema =
+          required && !isNullable(prop)
+            ? z.preprocess((v) => (v === "" ? undefined : v), num)
+            : num;
         break;
       }
       case "boolean":
@@ -200,7 +206,9 @@ function mcpPropertyToZod(
           .pipe(z.array(z.unknown()));
         break;
       default:
-        schema = z.string();
+        // A required text field must be non-empty; "" is otherwise a valid
+        // string and would let the form pass with the field left blank.
+        schema = required ? z.string().min(1, "Required") : z.string();
     }
   }
 
