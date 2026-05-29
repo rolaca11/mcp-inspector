@@ -2,11 +2,15 @@ import * as React from "react";
 import {
   AlertCircle,
   Asterisk,
+  ChevronDown,
+  FolderOpen,
   Hammer,
   Loader2,
   Play,
   Plus,
+  Save,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { Controller, type Control, type FieldValues } from "react-hook-form";
@@ -22,6 +26,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EditableJsonBlock } from "@/components/editable-json-block";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,7 +63,7 @@ import {
   resolveSchemaType,
   schemaAlternativeOptions,
 } from "@/lib/schema-builder";
-import { api, ApiError } from "@/data/api";
+import { api, ApiError, type SavedForm } from "@/data/api";
 import type { ActivityResult, MCPTool, MCPToolSchema, MCPToolSchemaProperty, ToolResult } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
@@ -337,18 +357,28 @@ function ToolDetail({
               />
             </div>
           )}
-          <Button
-            variant="success"
-            onClick={onCall}
-            disabled={!canCall}
-          >
-            {callState.loading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Play className="size-4" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="success"
+              onClick={onCall}
+              disabled={!canCall}
+            >
+              {callState.loading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Play className="size-4" />
+              )}
+              Call tool
+            </Button>
+            {hasArgs && (
+              <SavedFormsControls
+                serverName={serverName}
+                toolName={tool.name}
+                getValues={() => watch() as Record<string, string>}
+                onLoad={setAllValues}
+              />
             )}
-            Call tool
-          </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -386,6 +416,240 @@ function ToolDetail({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Saved forms (persist / load tool input presets)                     */
+/* ------------------------------------------------------------------ */
+
+function SavedFormsControls({
+  serverName,
+  toolName,
+  getValues,
+  onLoad,
+}: {
+  serverName: string;
+  toolName: string;
+  getValues: () => Record<string, string>;
+  onLoad: (values: Record<string, string>) => void;
+}) {
+  const [scoped, setScoped] = React.useState<SavedForm[]>([]);
+  const [global, setGlobal] = React.useState<SavedForm[]>([]);
+  const [saveOpen, setSaveOpen] = React.useState(false);
+  const [name, setName] = React.useState("");
+  const [scope, setScope] = React.useState<"tool" | "global">("tool");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const reload = React.useCallback(async () => {
+    try {
+      const res = await api.savedFormsList(serverName, toolName);
+      setScoped(res.scoped);
+      setGlobal(res.global);
+    } catch {
+      /* non-fatal — leave the lists as-is */
+    }
+  }, [serverName, toolName]);
+
+  React.useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const onSave = React.useCallback(async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.savedFormSave({
+        name: trimmed,
+        scope,
+        serverName: scope === "tool" ? serverName : undefined,
+        toolName: scope === "tool" ? toolName : undefined,
+        values: getValues(),
+      });
+      setSaveOpen(false);
+      setName("");
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }, [name, scope, serverName, toolName, getValues, reload]);
+
+  const onDelete = React.useCallback(
+    async (id: string) => {
+      try {
+        await api.savedFormRemove(id);
+        await reload();
+      } catch {
+        /* non-fatal */
+      }
+    },
+    [reload],
+  );
+
+  const hasForms = scoped.length > 0 || global.length > 0;
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        onClick={() => setSaveOpen(true)}
+        className="border-info/40 bg-info/10 text-info hover:bg-info/20 hover:text-info"
+      >
+        <Save className="size-4" />
+        Save
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={!hasForms}
+            className="border-info/40 bg-info/10 text-info hover:bg-info/20 hover:text-info"
+          >
+            <FolderOpen className="size-4" />
+            Load
+            <ChevronDown className="size-3.5 opacity-70" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[16rem]">
+          {scoped.length > 0 && (
+            <>
+              <DropdownMenuLabel>This tool</DropdownMenuLabel>
+              {scoped.map((f) => (
+                <SavedFormRow
+                  key={f.id}
+                  form={f}
+                  onLoad={onLoad}
+                  onDelete={onDelete}
+                />
+              ))}
+            </>
+          )}
+          {scoped.length > 0 && global.length > 0 && (
+            <DropdownMenuSeparator />
+          )}
+          {global.length > 0 && (
+            <>
+              <DropdownMenuLabel>Global</DropdownMenuLabel>
+              {global.map((f) => (
+                <SavedFormRow
+                  key={f.id}
+                  form={f}
+                  onLoad={onLoad}
+                  onDelete={onDelete}
+                />
+              ))}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save form</DialogTitle>
+            <DialogDescription>
+              Persist the current input values to reuse them later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="saved-form-name">Name</Label>
+              <Input
+                id="saved-form-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void onSave();
+                }}
+                placeholder="e.g. happy path"
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Scope</Label>
+              <div className="flex gap-1.5">
+                {(
+                  [
+                    ["tool", "This server & tool"],
+                    ["global", "Global"],
+                  ] as const
+                ).map(([value, label]) => {
+                  const selected = scope === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setScope(value)}
+                      className={cn(
+                        "rounded-md border px-3 py-1.5 text-sm transition-colors cursor-pointer",
+                        selected
+                          ? "border-success/40 bg-success/10 text-success"
+                          : "border-border bg-black/25 text-muted-foreground hover:bg-accent/40",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {error && (
+              <div className="text-xs text-destructive">{error}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setSaveOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={onSave} disabled={saving || !name.trim()}>
+              {saving && <Loader2 className="size-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function SavedFormRow({
+  form,
+  onLoad,
+  onDelete,
+}: {
+  form: SavedForm;
+  onLoad: (values: Record<string, string>) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <DropdownMenuItem
+      onSelect={() => onLoad(form.values)}
+      className="justify-between gap-3 group/saved"
+    >
+      <span className="truncate">{form.name}</span>
+      <button
+        type="button"
+        aria-label={`Delete ${form.name}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(form.id);
+        }}
+        className="shrink-0 rounded p-0.5 text-muted-foreground/60 opacity-0 transition-all group-hover/saved:opacity-100 hover:text-destructive"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </DropdownMenuItem>
   );
 }
 

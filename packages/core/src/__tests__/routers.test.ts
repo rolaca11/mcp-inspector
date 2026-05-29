@@ -216,6 +216,159 @@ describe("config router", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* Saved-forms router                                                  */
+/* ------------------------------------------------------------------ */
+
+describe("savedForms router", () => {
+  let tmpDir: string;
+  let originalXDG: string | undefined;
+
+  beforeEach(() => {
+    originalXDG = process.env.XDG_CONFIG_HOME;
+    tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mcp-saved-forms-router-test-"),
+    );
+    process.env.XDG_CONFIG_HOME = tmpDir;
+  });
+
+  afterEach(() => {
+    if (originalXDG === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = originalXDG;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("list returns empty groups when no file exists", async () => {
+    const caller = createCaller(createContext());
+    const result = await caller.savedForms.list({
+      serverName: "srv",
+      toolName: "tool",
+    });
+    expect(result).toEqual({ scoped: [], global: [] });
+  });
+
+  it("save persists a tool-scoped form and list returns it under scoped", async () => {
+    const caller = createCaller(createContext());
+    const saved = await caller.savedForms.save({
+      name: "happy path",
+      scope: "tool",
+      serverName: "srv",
+      toolName: "tool",
+      values: { a: "1" },
+    });
+    expect(saved.id).toBeTruthy();
+    expect(saved.scope).toBe("tool");
+
+    const result = await caller.savedForms.list({
+      serverName: "srv",
+      toolName: "tool",
+    });
+    expect(result.scoped).toHaveLength(1);
+    expect(result.scoped[0]!.name).toBe("happy path");
+    expect(result.scoped[0]!.values).toEqual({ a: "1" });
+    expect(result.global).toHaveLength(0);
+  });
+
+  it("global forms appear for every tool", async () => {
+    const caller = createCaller(createContext());
+    await caller.savedForms.save({
+      name: "shared",
+      scope: "global",
+      values: { x: "y" },
+    });
+
+    const a = await caller.savedForms.list({
+      serverName: "srv-a",
+      toolName: "tool-a",
+    });
+    const b = await caller.savedForms.list({
+      serverName: "srv-b",
+      toolName: "tool-b",
+    });
+    expect(a.global).toHaveLength(1);
+    expect(b.global).toHaveLength(1);
+    expect(a.scoped).toHaveLength(0);
+  });
+
+  it("scoped forms only appear for their own server/tool", async () => {
+    const caller = createCaller(createContext());
+    await caller.savedForms.save({
+      name: "only-here",
+      scope: "tool",
+      serverName: "srv",
+      toolName: "tool",
+      values: {},
+    });
+
+    const other = await caller.savedForms.list({
+      serverName: "srv",
+      toolName: "different-tool",
+    });
+    expect(other.scoped).toHaveLength(0);
+  });
+
+  it("save overwrites an existing form with the same name and scope", async () => {
+    const caller = createCaller(createContext());
+    const first = await caller.savedForms.save({
+      name: "dup",
+      scope: "tool",
+      serverName: "srv",
+      toolName: "tool",
+      values: { v: "1" },
+    });
+    const second = await caller.savedForms.save({
+      name: "dup",
+      scope: "tool",
+      serverName: "srv",
+      toolName: "tool",
+      values: { v: "2" },
+    });
+    expect(second.id).toBe(first.id);
+
+    const result = await caller.savedForms.list({
+      serverName: "srv",
+      toolName: "tool",
+    });
+    expect(result.scoped).toHaveLength(1);
+    expect(result.scoped[0]!.values).toEqual({ v: "2" });
+  });
+
+  it("save rejects tool scope without server/tool", async () => {
+    const caller = createCaller(createContext());
+    await expect(
+      caller.savedForms.save({
+        name: "bad",
+        scope: "tool",
+        values: {},
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("remove deletes a form by id", async () => {
+    const caller = createCaller(createContext());
+    const saved = await caller.savedForms.save({
+      name: "temp",
+      scope: "global",
+      values: {},
+    });
+    const removed = await caller.savedForms.remove({ id: saved.id });
+    expect(removed.ok).toBe(true);
+
+    const result = await caller.savedForms.list({
+      serverName: "srv",
+      toolName: "tool",
+    });
+    expect(result.global).toHaveLength(0);
+  });
+
+  it("remove throws for an unknown id", async () => {
+    const caller = createCaller(createContext());
+    await expect(
+      caller.savedForms.remove({ id: "does-not-exist" }),
+    ).rejects.toThrow(/not found/);
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* Servers router                                                      */
 /* ------------------------------------------------------------------ */
 

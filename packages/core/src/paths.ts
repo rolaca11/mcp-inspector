@@ -26,3 +26,12 @@ export function authFile(targetId: string): string {
 export function inspectorConfigPath(): string {
   return path.join(configDir(), "mcp.json");
 }
+
+/**
+ * Path to the file storing persisted tool-call input forms — the named
+ * argument presets the GUI saves, loads, and deletes from the Tools page.
+ * Lives alongside the server config in `configDir()`.
+ */
+export function savedFormsPath(): string {
+  return path.join(configDir(), "saved-forms.json");
+}

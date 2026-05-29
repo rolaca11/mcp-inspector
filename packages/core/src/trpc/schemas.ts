@@ -70,3 +70,25 @@ export const configAddInput = z.object({
 });
 
 export const configRemoveInput = z.object({ name: z.string().min(1) });
+
+export const savedFormScope = z.enum(["global", "tool"]);
+
+export const savedFormListInput = z.object({
+  serverName: z.string().optional(),
+  toolName: z.string().optional(),
+});
+
+export const savedFormSaveInput = z
+  .object({
+    name: z.string().min(1),
+    scope: savedFormScope,
+    serverName: z.string().optional(),
+    toolName: z.string().optional(),
+    values: z.record(z.string(), z.string()),
+  })
+  .refine(
+    (f) => f.scope === "global" || (!!f.serverName && !!f.toolName),
+    { message: "`serverName` and `toolName` are required for tool scope" },
+  );
+
+export const savedFormRemoveInput = z.object({ id: z.string().min(1) });

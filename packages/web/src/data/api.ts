@@ -105,6 +105,15 @@ export interface ServersListResponse {
   }>;
 }
 
+export interface SavedForm {
+  id: string;
+  name: string;
+  scope: "global" | "tool";
+  serverName?: string;
+  toolName?: string;
+  values: Record<string, string>;
+}
+
 export const api = {
   health(): Promise<{ ok: true }> {
     return trpc.health.check.query();
@@ -295,6 +304,44 @@ export const api = {
   async configRemoveServer(name: string): Promise<{ ok: true; name: string }> {
     try {
       return await trpc.config.remove.mutate({ name });
+    } catch (e) {
+      throw wrapError(e);
+    }
+  },
+
+  /* Saved tool-call forms CRUD */
+
+  async savedFormsList(
+    serverName: string,
+    toolName: string,
+  ): Promise<{ scoped: SavedForm[]; global: SavedForm[] }> {
+    try {
+      return (await trpc.savedForms.list.query({
+        serverName,
+        toolName,
+      })) as { scoped: SavedForm[]; global: SavedForm[] };
+    } catch (e) {
+      throw wrapError(e);
+    }
+  },
+
+  async savedFormSave(input: {
+    name: string;
+    scope: "global" | "tool";
+    serverName?: string;
+    toolName?: string;
+    values: Record<string, string>;
+  }): Promise<SavedForm> {
+    try {
+      return (await trpc.savedForms.save.mutate(input)) as SavedForm;
+    } catch (e) {
+      throw wrapError(e);
+    }
+  },
+
+  async savedFormRemove(id: string): Promise<{ ok: true; id: string }> {
+    try {
+      return await trpc.savedForms.remove.mutate({ id });
     } catch (e) {
       throw wrapError(e);
     }
