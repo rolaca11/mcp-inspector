@@ -8,13 +8,9 @@ import path from "node:path";
 
 import { TRPCError } from "@trpc/server";
 
-import { configDir } from "../../paths.js";
+import { inspectorConfigPath } from "../../paths.js";
 import { configAddInput, configRemoveInput } from "../schemas.js";
 import { publicProcedure, router } from "../trpc.js";
-
-function inspectorConfigPath(): string {
-  return path.join(configDir(), "mcp.json");
-}
 
 function readInspectorConfig(): Record<string, unknown> {
   const p = inspectorConfigPath();

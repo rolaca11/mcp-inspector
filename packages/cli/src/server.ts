@@ -18,7 +18,10 @@ import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import pc from "picocolors";
 
 import { connect, type Session } from "@rolaca11/mcp-inspector-core/client";
-import { loadConfigSync } from "@rolaca11/mcp-inspector-core/config";
+import {
+  ensureInspectorConfig,
+  loadConfigSync,
+} from "@rolaca11/mcp-inspector-core/config";
 import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
@@ -88,6 +91,7 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
       ? [opts.configFile]
       : [];
   const configOpts = extraFiles.length > 0 ? { extraFiles } : {};
+  ensureInspectorConfig();
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 

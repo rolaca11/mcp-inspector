@@ -18,3 +18,11 @@ export function configDir(): string {
 export function authFile(targetId: string): string {
   return path.join(configDir(), "auth", `${targetId}.json`);
 }
+
+/**
+ * Path to the inspector's own ("global") server config file — the one the GUI
+ * adds to, edits, and deletes. Lives alongside the OAuth state in `configDir()`.
+ */
+export function inspectorConfigPath(): string {
+  return path.join(configDir(), "mcp.json");
+}

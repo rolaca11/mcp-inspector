@@ -30,12 +30,12 @@
  * A server entry must declare either a `command` (stdio) or a `url` (HTTP).
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 
-import { configDir } from "./paths.js";
+import { configDir, inspectorConfigPath } from "./paths.js";
 
 export type StdioServerConfig = {
   type?: "stdio";
@@ -94,6 +94,27 @@ export interface LoadConfigOptions {
   home?: string;
   /** Extra `.mcp.json` files to load (highest precedence — appended last). */
   extraFiles?: string[];
+}
+
+/**
+ * Make sure the inspector's own ("global") config file exists so users can
+ * find and hand-edit it, and so the GUI always has a writable source to add
+ * servers to. Created lazily on first server add otherwise — which means on a
+ * fresh install (e.g. the packaged/AppImage app) the file would never exist
+ * until something was added. Writes an empty `{ "mcpServers": {} }` skeleton.
+ *
+ * Best-effort: a read-only or otherwise unwritable config dir is not fatal —
+ * the app still runs against whatever config files it can read.
+ */
+export function ensureInspectorConfig(): void {
+  const file = inspectorConfigPath();
+  if (existsSync(file)) return;
+  try {
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ mcpServers: {} }, null, 2) + "\n");
+  } catch {
+    // Non-fatal: keep running with the config we can read.
+  }
 }
 
 export function loadConfigSync(opts: LoadConfigOptions = {}): LoadedConfig {

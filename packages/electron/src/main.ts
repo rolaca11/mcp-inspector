@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 import { connect, type Session } from "@rolaca11/mcp-inspector-core/client";
-import { loadConfigSync } from "@rolaca11/mcp-inspector-core/config";
+import {
+  ensureInspectorConfig,
+  loadConfigSync,
+} from "@rolaca11/mcp-inspector-core/config";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
 
@@ -165,6 +168,7 @@ function resolveWebDir(): string {
 
 async function createWindow(): Promise<void> {
   const configOpts = {};
+  ensureInspectorConfig();
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 

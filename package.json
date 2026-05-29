@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run build:web && bun run build:cli",
+    "build": "bun run build:web && bun run build:cli && bun run build:electron",
     "build:cli": "bun run --filter @rolaca11/mcp-inspector build",
     "build:web": "bun run --filter @rolaca11/mcp-inspector-web build",
     "build:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron build",

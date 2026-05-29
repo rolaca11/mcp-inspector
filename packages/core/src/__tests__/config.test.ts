@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { loadConfigSync } from "../config.js";
+import { ensureInspectorConfig, loadConfigSync } from "../config.js";
+import { inspectorConfigPath } from "../paths.js";
 
 let tmpDir: string;
 let originalXDG: string | undefined;
@@ -254,5 +255,34 @@ describe("loadConfigSync", () => {
     expect(result.servers.size).toBe(2);
     expect(result.servers.has("from_home")).toBe(true);
     expect(result.servers.has("from_project")).toBe(true);
+  });
+});
+
+describe("ensureInspectorConfig", () => {
+  it("creates an empty config file (and its dir) when missing", () => {
+    const file = inspectorConfigPath();
+    expect(fs.existsSync(file)).toBe(false);
+
+    ensureInspectorConfig();
+
+    expect(fs.existsSync(file)).toBe(true);
+    expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual({
+      mcpServers: {},
+    });
+    // The freshly-created file is a valid, empty inspector source.
+    const result = loadConfigSync({ cwd: tmpDir, home: tmpDir });
+    expect(result.errors).toEqual([]);
+    expect(result.servers.size).toBe(0);
+  });
+
+  it("leaves an existing config file untouched", () => {
+    const file = inspectorConfigPath();
+    writeJson(file, { mcpServers: { keep: { command: "echo" } } });
+
+    ensureInspectorConfig();
+
+    expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual({
+      mcpServers: { keep: { command: "echo" } },
+    });
   });
 });

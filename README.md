@@ -33,8 +33,9 @@ re-enter your inputs.
 
 ### Server sources
 
-The inspector has its own server config file at `~/.config/mcp-inspector/config.json`.
-You can add more servers there, edit the config, or delete it to reset the config from
+The inspector has its own server config file at `~/.config/mcp-inspector/mcp.json`
+(honoring `$XDG_CONFIG_HOME`). It's created automatically on first launch, and you
+can add more servers there, edit the config, or delete it to reset the config from
 the GUI. It also searches for `.mcp.json` files in the current working directory and your home
 directory. It means that if you use the web GUI, you can run `mcp-inspector serve`
 from the directory of your project, and it'll find servers in `./.mcp.json`.
