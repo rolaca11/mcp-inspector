@@ -30,6 +30,25 @@
     -->
     <script>
       (function () {
+        // Security self-test (mirrors the official MCP Inspector sandbox proxy):
+        // a correctly isolated, cross-origin sandbox CANNOT reach the host's top
+        // window — touching `window.top.alert` throws a SecurityError. If it does
+        // NOT throw, this page is same-origin to the dashboard (mis-configured),
+        // so the app could script the host. Surface it loudly and refuse to run.
+        try {
+          window.top?.alert(
+            "If you see this, the MCP app sandbox is not set up securely.",
+          );
+          throw "INSECURE";
+        } catch (e) {
+          if (e === "INSECURE") {
+            throw new Error(
+              "MCP app sandbox is not isolated — the host window is reachable.",
+            );
+          }
+          // Expected: a SecurityError here confirms proper cross-origin isolation.
+        }
+
         var host = window.parent;
         var inner = null;
 
