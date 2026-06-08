@@ -6,6 +6,8 @@
 
 import pc from "picocolors";
 
+import { toolUiResourceUri } from "./apps.js";
+
 export interface FormatOptions {
   /** Print machine-readable JSON only. */
   json?: boolean;
@@ -157,6 +159,7 @@ interface ToolLike {
   inputSchema: { type: "object"; properties?: Record<string, unknown>; required?: string[] };
   outputSchema?: unknown;
   title?: string;
+  _meta?: Record<string, unknown>;
 }
 
 export function printTools(tools: ToolLike[], opts: FormatOptions = {}) {
@@ -168,7 +171,8 @@ export function printTools(tools: ToolLike[], opts: FormatOptions = {}) {
   console.log(pc.bold(`Tools (${tools.length}):`));
   for (const t of tools) {
     const title = t.title ?? t.name;
-    console.log(`  ${pc.green(t.name)}${title !== t.name ? `  ${pc.dim(`(${title})`)}` : ""}`);
+    const uiTag = toolUiResourceUri(t._meta) ? `  ${pc.magenta("[ui]")}` : "";
+    console.log(`  ${pc.green(t.name)}${title !== t.name ? `  ${pc.dim(`(${title})`)}` : ""}${uiTag}`);
     if (t.description) console.log(`    ${pc.dim(t.description)}`);
     const props = (t.inputSchema?.properties ?? {}) as Record<string, { type?: string; description?: string }>;
     const required = new Set(t.inputSchema?.required ?? []);

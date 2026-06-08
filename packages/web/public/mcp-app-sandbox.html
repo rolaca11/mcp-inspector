@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MCP App Sandbox</title>
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+      }
+      iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      MCP Apps sandbox proxy (SEP-1865). Served from a different origin than the
+      dashboard so the host can grant the app `allow-same-origin` (storage, etc.)
+      without the app being able to reach the dashboard's origin. This page
+      transparently forwards JSON-RPC messages between the host (its parent) and
+      the inner app iframe, except the `ui/notifications/sandbox-*` control
+      messages it consumes itself.
+    -->
+    <script>
+      (function () {
+        var host = window.parent;
+        var inner = null;
+
+        function isSandboxControl(method) {
+          return (
+            typeof method === "string" &&
+            method.indexOf("ui/notifications/sandbox-") === 0
+          );
+        }
+
+        // Map the spec's presence-object permissions to an iframe `allow` value.
+        function permissionsToAllow(perms) {
+          if (!perms || typeof perms !== "object") return "";
+          var map = {
+            camera: "camera",
+            microphone: "microphone",
+            geolocation: "geolocation",
+            clipboardWrite: "clipboard-write",
+          };
+          var out = [];
+          for (var key in map) {
+            if (perms[key]) out.push(map[key]);
+          }
+          return out.join("; ");
+        }
+
+        window.addEventListener("message", function (event) {
+          var data = event.data;
+
+          // Messages from the host (parent).
+          if (event.source === host) {
+            if (
+              data &&
+              data.method === "ui/notifications/sandbox-resource-ready"
+            ) {
+              if (inner) return; // one app per sandbox load
+              var p = data.params || {};
+              inner = document.createElement("iframe");
+              inner.setAttribute(
+                "sandbox",
+                p.sandbox || "allow-scripts allow-same-origin allow-forms",
+              );
+              var allow = permissionsToAllow(p.permissions);
+              if (allow) inner.setAttribute("allow", allow);
+              inner.style.cssText = "width:100%;height:100%;border:0;display:block";
+              document.body.appendChild(inner);
+              // Use document.write rather than srcdoc: a srcdoc document loads at
+              // the `about:srcdoc` URL, which breaks web-worker creation and tile
+              // URL resolution in some apps (notably the CesiumJS map). Writing
+              // into the freshly-created same-origin frame lets it inherit this
+              // proxy's real origin so workers and network requests resolve.
+              var html = typeof p.html === "string" ? p.html : "";
+              var doc = inner.contentDocument || (inner.contentWindow && inner.contentWindow.document);
+              if (doc) {
+                doc.open();
+                doc.write(html);
+                doc.close();
+              } else {
+                inner.setAttribute("srcdoc", html);
+              }
+              return;
+            }
+            // Forward host → app (skip our own control messages).
+            if (inner && inner.contentWindow && !(data && isSandboxControl(data.method))) {
+              inner.contentWindow.postMessage(data, "*");
+            }
+            return;
+          }
+
+          // Messages from the inner app → forward to the host.
+          if (inner && event.source === inner.contentWindow) {
+            if (!(data && isSandboxControl(data.method))) {
+              host.postMessage(data, "*");
+            }
+          }
+        });
+
+        // Announce readiness so the host sends us the app resource. `params` is
+        // required by the spec schema — the host SDK drops the notification
+        // without it.
+        host.postMessage(
+          { jsonrpc: "2.0", method: "ui/notifications/sandbox-proxy-ready", params: {} },
+          "*",
+        );
+      })();
+    </script>
+  </body>
+</html>

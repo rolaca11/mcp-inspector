@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   AlertCircle,
+  AppWindow,
   Asterisk,
   ChevronDown,
   FolderOpen,
@@ -69,9 +70,22 @@ import {
   schemaAlternativeOptions,
 } from "@/lib/schema-builder";
 import { api, ApiError, type SavedForm } from "@/data/api";
-import type { ActivityResult, MCPTool, MCPToolSchema, MCPToolSchemaProperty, ToolResult } from "@/data/types";
+import type {
+  ActivityResult,
+  MCPTool,
+  MCPToolSchema,
+  MCPToolSchemaProperty,
+  ToolResult,
+} from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
+import { McpAppFrame } from "@/components/mcp-app-frame";
+import { isUiResourceUri, toolUiResourceUri } from "@/lib/mcp-apps";
+import {
+  appPayloadFromContent,
+  pickAppContent,
+  type AppPayload,
+} from "@/lib/app-content";
 
 type ZodIssueLike = {
   code: string;
@@ -219,18 +233,25 @@ function ToolListRow({
   isActive: boolean;
   onSelect: () => void;
 }) {
+  const hasUi = toolUiResourceUri(tool._meta) !== undefined;
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer truncate",
+        "flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer",
         isActive
           ? "bg-accent text-foreground font-medium"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
-      {tool.title ?? tool.name}
+      <span className="truncate">{tool.title ?? tool.name}</span>
+      {hasUi && (
+        <AppWindow
+          className="ml-auto size-3.5 shrink-0 text-info"
+          aria-label="Has an app UI"
+        />
+      )}
     </button>
   );
 }
@@ -240,6 +261,8 @@ interface CallState {
   activity?: ActivityResult<ToolResult>;
   error?: string;
   errorResponse?: Record<string, unknown>;
+  /** Arguments actually sent — fed to a linked app as its tool input. */
+  input?: Record<string, unknown>;
 }
 
 function ToolDetail({
@@ -285,6 +308,8 @@ function ToolDetail({
   const [loading, setLoading] = React.useState(false);
   const [jsonError, setJsonError] = React.useState<string | null>(null);
 
+  const uiResourceUri = toolUiResourceUri(tool._meta);
+
   const cachedResult = resultStore.get<CallState>(serverName, "tool", tool.name);
   const callState: CallState = loading ? { loading: true } : (cachedResult ?? { loading: false });
 
@@ -323,13 +348,15 @@ function ToolDetail({
       void handleSubmit(async (coercedData) => {
         setLoading(true);
         try {
+          const args = coercedData as Record<string, unknown>;
           const activities = await api.callTool(serverName, {
             name: tool.name,
-            arguments: coercedData as Record<string, unknown>,
+            arguments: args,
           });
           const settled: CallState = {
             loading: false,
             activity: activities[0],
+            input: args,
           };
           resultStore.set(serverName, "tool", tool.name, settled);
         } catch (e) {
@@ -376,6 +403,15 @@ function ToolDetail({
               <span className="text-muted-foreground font-normal text-sm font-mono">
                 · {tool.name}
               </span>
+            )}
+            {uiResourceUri && (
+              <Badge
+                variant="muted"
+                className="gap-1 border-info/40 bg-info/10 text-info"
+              >
+                <AppWindow className="size-3" />
+                app
+              </Badge>
             )}
           </CardTitle>
           <CardDescription>
@@ -454,6 +490,29 @@ function ToolDetail({
         </CardContent>
       </Card>
 
+      {uiResourceUri && callState.activity?.outcome === "ok" && callState.activity.result && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AppWindow className="size-4 text-info" />
+              App
+            </CardTitle>
+            <CardDescription className="font-mono truncate">
+              {uiResourceUri}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ToolAppView
+              serverName={serverName}
+              resourceUri={uiResourceUri}
+              toolName={tool.name}
+              toolInput={callState.input}
+              toolResult={callState.activity.result}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Result</CardTitle>
@@ -484,10 +543,107 @@ function ToolDetail({
           </CardAction>
         </CardHeader>
         <CardContent>
-          <ToolResultView state={callState} />
+          <ToolResultView
+            state={callState}
+            serverName={serverName}
+            toolInput={callState.input}
+          />
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* App rendering (MCP Apps / mcp-ui)                                   */
+/* ------------------------------------------------------------------ */
+
+interface AppFetchState {
+  loading: boolean;
+  payload?: AppPayload | null;
+  error?: string;
+}
+
+/**
+ * Fetches a tool's linked `ui://` template and renders it as an app, fed the
+ * tool's input arguments and result. Re-fetches when the template URI changes.
+ */
+function ToolAppView({
+  serverName,
+  resourceUri,
+  toolName,
+  toolInput,
+  toolResult,
+}: {
+  serverName: string;
+  resourceUri: string;
+  toolName: string;
+  toolInput?: Record<string, unknown>;
+  toolResult: ToolResult;
+}) {
+  const [state, setState] = React.useState<AppFetchState>({ loading: true });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setState({ loading: true });
+    (async () => {
+      try {
+        const activities = await api.readResource(serverName, { uri: resourceUri });
+        const act = activities[0];
+        if (cancelled) return;
+        if (!act || act.outcome === "error") {
+          setState({ loading: false, error: act?.error ?? "failed to read app resource" });
+          return;
+        }
+        const content = pickAppContent(act.result?.contents ?? []);
+        if (!content) {
+          setState({ loading: false, payload: null });
+          return;
+        }
+        setState({ loading: false, payload: appPayloadFromContent(content) });
+      } catch (e) {
+        if (cancelled) return;
+        setState({
+          loading: false,
+          error: e instanceof ApiError ? e.message : (e as Error).message,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [serverName, resourceUri]);
+
+  if (state.loading) {
+    return (
+      <div className="rounded-md border border-border/60 bg-card/30 px-4 py-8 grid place-items-center text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+      </div>
+    );
+  }
+  if (state.error) {
+    return <ErrorMessage error={state.error} />;
+  }
+  if (!state.payload) {
+    return (
+      <div className="rounded-md border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted-foreground">
+        The linked resource <span className="font-mono">{resourceUri}</span> didn't
+        return renderable UI content.
+      </div>
+    );
+  }
+
+  return (
+    <McpAppFrame
+      serverName={serverName}
+      kind={state.payload.kind}
+      html={state.payload.html}
+      url={state.payload.url}
+      meta={state.payload.meta}
+      toolInput={toolInput}
+      toolResult={toolResult}
+      title={`${toolName} · ${resourceUri}`}
+    />
   );
 }
 
@@ -1708,7 +1864,15 @@ function JsonSubField({
 /* Result rendering                                                    */
 /* ------------------------------------------------------------------ */
 
-function ToolResultView({ state }: { state: CallState }) {
+function ToolResultView({
+  state,
+  serverName,
+  toolInput,
+}: {
+  state: CallState;
+  serverName: string;
+  toolInput?: Record<string, unknown>;
+}) {
   const errorMsg = state.error ?? (state.activity?.outcome === "error" ? state.activity.error : null);
   if (errorMsg) {
     return <ErrorMessage error={errorMsg} errorResponse={state.errorResponse} />;
@@ -1724,7 +1888,13 @@ function ToolResultView({ state }: { state: CallState }) {
   return (
     <div className="space-y-3">
       {r.content.map((block, i) => (
-        <ContentBlockView key={i} block={block} />
+        <ContentBlockView
+          key={i}
+          block={block}
+          serverName={serverName}
+          toolInput={toolInput}
+          toolResult={r}
+        />
       ))}
       {r.structuredContent !== undefined && (
         <CodeBlock language="application/json" caption="structuredContent">
@@ -1735,7 +1905,17 @@ function ToolResultView({ state }: { state: CallState }) {
   );
 }
 
-function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
+function ContentBlockView({
+  block,
+  serverName,
+  toolInput,
+  toolResult,
+}: {
+  block: ToolResult["content"][number];
+  serverName: string;
+  toolInput?: Record<string, unknown>;
+  toolResult: ToolResult;
+}) {
   if (block.type === "text") {
     return (
       <CodeBlock language="text" caption="text">
@@ -1773,6 +1953,26 @@ function ContentBlockView({ block }: { block: ToolResult["content"][number] }) {
   }
   if (block.type === "resource") {
     const inner = block.resource;
+    // An embedded `ui://` (or HTML/URI-list) resource is a classic mcp-ui app:
+    // render it interactively rather than dumping its source.
+    const appPayload =
+      isUiResourceUri(inner.uri) || inner.mimeType
+        ? appPayloadFromContent(inner)
+        : null;
+    if (appPayload) {
+      return (
+        <McpAppFrame
+          serverName={serverName}
+          kind={appPayload.kind}
+          html={appPayload.html}
+          url={appPayload.url}
+          meta={appPayload.meta}
+          toolInput={toolInput}
+          toolResult={toolResult}
+          title={inner.uri}
+        />
+      );
+    }
     return (
       <div className="rounded-md border border-border/60 bg-card/30 p-3 space-y-2">
         <div className="text-xs text-muted-foreground/80 font-mono">

@@ -31,6 +31,40 @@ or paste into it. You can find an approximate token count for the response. Form
 are saved in global state, so you can switch between tools/resources without needing to
 re-enter your inputs.
 
+### MCP Apps (interactive UIs)
+
+The inspector supports [MCP Apps](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp)
+(SEP-1865). It advertises the `io.modelcontextprotocol/ui` extension during
+`initialize`, so servers expose their UI-enabled tools, and renders those apps
+in a sandboxed iframe.
+
+- Tools that declare a UI (`_meta.ui.resourceUri`, the deprecated
+  `ui/resourceUri`, or the OpenAI `openai/outputTemplate` alias) are flagged with
+  an app icon. Calling such a tool fetches its `ui://` template and renders it
+  beneath the response, fed the tool's input and result.
+- The host side is the official [`@modelcontextprotocol/ext-apps`](https://www.npmjs.com/package/@modelcontextprotocol/ext-apps)
+  `AppBridge` over `postMessage`: `ui/initialize` → `ui/notifications/initialized`
+  → `ui/notifications/tool-input` / `tool-result`, plus app-initiated `tools/call`,
+  `resources/read`, `ui/open-link`, `ui/message`, display-mode and resize
+  requests. Tool calls and resource reads are proxied to the server through the
+  inspector's API, so they also appear in the activity feed; every message the
+  app exchanges with the host is shown in a live log.
+- Embedded `ui://` resources in a tool result (`text/html`, `text/uri-list`) are
+  rendered inline, and UI resources can be previewed directly from the
+  **Resources** tab.
+
+Apps render in a **sandbox proxy** on a sibling origin (`127.0.0.1`↔`localhost`,
+or a dedicated host for the Electron `app:` scheme), as the spec prescribes —
+mirroring the official MCP Inspector's proxy. This lets the app be granted
+`allow-same-origin` — so storage, workers, and frameworks like CesiumJS work —
+while staying cross-origin to the dashboard, unable to reach its DOM, storage, or
+API. The proxy injects the app via `document.write` rather than `srcdoc` (a
+`srcdoc` document loads at `about:srcdoc`, which breaks some apps' workers and
+relative-URL resolution). If no sibling origin is reachable, the host falls back
+to an opaque-origin inline `srcdoc` (no same-origin; simple apps still render).
+When a resource declares `_meta.ui.csp`, its origin allowlist is enforced exactly;
+otherwise a permissive policy is used so apps actually render.
+
 ### Server sources
 
 The inspector has its own server config file at `~/.config/mcp-inspector/mcp.json`
@@ -61,6 +95,7 @@ packages/
 │   └── src/
 │       ├── client.ts     # connect() — picks transport, runs OAuth flow with retry
 │       ├── actions.ts    # primitive actions used by CLI, REPL, and tRPC
+│       ├── apps.ts       # MCP Apps (SEP-1865) constants + _meta/UI detection
 │       ├── config.ts     # .mcp.json loader (cwd + home, with merging)
 │       ├── oauth.ts      # FileOAuthProvider + loopback callback server
 │       ├── target.ts     # parse "target" string into transport spec
@@ -82,11 +117,11 @@ packages/
 │   └── src/
 │       ├── App.tsx
 │       ├── pages/        # overview, resources, tools, prompts, completions, auth, servers
-│       ├── components/   # header, nav-tabs, status-dot, code-block, ui/* …
+│       ├── components/   # header, nav-tabs, mcp-app-frame (sandboxed app host), ui/* …
 │       ├── stores/       # Zustand state (activity, connection, results, …)
 │       ├── data/         # tRPC client + types
 │       ├── hooks/
-│       └── lib/          # utilities, schema builder
+│       └── lib/          # utilities, schema builder, mcp-apps protocol + app-content
 │
 └── electron/             # native desktop app
     ├── src/
