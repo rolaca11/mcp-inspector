@@ -14,6 +14,7 @@ import type { OAuthClientMetadata } from "@modelcontextprotocol/sdk/shared/auth.
 import pc from "picocolors";
 
 import { authFile } from "./paths.js";
+import { uiClientExtensions } from "./apps.js";
 import {
   FileOAuthProvider,
   openInBrowser,
@@ -26,6 +27,13 @@ const CLIENT_INFO: Implementation = {
   name: "mcp-inspector",
   version: VERSION,
 };
+
+/**
+ * Capabilities the inspector advertises during `initialize`. We declare the
+ * MCP Apps (`io.modelcontextprotocol/ui`) extension so servers expose their
+ * UI-enabled tools; the dashboard renders those apps in a sandboxed iframe.
+ */
+const CLIENT_CAPABILITIES = { extensions: uiClientExtensions() };
 
 export interface ConnectOptions {
   /** Override the OAuth client name reported during dynamic client registration. */
@@ -84,7 +92,7 @@ async function connectStdio(
     stderr: "inherit",
     ...(target.cwd ? { cwd: target.cwd } : {}),
   });
-  const client = new Client(CLIENT_INFO, { capabilities: {} });
+  const client = new Client(CLIENT_INFO, { capabilities: CLIENT_CAPABILITIES });
   await client.connect(transport);
 
   return {
@@ -109,7 +117,8 @@ async function connectHttp(
 
   // Reuse stored tokens if any. We start the loopback server only when needed
   // because once a tab is opened the user expects the CLI to be waiting.
-  const buildClient = () => new Client(CLIENT_INFO, { capabilities: {} });
+  const buildClient = () =>
+    new Client(CLIENT_INFO, { capabilities: CLIENT_CAPABILITIES });
 
   // Extra HTTP headers from a named-config entry get forwarded to every
   // transport request via `requestInit.headers`.

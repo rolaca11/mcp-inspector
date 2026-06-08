@@ -1,7 +1,9 @@
 import * as React from "react";
 import {
   AlertCircle,
+  AppWindow,
   Check,
+  Code,
   Copy,
   Eye,
   FileText,
@@ -46,6 +48,9 @@ import {
 } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
+import { McpAppFrame } from "@/components/mcp-app-frame";
+import { appPayloadFromContent } from "@/lib/app-content";
+import { isRenderableUiResource } from "@/lib/mcp-apps";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -116,6 +121,12 @@ function itemLabel(item: ListItem) {
   return item.template.title ?? item.template.name;
 }
 
+function itemIsUi(item: ListItem) {
+  return item.kind === "static"
+    ? isRenderableUiResource(item.resource.mimeType, item.resource.uri)
+    : isRenderableUiResource(item.template.mimeType, item.template.uriTemplate);
+}
+
 function CombinedResourcesPanel({
   serverName,
   resources,
@@ -172,13 +183,19 @@ function CombinedResourcesPanel({
               type="button"
               onClick={() => setSelected(item)}
               className={cn(
-                "w-full rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer truncate",
+                "flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer",
                 itemKey(item) === (selected ? itemKey(selected) : null)
                   ? "bg-accent text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {itemLabel(item)}
+              <span className="truncate">{itemLabel(item)}</span>
+              {itemIsUi(item) && (
+                <AppWindow
+                  className="ml-auto size-3.5 shrink-0 text-info"
+                  aria-label="UI resource"
+                />
+              )}
             </button>
           ))}
           {items.length === 0 && (
@@ -297,7 +314,7 @@ function ResourcePreview({
           {error ? (
             <ErrorMessage error={error} errorResponse={errorResponse} />
           ) : result ? (
-            <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
+            <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
           ) : (
             <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
               Click <span className="font-medium text-foreground">Read</span> to
@@ -477,7 +494,7 @@ function TemplatePreview({
           {error ? (
             <ErrorMessage error={error} errorResponse={errorResponse} />
           ) : result ? (
-            <ResourceContentsView contents={result.contents} readAt={null} tokenCount={null} />
+            <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
           ) : (
             <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
               {fullyExpanded ? (
@@ -518,10 +535,12 @@ function CopyUriButton({ text }: { text: string }) {
 
 function ResourceContentsView({
   contents,
+  serverName,
   readAt,
   tokenCount,
 }: {
   contents: ResourceContents[];
+  serverName: string;
   readAt: number | null;
   tokenCount?: number | null;
 }) {
@@ -539,7 +558,7 @@ function ResourceContentsView({
   return (
     <div className="space-y-3">
       {contents.map((c, i) => (
-        <ResourceContentBlock key={i} content={c} caption={
+        <ResourceContentBlock key={i} content={c} serverName={serverName} caption={
           i === 0 ? caption : undefined
         } />
       ))}
@@ -549,13 +568,22 @@ function ResourceContentsView({
 
 function ResourceContentBlock({
   content,
+  serverName,
   caption,
 }: {
   content: ResourceContents;
+  serverName: string;
   caption?: string;
 }) {
   const meta = `${content.mimeType ?? "?"}${caption ? ` · ${caption}` : ""
     }`;
+
+  // A `ui://` (or HTML/URI-list) resource can be previewed as a live app.
+  const appPayload = React.useMemo(() => appPayloadFromContent(content), [content]);
+  if (appPayload) {
+    return <ResourceAppPreview content={content} serverName={serverName} meta={meta} />;
+  }
+
   if (content.text != null) {
     const formatted = tryFormatJson(content.text, content.mimeType);
     return (
@@ -579,6 +607,92 @@ function ResourceContentBlock({
   );
 }
 
+
+/**
+ * A UI resource shown as a live app, with a toggle to inspect its source.
+ */
+function ResourceAppPreview({
+  content,
+  serverName,
+  meta,
+}: {
+  content: ResourceContents;
+  serverName: string;
+  meta: string;
+}) {
+  const [view, setView] = React.useState<"preview" | "source">("preview");
+  const payload = React.useMemo(() => appPayloadFromContent(content), [content]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground/80 font-mono truncate">
+          {meta}
+        </span>
+        <div className="ml-auto flex shrink-0 overflow-hidden rounded-md border border-border/60">
+          <ViewToggle
+            active={view === "preview"}
+            onClick={() => setView("preview")}
+            icon={<AppWindow className="size-3" />}
+            label="Preview"
+          />
+          <ViewToggle
+            active={view === "source"}
+            onClick={() => setView("source")}
+            icon={<Code className="size-3" />}
+            label="Source"
+          />
+        </div>
+      </div>
+      {view === "preview" && payload ? (
+        <McpAppFrame
+          serverName={serverName}
+          kind={payload.kind}
+          html={payload.html}
+          url={payload.url}
+          meta={payload.meta}
+          title={content.uri}
+        />
+      ) : content.text != null ? (
+        <CodeBlock language={content.mimeType ?? "text/html"}>
+          {content.text}
+        </CodeBlock>
+      ) : content.blob != null ? (
+        <div className="rounded-md border border-border/60 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
+          Binary blob · {formatBytes(approxDecodedLength(content.blob))} (base64)
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ViewToggle({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors cursor-pointer",
+        active
+          ? "bg-info/15 text-info"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
 
 function Loading() {
   return (

@@ -61,6 +61,8 @@ export interface MCPResource {
   description?: string;
   mimeType?: string;
   size?: number;
+  /** Extension metadata — carries `_meta.ui` for MCP Apps UI resources. */
+  _meta?: Record<string, unknown>;
 }
 
 export interface MCPResourceTemplate {
@@ -99,6 +101,8 @@ export interface MCPTool {
   description?: string;
   inputSchema: MCPToolSchema;
   outputSchema?: unknown;
+  /** Extension metadata — carries `_meta.ui.resourceUri` for MCP Apps. */
+  _meta?: Record<string, unknown>;
 }
 
 export interface MCPPromptArg {
@@ -129,6 +133,7 @@ export type ContentBlock =
         mimeType?: string;
         text?: string;
         blob?: string;
+        _meta?: Record<string, unknown>;
       };
       annotations?: unknown;
     }
@@ -145,6 +150,7 @@ export interface ResourceContents {
   mimeType?: string;
   text?: string;
   blob?: string;
+  _meta?: Record<string, unknown>;
 }
 
 export interface ReadResourceResult {

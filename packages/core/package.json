@@ -6,6 +6,7 @@
   "exports": {
     "./client": "./src/client.ts",
     "./actions": "./src/actions.ts",
+    "./apps": "./src/apps.ts",
     "./config": "./src/config.ts",
     "./config-files": "./src/config-files.ts",
     "./oauth": "./src/oauth.ts",

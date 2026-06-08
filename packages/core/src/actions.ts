@@ -58,14 +58,22 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
     caps.prompts ? safeList(() => session.client.listPrompts()) : { prompts: [] as PromptLike[] },
   ]);
 
+  // A list call can fail even when the capability is advertised (e.g. a server
+  // declares `resources` but doesn't implement `resources/templates/list`).
+  // `safeList` returns `{}` in that case, so default each slice to an array.
+  const resourceList = resources.resources ?? [];
+  const templateList = templates.resourceTemplates ?? [];
+  const toolList = tools.tools ?? [];
+  const promptList = prompts.prompts ?? [];
+
   if (opts.json) {
     printJson({
       server: info,
       capabilities: caps,
-      resources: resources.resources,
-      resourceTemplates: templates.resourceTemplates,
-      tools: tools.tools,
-      prompts: prompts.prompts,
+      resources: resourceList,
+      resourceTemplates: templateList,
+      tools: toolList,
+      prompts: promptList,
     });
     return;
   }
@@ -88,13 +96,13 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
   }
   console.log();
 
-  printResources(resources.resources, opts);
+  printResources(resourceList, opts);
   console.log();
-  printResourceTemplates(templates.resourceTemplates, opts);
+  printResourceTemplates(templateList, opts);
   console.log();
-  printTools(tools.tools, opts);
+  printTools(toolList, opts);
   console.log();
-  printPrompts(prompts.prompts, opts);
+  printPrompts(promptList, opts);
   if (opts.countTokens) {
     const payload = { resources, templates, tools, prompts };
     emitTokenCount(payload, opts);
