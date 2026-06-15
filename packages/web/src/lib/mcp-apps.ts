@@ -220,7 +220,15 @@ export function cspToString(csp?: UiCsp): string {
     .join("; ");
 }
 
-const CSP_META_RE = /<meta[^>]+http-equiv=["']?content-security-policy["']?[^>]*>/i;
+const CSP_META_RE =
+  /<meta\b(?=[^>]*\bhttp-equiv\s*=\s*(['"]?)content-security-policy\1)[^>]*>/gi;
+
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
 
 /**
  * Return an HTML document ready for `srcdoc`, with a host-controlled CSP
@@ -229,7 +237,7 @@ const CSP_META_RE = /<meta[^>]+http-equiv=["']?content-security-policy["']?[^>]*
  */
 export function buildSrcDoc(html: string, csp?: UiCsp): string {
   const policy = cspToString(csp);
-  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
+  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${escapeHtmlAttr(policy)}">`;
   const withoutServerCsp = html.replace(CSP_META_RE, "");
 
   // Insert right after <head ...> when present so the policy applies before any

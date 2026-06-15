@@ -25,6 +25,15 @@ import { configDir } from "@rolaca11/mcp-inspector-core/paths";
 import { runRepl } from "./repl.js";
 import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
 import { parseTarget, setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
+import {
+  createTeamCityStream,
+  loadSuites,
+  renderReport,
+  runSuites,
+  REPORTERS,
+  type ReporterName,
+  type RunOptions,
+} from "@rolaca11/mcp-inspector-core/testing";
 import { VERSION } from "@rolaca11/mcp-inspector-core/version";
 
 interface GlobalOpts {
@@ -682,6 +691,106 @@ config
   });
 
 /* ------------------------------------------------------------------ */
+/* test                                                                */
+/* ------------------------------------------------------------------ */
+
+attachGlobal(
+  program
+    .command("test")
+    .argument(
+      "[paths...]",
+      "test files or directories to run (default: ./mcp-tests)",
+    )
+    .option(
+      "--target <target>",
+      "default target for suites/cases that don't declare one",
+    )
+    .addOption(
+      new Option("--reporter <name>", "output format").choices([...REPORTERS]),
+    )
+    .option("--out <file>", "write the report to a file instead of stdout")
+    .option("--bail", "stop after the first failing case")
+    .option("--filter <substr>", "only run cases whose name includes <substr>")
+    .option(
+      "--var <pair>",
+      "set a variable as key=value (repeatable)",
+      (v: string, prev: string[]) => [...prev, v],
+      [] as string[],
+    )
+    .description(
+      "Run declarative YAML/JSON test suites against MCP servers",
+    )
+    .action(async (paths: string[], _opts, cmd: Command) => {
+      const opts = collectOpts(cmd) as GlobalOpts & {
+        target?: string;
+        reporter?: ReporterName;
+        out?: string;
+        bail?: boolean;
+        filter?: string;
+        var?: string[];
+      };
+
+      const inputPaths = paths.length > 0 ? paths : ["mcp-tests"];
+      // --json is shorthand for the json reporter.
+      const reporter: ReporterName = opts.json ? "json" : opts.reporter ?? "console";
+      const vars = parseVarPairs(opts.var ?? []);
+
+      const suites = await loadSuites(inputPaths);
+      if (suites.length === 0) {
+        console.error(
+          pc.yellow(
+            `No test files (.yaml/.yml/.json) found in: ${inputPaths.join(", ")}`,
+          ),
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const runOptions: RunOptions = {
+        ...(opts.target ? { defaultTarget: opts.target } : {}),
+        vars,
+        ...(opts.bail ? { bail: true } : {}),
+        ...(opts.filter ? { filter: opts.filter } : {}),
+        connectOptions: {
+          ...(opts.scope ? { scope: opts.scope } : {}),
+          ...(opts.clientName ? { clientName: opts.clientName } : {}),
+          ...(opts.quiet ? { quiet: true } : {}),
+        },
+      };
+
+      // For the teamcity reporter on stdout, stream service messages live as
+      // each case resolves, so JetBrains / TeamCity build the test tree in
+      // real time. With --out we fall through to the batch render below.
+      const liveTeamCity =
+        reporter === "teamcity" && !opts.out
+          ? createTeamCityStream((line) => process.stdout.write(line + "\n"))
+          : null;
+      if (liveTeamCity) {
+        runOptions.onCaseStart = liveTeamCity.onCaseStart;
+        runOptions.onCaseComplete = liveTeamCity.onCaseComplete;
+      }
+
+      const report = await runSuites(suites, runOptions);
+
+      if (liveTeamCity) {
+        liveTeamCity.end();
+      } else {
+        const color =
+          reporter === "console" && !opts.out && process.stdout.isTTY === true;
+        const output = renderReport(reporter, report, { color });
+        if (opts.out) {
+          writeFileSync(opts.out, output + "\n");
+          if (!opts.quiet) console.error(pc.dim(`report written to ${opts.out}`));
+        } else {
+          console.log(output);
+        }
+      }
+
+      if (!report.ok) process.exitCode = 1;
+    }),
+);
+
+/* ------------------------------------------------------------------ */
 /* serve                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -775,6 +884,16 @@ function parseJsonObject(s: string, label: string): Record<string, unknown> {
     throw new Error(`${label} must be a JSON object`);
   }
   return parsed as Record<string, unknown>;
+}
+
+function parseVarPairs(pairs: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const p of pairs) {
+    const eq = p.indexOf("=");
+    if (eq === -1) throw new Error(`--var must be key=value, got: ${p}`);
+    out[p.slice(0, eq)] = p.slice(eq + 1);
+  }
+  return out;
 }
 
 function parseStringMap(s: string, label: string): Record<string, string> {

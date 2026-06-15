@@ -108,7 +108,7 @@ export function McpAppFrame({
     () => (kind === "html" && html != null ? buildSrcDoc(html, meta?.csp) : undefined),
     [kind, html, meta?.csp],
   );
-  const srcDocRef = React.useRef(srcDoc);
+  const htmlRef = React.useRef(html);
 
   const [height, setHeight] = React.useState(DEFAULT_HEIGHT);
   const [expanded, setExpanded] = React.useState(false);
@@ -127,8 +127,8 @@ export function McpAppFrame({
     expandedRef.current = expanded;
   }, [expanded]);
   React.useEffect(() => {
-    srcDocRef.current = srcDoc;
-  }, [srcDoc]);
+    htmlRef.current = html;
+  }, [html]);
 
   const log = React.useCallback(
     (tone: EventTone, label: string, detail?: string) => {
@@ -265,8 +265,9 @@ export function McpAppFrame({
       proxyReadyRef.current = true;
       log("in", "sandbox-proxy-ready");
       void bridge.sendSandboxResourceReady({
-        html: srcDocRef.current ?? "",
+        html: htmlRef.current ?? "",
         sandbox: sandboxAttr({ sameOrigin: true }),
+        ...(meta?.csp ? { csp: meta.csp } : {}),
         ...(meta?.permissions
           ? { permissions: toResourcePermissions(meta.permissions) }
           : {}),

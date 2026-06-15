@@ -5,7 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
-import { connect, type Session } from "@rolaca11/mcp-inspector-core/client";
+import {
+  createSessionPool,
+  type SessionPool,
+} from "@rolaca11/mcp-inspector-core/session-pool";
 import {
   ensureInspectorConfig,
   loadConfigSync,
@@ -38,7 +41,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SCHEME = "app";
 const HOST = "inspector";
-const SESSION_IDLE_MS = 5 * 60 * 1000;
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -76,82 +78,10 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 /* ------------------------------------------------------------------ */
-/* Session pool (same contract as the CLI server)                      */
+/* Session pool (shared with the CLI server, see core/session-pool)    */
 /* ------------------------------------------------------------------ */
 
 const pendingAuthUrls = new Map<string, string>();
-
-class SessionPool {
-  #entries = new Map<
-    string,
-    {
-      session: Session | null;
-      pending: Promise<Session> | null;
-      lastUsed: number;
-      timer: ReturnType<typeof setTimeout> | null;
-    }
-  >();
-
-  async acquire(name: string): Promise<Session> {
-    let entry = this.#entries.get(name);
-    if (!entry) {
-      entry = {
-        session: null,
-        pending: null,
-        lastUsed: Date.now(),
-        timer: null,
-      };
-      this.#entries.set(name, entry);
-    }
-
-    entry.lastUsed = Date.now();
-    if (entry.timer) clearTimeout(entry.timer);
-    entry.timer = setTimeout(
-      () => void this.release(name, true),
-      SESSION_IDLE_MS,
-    );
-
-    if (entry.session) return entry.session;
-    if (entry.pending) return entry.pending;
-
-    entry.pending = connect(name, {
-      onRedirect: (url) => {
-        pendingAuthUrls.set(name, url.toString());
-      },
-    })
-      .then((s) => {
-        entry!.session = s;
-        entry!.pending = null;
-        return s;
-      })
-      .catch((err) => {
-        entry!.pending = null;
-        throw err;
-      });
-
-    return entry.pending;
-  }
-
-  async release(name: string, hard = false): Promise<void> {
-    const entry = this.#entries.get(name);
-    if (!entry) return;
-    if (entry.timer) {
-      clearTimeout(entry.timer);
-      entry.timer = null;
-    }
-    if (hard) {
-      const s = entry.session;
-      entry.session = null;
-      this.#entries.delete(name);
-      if (s) await s.close();
-    }
-  }
-
-  async closeAll(): Promise<void> {
-    const all = Array.from(this.#entries.keys());
-    for (const name of all) await this.release(name, true);
-  }
-}
 
 /* ------------------------------------------------------------------ */
 /* App lifecycle                                                       */
@@ -172,7 +102,9 @@ async function createWindow(): Promise<void> {
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 
-  const sessions = new SessionPool();
+  const sessions = createSessionPool({
+    onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),
+  });
   activeSessions = sessions;
 
   const webDir = resolveWebDir();

@@ -261,6 +261,13 @@ function wrapSession(
     target,
     id,
     async close() {
+      // Spec: clients that no longer need a session SHOULD send a DELETE with
+      // its Mcp-Session-Id so the server can reclaim it. Servers may refuse
+      // (405) or have already dropped the session — proceed with teardown
+      // either way. Must run before close() while the transport is still open.
+      if (transport instanceof StreamableHTTPClientTransport) {
+        await transport.terminateSession().catch(() => {});
+      }
       await client.close().catch(() => {});
       await (transport as { close?: () => Promise<void> }).close?.().catch(
         () => {},

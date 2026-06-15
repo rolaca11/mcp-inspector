@@ -82,6 +82,23 @@ describe("buildSrcDoc", () => {
     expect(out).toContain("connect-src https://api.example.com");
   });
 
+  it("strips every server-supplied CSP meta regardless of attribute order", () => {
+    const html =
+      '<html><head><meta content="default-src *" http-equiv="Content-Security-Policy"><meta http-equiv=content-security-policy content="img-src *"></head><body></body></html>';
+    const out = buildSrcDoc(html, { connectDomains: ["https://api.example.com"] });
+    expect(out).not.toContain("default-src *");
+    expect(out).not.toContain("img-src *");
+    expect(out.match(/http-equiv="Content-Security-Policy"/g)).toHaveLength(1);
+  });
+
+  it("escapes the generated CSP before injecting it into an HTML attribute", () => {
+    const out = buildSrcDoc("<h1>x</h1>", {
+      connectDomains: ['https://api.example.com/"bad'],
+    });
+    expect(out).toContain("https://api.example.com/&quot;bad");
+    expect(out).not.toContain('https://api.example.com/"bad');
+  });
+
   it("reflects declared CSP domains in the injected policy", () => {
     const out = buildSrcDoc("<h1>x</h1>", {
       connectDomains: ["https://api.example.com"],

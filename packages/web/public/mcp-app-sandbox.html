@@ -75,6 +75,107 @@
           return out.join("; ");
         }
 
+        function hasDeclaredCsp(csp) {
+          if (!csp || typeof csp !== "object") return false;
+          return [
+            csp.connectDomains,
+            csp.resourceDomains,
+            csp.frameDomains,
+            csp.baseUriDomains,
+          ].some(function (domains) {
+            return Array.isArray(domains) && domains.length > 0;
+          });
+        }
+
+        function sourceList(value) {
+          return Array.isArray(value)
+            ? value.filter(function (item) {
+                return typeof item === "string";
+              })
+            : [];
+        }
+
+        function cspToString(csp) {
+          if (!hasDeclaredCsp(csp)) {
+            return [
+              "default-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https: data: blob:",
+              "connect-src https: wss: data: blob:",
+              "img-src https: data: blob: 'self'",
+              "worker-src 'self' blob:",
+              "frame-src https:",
+            ].join("; ");
+          }
+
+          var resource = sourceList(csp.resourceDomains);
+          var connect = sourceList(csp.connectDomains);
+          var frame = sourceList(csp.frameDomains);
+          var baseUri = sourceList(csp.baseUriDomains);
+          var directives = [
+            ["default-src", ["'none'"]],
+            [
+              "script-src",
+              [
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "'wasm-unsafe-eval'",
+              ].concat(resource),
+            ],
+            ["worker-src", ["'self'", "blob:"].concat(resource)],
+            ["style-src", ["'self'", "'unsafe-inline'"].concat(resource)],
+            ["img-src", ["'self'", "data:", "blob:"].concat(resource)],
+            ["font-src", ["'self'", "data:"].concat(resource)],
+            ["media-src", ["'self'", "data:", "blob:"].concat(resource)],
+            [
+              "connect-src",
+              connect.length > 0 ? connect.concat(["data:", "blob:"]) : ["'none'"],
+            ],
+            ["frame-src", frame.length > 0 ? frame : ["'none'"]],
+            ["object-src", ["'none'"]],
+            ["base-uri", baseUri.length > 0 ? baseUri : ["'self'"]],
+          ];
+          return directives
+            .map(function (directive) {
+              return directive[0] + " " + directive[1].join(" ");
+            })
+            .join("; ");
+        }
+
+        function escapeHtmlAttr(value) {
+          return value
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/</g, "&lt;");
+        }
+
+        function applyCsp(html, csp) {
+          var metaTag =
+            '<meta http-equiv="Content-Security-Policy" content="' +
+            escapeHtmlAttr(cspToString(csp)) +
+            '">';
+          var withoutServerCsp = html.replace(
+            /<meta\b(?=[^>]*\bhttp-equiv\s*=\s*(['"]?)content-security-policy\1)[^>]*>/gi,
+            "",
+          );
+
+          if (/<head[^>]*>/i.test(withoutServerCsp)) {
+            return withoutServerCsp.replace(/(<head[^>]*>)/i, "$1" + metaTag);
+          }
+          if (/<html[^>]*>/i.test(withoutServerCsp)) {
+            return withoutServerCsp.replace(
+              /(<html[^>]*>)/i,
+              "$1<head>" + metaTag + "</head>",
+            );
+          }
+          return (
+            "<!doctype html><html><head>" +
+            metaTag +
+            "</head><body>" +
+            withoutServerCsp +
+            "</body></html>"
+          );
+        }
+
         window.addEventListener("message", function (event) {
           var data = event.data;
 
@@ -100,7 +201,10 @@
               // URL resolution in some apps (notably the CesiumJS map). Writing
               // into the freshly-created same-origin frame lets it inherit this
               // proxy's real origin so workers and network requests resolve.
-              var html = typeof p.html === "string" ? p.html : "";
+              var html = applyCsp(
+                typeof p.html === "string" ? p.html : "",
+                p.csp,
+              );
               var doc = inner.contentDocument || (inner.contentWindow && inner.contentWindow.document);
               if (doc) {
                 doc.open();

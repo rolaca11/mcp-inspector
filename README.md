@@ -85,6 +85,22 @@ mcp-inspector serve --config /path/to/first/.mcp.json /path/to/second/.mcp.json
 
 Read more about CLI usage [here](packages/cli/README.md)
 
+### Testing
+
+Describe expectations as declarative YAML/JSON **suite files** and evaluate them
+with `mcp-inspector test` — a Postman/Newman-style runner for MCP servers. Each
+case is a sequence of steps (call a tool, read a resource, …) with assertions and
+variable capture for chaining. Reports as a console tree, JSON, JUnit XML, TAP, or
+live TeamCity service messages (for JetBrains IDEs / TeamCity), and exits non-zero
+on failure so it drops straight into CI.
+
+```sh
+mcp-inspector test ./mcp-tests --reporter junit --out results.xml
+```
+
+See the [Testing section](packages/cli/README.md#testing) of the CLI docs for the
+file format, matchers, and variables.
+
 ## Project layout
 
 The repo is a Bun monorepo with four packages:
@@ -102,6 +118,7 @@ packages/
 │       ├── format.ts     # pretty-printers (resources, tools, prompts, …)
 │       ├── paths.ts      # OAuth config-dir helpers
 │       ├── tokens.ts     # token helpers
+│       ├── testing/      # declarative test-suite runner (mcp-inspector test)
 │       ├── trpc/         # tRPC router, schemas, and activity tracking
 │       └── __tests__/    # vitest unit tests
 │

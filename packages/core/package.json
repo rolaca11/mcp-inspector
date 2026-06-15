@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./client": "./src/client.ts",
+    "./session-pool": "./src/session-pool.ts",
     "./actions": "./src/actions.ts",
     "./apps": "./src/apps.ts",
     "./config": "./src/config.ts",
@@ -18,7 +19,8 @@
     "./trpc/router": "./src/trpc/router.ts",
     "./trpc/trpc": "./src/trpc/trpc.ts",
     "./trpc/activity": "./src/trpc/activity.ts",
-    "./trpc/schemas": "./src/trpc/schemas.ts"
+    "./trpc/schemas": "./src/trpc/schemas.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -32,6 +34,7 @@
     "picocolors": "^1.1.1",
     "shell-quote": "^1.8.3",
     "tiktoken": "^1.0.22",
+    "yaml": "^2.8.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

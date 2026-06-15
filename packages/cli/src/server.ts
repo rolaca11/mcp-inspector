@@ -5,8 +5,9 @@
  * UI bundle (`dist/web/`) and a tRPC API. The CLI and the web view talk to
  * one client implementation; there is no second process.
  *
- * Sessions are cached for `SESSION_IDLE_MS` after their last use. They are
- * always closed on process exit so child stdio processes are reaped.
+ * Sessions live in the shared core session pool (idle-evicted, self-healing
+ * on session expiry). They are always closed on process exit so child stdio
+ * processes are reaped.
  */
 
 import { createReadStream, promises as fs } from "node:fs";
@@ -17,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import pc from "picocolors";
 
-import { connect, type Session } from "@rolaca11/mcp-inspector-core/client";
+import { createSessionPool } from "@rolaca11/mcp-inspector-core/session-pool";
 import {
   ensureInspectorConfig,
   loadConfigSync,
@@ -41,8 +42,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_STATIC_DIR = path.resolve(__dirname, "./web");
 const DEV_STATIC_DIR = path.resolve(__dirname, "../../web/dist");
-
-const SESSION_IDLE_MS = 5 * 60 * 1000;
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -95,7 +94,9 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 
-  const sessions = new SessionPool();
+  const sessions = createSessionPool({
+    onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),
+  });
 
   const trpcHandler = createHTTPHandler({
     router: appRouter,
@@ -268,82 +269,6 @@ async function serveStatic(
 
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
-}
-
-/* ------------------------------------------------------------------ */
-/* Session pool                                                        */
-/* ------------------------------------------------------------------ */
-
-class SessionPool {
-  #entries = new Map<
-    string,
-    {
-      session: Session | null;
-      pending: Promise<Session> | null;
-      lastUsed: number;
-      timer: NodeJS.Timeout | null;
-    }
-  >();
-
-  async acquire(name: string): Promise<Session> {
-    let entry = this.#entries.get(name);
-    if (!entry) {
-      entry = {
-        session: null,
-        pending: null,
-        lastUsed: Date.now(),
-        timer: null,
-      };
-      this.#entries.set(name, entry);
-    }
-
-    entry.lastUsed = Date.now();
-    if (entry.timer) clearTimeout(entry.timer);
-    entry.timer = setTimeout(
-      () => void this.release(name, true),
-      SESSION_IDLE_MS,
-    );
-
-    if (entry.session) return entry.session;
-    if (entry.pending) return entry.pending;
-
-    entry.pending = connect(name, {
-      onRedirect: (url) => {
-        pendingAuthUrls.set(name, url.toString());
-      },
-    })
-      .then((s) => {
-        entry!.session = s;
-        entry!.pending = null;
-        return s;
-      })
-      .catch((err) => {
-        entry!.pending = null;
-        throw err;
-      });
-
-    return entry.pending;
-  }
-
-  async release(name: string, hard = false): Promise<void> {
-    const entry = this.#entries.get(name);
-    if (!entry) return;
-    if (entry.timer) {
-      clearTimeout(entry.timer);
-      entry.timer = null;
-    }
-    if (hard) {
-      const s = entry.session;
-      entry.session = null;
-      this.#entries.delete(name);
-      if (s) await s.close();
-    }
-  }
-
-  async closeAll(): Promise<void> {
-    const all = Array.from(this.#entries.keys());
-    for (const name of all) await this.release(name, true);
-  }
 }
 
 /* ------------------------------------------------------------------ */

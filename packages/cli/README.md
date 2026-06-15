@@ -104,6 +104,11 @@ mcp-inspector serve               [--port 8765]          # web dashboard at http
                                   [--config a.json b.json]
                                   [--no-open]            # don't open the browser
                                   [--no-ui]              # tRPC API only
+
+mcp-inspector test                [paths...]             # run test suites (default: ./mcp-tests)
+                                  [--target <target>]    # target for suites that omit one
+                                  [--reporter console|json|junit|tap|teamcity]
+                                  [--out <file>] [--bail] [--filter <substr>] [--var k=v]
 ```
 
 Global flags (available on every leaf command):
@@ -152,6 +157,131 @@ mcp-inspector complete https://example.com/mcp \
 # Connect to an OAuth-protected HTTP server (browser opens for first call)
 mcp-inspector connect https://example.com/mcp
 ```
+
+---
+
+## Testing
+
+Codify expectations as declarative **suite files** and evaluate them with one
+command — a Postman/Newman-style runner for MCP servers:
+
+```sh
+mcp-inspector test                       # run every suite in ./mcp-tests
+mcp-inspector test ./suites              # a directory (scanned recursively)
+mcp-inspector test smoke.yaml api.yaml   # specific files
+mcp-inspector test ./suites --target everything   # target for suites that omit one
+```
+
+A suite is a YAML (`.yaml`/`.yml`) or JSON file with a `target`, optional `vars`,
+and a list of `cases`. Each case has ordered `steps`; every step performs one MCP
+action, optionally asserts on the result (`expect`) and binds values for later
+steps (`capture`).
+
+```yaml
+target: everything          # named server | URL | quoted stdio command; --target overrides
+vars:
+  greeting: hello
+cases:
+  - name: echo round-trips text
+    steps:
+      - call: echo                          # tools/call
+        with: { message: "${greeting}" }    # ${vars} and ${env.VAR} are interpolated
+        expect:
+          isError: false
+          text: { contains: "hello" }       # `text` = all text blocks joined
+          content.0.text: { equals: "Echo: hello" }
+        capture:
+          echoed: content.0.text            # -> ${echoed} in later steps
+      - call: echo
+        with: { message: "again: ${echoed}" }
+        expect:
+          content.0.text: { equals: "Echo: again: Echo: hello" }
+```
+
+### Step actions
+
+Exactly one action key per step:
+
+| Key                                          | MCP call               |
+|----------------------------------------------|------------------------|
+| `call: <tool>` + `with: {…}`                 | `tools/call`           |
+| `read: <uri>`                                | `resources/read`       |
+| `get: <prompt>` + `with: {…}`                | `prompts/get`          |
+| `list: tools\|resources\|templates\|prompts` | the matching list call |
+| `complete: { refType, ref, argument, value?, context? }` | `completion/complete` |
+
+### Assertions (`expect`)
+
+`expect` maps a **dot-path into the result** to a matcher — or to a literal, which
+is shorthand for `equals`. Two virtual fields are always available: `isError` (a
+boolean, even when the server omits it) and `text` (every text block joined);
+`list` steps also add `names`.
+
+```yaml
+expect:
+  isError: false                       # literal -> equals
+  content.0.text: { equals: "hi" }
+  text: { contains: "weather" }
+  text: { matches: "temp.*[0-9]+" }    # regex (JS RegExp)
+  structuredContent.temp: { type: number, gte: -50, lte: 60 }
+  structuredContent.city: { oneOf: ["NYC", "LA"] }
+  names: { contains: "echo" }          # list step
+  structuredContent.optional: { exists: false }
+```
+
+Matchers: `equals`, `contains` (substring / array membership), `matches` (regex),
+`exists`, `type` (`string|number|boolean|object|array|null`), `gt`/`gte`/`lt`/`lte`,
+`oneOf`, `length`. Combine several in one object (e.g. `{ gte: 0, lte: 100 }`). A
+path can carry only one matcher object — to assert two things about the same
+value, use two steps. Keys containing literal dots aren't addressable.
+
+### Variables
+
+`${name}` and `${env.VAR}` are interpolated in step arguments and matcher values.
+Precedence (low → high): `--var k=v` < suite `vars` < case `vars` < `capture`d
+values. A whole-token string (`"${count}"`) preserves the referenced value's type;
+a token inside surrounding text is stringified.
+
+### Running & CI
+
+```sh
+mcp-inspector test ./suites --filter "echo"          # only cases whose name contains "echo"
+mcp-inspector test ./suites --bail                   # stop after the first failing case
+mcp-inspector test ./suites --var who=World          # seed a variable (repeatable)
+mcp-inspector test ./suites --reporter junit --out results.xml
+```
+
+| Reporter             | Output                                          |
+|----------------------|-------------------------------------------------|
+| `console` (default)  | Colored pass/fail tree with failure diffs.      |
+| `json` (or `--json`) | The full structured report.                     |
+| `junit`              | JUnit XML (GitHub Actions / GitLab / Jenkins).  |
+| `tap`                | TAP version 13.                                 |
+| `teamcity`           | TeamCity service messages (JetBrains IDEs / TeamCity). |
+
+`--out <file>` writes the report to a file instead of stdout. The command exits
+**non-zero** when any case fails, so `mcp-inspector test` works as a CI gate. A
+case stops at its first failing step (later steps usually depend on its captures).
+
+### JetBrains / TeamCity integration
+
+The `teamcity` reporter emits [TeamCity service
+messages](https://www.jetbrains.com/help/teamcity/service-messages.html) — the
+protocol JetBrains IDEs (IntelliJ IDEA, WebStorm, PyCharm, …) and TeamCity parse
+off stdout to build their **test tree**. When written to stdout it streams
+**live**, so the tree fills in case-by-case as the run progresses, with clickable
+failures.
+
+In an IDE, add a **Shell Script** run configuration that runs:
+
+```sh
+mcp-inspector test ./mcp-tests --reporter teamcity
+```
+
+The Run tool window then shows the live green/red tree. (TeamCity CI picks the
+messages up automatically.) The `junit` reporter is the alternative when you'd
+rather import a results file after the fact (IDE → *Import Tests from File*, or
+TeamCity's XML report processing).
 
 ---
 
