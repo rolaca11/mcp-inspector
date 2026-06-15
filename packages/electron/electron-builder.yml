@@ -15,19 +15,8 @@ mac:
     - dmg
     - zip
   category: public.app-category.developer-tools
-win:
-  target:
-    - nsis
 linux:
   target:
     - AppImage
-    - flatpak
   artifactName: "mcp-inspector.${ext}"
   category: Development
-flatpak:
-  runtime: org.freedesktop.Platform
-  runtimeVersion: "24.08"
-  sdk: org.freedesktop.Sdk
-  base: org.electronjs.Electron2.BaseApp
-  baseVersion: "24.08"
-  useWaylandFlags: true
