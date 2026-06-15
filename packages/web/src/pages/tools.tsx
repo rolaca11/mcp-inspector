@@ -153,7 +153,7 @@ export function ToolsPage() {
 
   if (!data && state === "connecting") {
     return (
-      <PageShell title="Tools">
+      <PageShell>
         <div className="rounded-sm border border-border/60 bg-card/30 px-6 py-12 grid place-items-center text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
         </div>
@@ -162,7 +162,7 @@ export function ToolsPage() {
   }
   if (!data) {
     return (
-      <PageShell title="Tools">
+      <PageShell>
         <Empty
           title="Not connected"
           description="Connect to this server to see its tools."
@@ -172,7 +172,7 @@ export function ToolsPage() {
   }
   if (tools.length === 0) {
     return (
-      <PageShell title="Tools">
+      <PageShell>
         <Empty
           icon={Hammer}
           title="No tools advertised"
@@ -183,23 +183,19 @@ export function ToolsPage() {
   }
 
   return (
-    <PageShell
-      title="Tools"
-      actions={
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter tools…"
-            className="pl-8 w-72"
-          />
-        </div>
-      }
-    >
+    <PageShell>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-0 self-start flex flex-col lg:max-h-[calc(100dvh-var(--chrome-top,3rem)-var(--chrome-bottom,1.75rem)-2.5rem)]">
-          <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
+        <div className="flex flex-col gap-2 px-1">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter tools…"
+              className="w-full pl-8"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             {filtered.map((t) => (
               <ToolListRow
                 key={t.name}

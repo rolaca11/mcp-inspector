@@ -89,7 +89,6 @@ export function AuthPage() {
 
   return (
     <PageShell
-      title="Auth"
       description={
         isHttp
           ? "OAuth 2.1 + PKCE state for this HTTP MCP server. mcp-inspector stores tokens, refresh tokens, and dynamic client registration on disk."

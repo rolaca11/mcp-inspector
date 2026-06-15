@@ -54,7 +54,6 @@ import { isRenderableUiResource } from "@/lib/mcp-apps";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
-  const [query, setQuery] = React.useState("");
 
   if (!server) return null;
 
@@ -69,7 +68,7 @@ export function ResourcesPage() {
   }
   if (resources.length === 0 && templates.length === 0) {
     return (
-      <PageShell title="Resources">
+      <PageShell>
         <Empty
           icon={FileText}
           title="No resources advertised"
@@ -80,25 +79,11 @@ export function ResourcesPage() {
   }
 
   return (
-    <PageShell
-      title="Resources"
-      actions={
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by URI or name…"
-            className="pl-8 w-72"
-          />
-        </div>
-      }
-    >
+    <PageShell>
       <CombinedResourcesPanel
         serverName={server!.id}
         resources={resources}
         templates={templates}
-        query={query}
       />
     </PageShell>
   );
@@ -131,14 +116,13 @@ function CombinedResourcesPanel({
   serverName,
   resources,
   templates,
-  query,
 }: {
   serverName: string;
   resources: MCPResource[];
   templates: MCPResourceTemplate[];
-  query: string;
 }) {
   const selectionStore = useSelectionStore();
+  const [query, setQuery] = React.useState("");
 
   const items = React.useMemo<ListItem[]>(() => {
     const q = query.trim().toLowerCase();
@@ -175,8 +159,17 @@ function CombinedResourcesPanel({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-      <div className="lg:sticky lg:top-0 self-start flex flex-col lg:max-h-[calc(100dvh-var(--chrome-top,3rem)-var(--chrome-bottom,1.75rem)-2.5rem)]">
-        <div className="overflow-y-auto min-h-0 flex flex-col gap-1 px-1">
+      <div className="flex flex-col gap-2 px-1">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter by URI or name…"
+            className="w-full pl-8"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
           {items.map((item) => (
             <button
               key={itemKey(item)}
@@ -696,7 +689,7 @@ function ViewToggle({
 
 function Loading() {
   return (
-    <PageShell title="Resources">
+    <PageShell>
       <div className="grid gap-4 lg:grid-cols-2">
         <SkeletonCard />
         <SkeletonCard />
@@ -708,7 +701,7 @@ function Loading() {
 function NotConnected() {
   const { rediscover, connectionState: state } = useConnectionStore();
   return (
-    <PageShell title="Resources">
+    <PageShell>
       <Empty
         title="Not connected"
         description="Connect to this server to see its resources."

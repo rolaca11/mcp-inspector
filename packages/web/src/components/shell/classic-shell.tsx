@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Outlet } from "react-router-dom";
 
 import { AppSidebar } from "@/components/shell/app-sidebar";
@@ -37,15 +36,7 @@ export function ClassicShell({
   const counts = computeCounts(data, servers.length);
 
   return (
-    <div
-      className="flex h-screen overflow-hidden bg-background"
-      style={
-        {
-          "--chrome-top": "3rem",
-          "--chrome-bottom": "1.75rem",
-        } as React.CSSProperties
-      }
-    >
+    <div className="flex h-screen overflow-hidden bg-background">
       <div
         className="hidden h-full shrink-0 lg:block"
         style={{ width: sidebarCollapsed ? "3.5rem" : "16rem" }}
