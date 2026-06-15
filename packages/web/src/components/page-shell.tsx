@@ -11,6 +11,12 @@ interface PageShellProps {
   className?: string;
 }
 
+/**
+ * Per-page container. Restructured from a centered, marketing-style column into
+ * a dense app panel: full content width, compact padding, a demoted title row
+ * (page-level actions like search sit top-right). The shell chrome (sidebar /
+ * rail, toolbar, status bar) provides the surrounding app frame.
+ */
 export function PageShell({
   title,
   description,
@@ -22,27 +28,31 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "mx-auto max-w-450 px-8 py-12 flex flex-col gap-10",
+        "flex flex-col gap-6 px-4 py-4 sm:px-6 sm:py-5",
         className,
       )}
     >
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="space-y-4 min-w-0">
-          <h1 className="text-3xl font-semibold leading-none tracking-tight text-balance">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2">
+          <h1 className="text-lg font-semibold leading-tight tracking-tight text-balance">
             {title}
           </h1>
           {description && (
-            <p className="text-base text-muted-foreground max-w-2xl text-balance leading-relaxed">
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground text-balance">
               {description}
             </p>
           )}
           {meta && (
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-sm text-muted-foreground">
               {meta}
             </div>
           )}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
+        {actions && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {actions}
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -57,7 +67,7 @@ export function MetaItem({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 h-6">
+    <span className="inline-flex h-6 items-center gap-1.5">
       {Icon && <Icon className="size-4 text-muted-foreground/70" />}
       {children}
     </span>

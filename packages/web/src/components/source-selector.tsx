@@ -7,6 +7,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface ConfigSource {
   /** absolute path */
@@ -26,12 +27,15 @@ interface SourceSelectorProps {
   sources: ConfigSource[];
   activePath: string;
   onSelect: (path: string) => void;
+  /** Extra classes for the trigger button (e.g. full-width in the sidebar). */
+  triggerClassName?: string;
 }
 
 export function SourceSelector({
   sources,
   activePath,
   onSelect,
+  triggerClassName,
 }: SourceSelectorProps) {
   const active = sources.find((s) => s.path === activePath) ?? sources[0];
 
@@ -40,13 +44,16 @@ export function SourceSelector({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="group inline-flex h-8 items-center gap-2 rounded-md border border-border/60 bg-card/40 px-2.5 text-sm transition-[background-color] cursor-pointer hover:bg-card/70"
+          className={cn(
+            "group inline-flex h-8 items-center gap-2 rounded-md border border-border/60 bg-card/40 px-2.5 text-sm transition-[background-color] cursor-pointer hover:bg-card/70",
+            triggerClassName,
+          )}
         >
-          <FolderTree className="size-3.5 text-muted-foreground" />
-          <span className="font-medium leading-none">
+          <FolderTree className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate font-medium leading-none">
             {active?.label ?? "config"}
           </span>
-          <ChevronsUpDown className="size-3 text-muted-foreground/70 group-hover:text-muted-foreground" />
+          <ChevronsUpDown className="ml-auto size-3 shrink-0 text-muted-foreground/70 group-hover:text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[26rem]">

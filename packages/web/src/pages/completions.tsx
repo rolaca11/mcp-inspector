@@ -55,7 +55,7 @@ export function CompletionsPage() {
   if (!data && state === "connecting") {
     return (
       <PageShell title="Completions">
-        <div className="rounded-xl border border-border/60 bg-card/30 px-6 py-12 grid place-items-center text-muted-foreground">
+        <div className="rounded-sm border border-border/60 bg-card/30 px-6 py-12 grid place-items-center text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
         </div>
       </PageShell>

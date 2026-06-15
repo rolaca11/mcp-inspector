@@ -24,7 +24,7 @@ export function Empty({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/60 bg-card/30 px-8 py-14 text-center",
+        "flex flex-col items-center justify-center gap-4 rounded-sm border border-dashed border-border/60 bg-card/30 px-8 py-14 text-center",
         className,
       )}
     >

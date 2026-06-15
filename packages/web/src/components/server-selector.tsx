@@ -21,6 +21,8 @@ interface ServerSelectorProps {
   /** Live connection state for the active server only. */
   activeConnection: ConnectionState;
   variant?: "primary" | "secondary";
+  /** Extra classes for the trigger button (e.g. full-width in the sidebar). */
+  triggerClassName?: string;
 }
 
 const CONNECTION_TONE: Record<
@@ -40,6 +42,7 @@ export function ServerSelector({
   onSelect,
   activeConnection,
   variant = "primary",
+  triggerClassName,
 }: ServerSelectorProps) {
   const duplicateNames = new Set(
     servers
@@ -54,10 +57,11 @@ export function ServerSelector({
         <button
           type="button"
           className={cn(
-            "group inline-flex h-8 items-center gap-2 rounded-md border border-border/60 px-2.5 text-sm transition-[background-color,border-color] cursor-pointer",
+            "group inline-flex h-8 min-w-0 items-center gap-2 rounded-md border border-border/60 px-2.5 text-sm transition-[background-color,border-color] cursor-pointer",
             variant === "primary"
               ? "bg-card/40 hover:bg-card/70"
               : "bg-transparent hover:bg-card/40",
+            triggerClassName,
           )}
         >
           <StatusDot
@@ -68,13 +72,13 @@ export function ServerSelector({
             transport={active.transport}
             className="text-muted-foreground"
           />
-          <span className="font-medium leading-none">{active.name}</span>
+          <span className="truncate font-medium leading-none">{active.name}</span>
           {activeHasDuplicateName && (
             <span className="max-w-28 truncate text-xs text-muted-foreground">
               {active.sourceLabel}
             </span>
           )}
-          <ChevronsUpDown className="size-3 text-muted-foreground/70 group-hover:text-muted-foreground" />
+          <ChevronsUpDown className="ml-auto size-3 text-muted-foreground/70 group-hover:text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
