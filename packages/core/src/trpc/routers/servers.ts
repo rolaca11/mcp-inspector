@@ -1,5 +1,7 @@
 import { promises as fs } from "node:fs";
 
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+
 import { loadConfigSync, type LoadedConfig } from "../../config.js";
 import { parseTarget, setLoadedConfig, targetId } from "../../target.js";
 import { authFile } from "../../paths.js";
@@ -8,6 +10,7 @@ import {
   type ActivityEntry,
   errorActivity,
   runActivity,
+  runActivityWithWarnings,
 } from "../activity.js";
 import {
   callToolInput,
@@ -112,6 +115,75 @@ async function deleteAuthFile(name: string) {
     if (isENOENT(e)) return { removed: false, file };
     throw e;
   }
+}
+
+type ToolOutputValidator = (value: unknown) => {
+  valid: boolean;
+  errorMessage?: string;
+};
+
+interface RawToolClient {
+  request(
+    request: { method: "tools/call"; params: { name: string; arguments: Record<string, unknown> } },
+    resultSchema: typeof CallToolResultSchema,
+  ): Promise<unknown>;
+  listTools(): Promise<{ tools?: Array<{ name: string; outputSchema?: unknown }> }>;
+  getToolOutputValidator?(toolName: string): ToolOutputValidator | undefined;
+  isToolTaskRequired?(toolName: string): boolean;
+}
+
+function validationWarning(message: string): string {
+  return `Structured content does not match the tool's output schema: ${message}`;
+}
+
+async function callToolAllowingStructuredContentWarnings(
+  session: Session,
+  toolName: string,
+  toolArgs: Record<string, unknown>,
+) {
+  const client = session.client as unknown as RawToolClient;
+  if (client.isToolTaskRequired?.(toolName)) {
+    throw new Error(
+      `Tool "${toolName}" requires task-based execution. Use client.experimental.tasks.callToolStream() instead.`,
+    );
+  }
+
+  let hasOutputSchema = false;
+  let validator = client.getToolOutputValidator?.(toolName);
+  if (!validator) {
+    const tools = (await client.listTools())?.tools ?? [];
+    hasOutputSchema = tools.some((tool) => tool.name === toolName && !!tool.outputSchema);
+    validator = client.getToolOutputValidator?.(toolName);
+  } else {
+    hasOutputSchema = true;
+  }
+
+  const result = await client.request(
+    { method: "tools/call", params: { name: toolName, arguments: toolArgs } },
+    CallToolResultSchema,
+  );
+
+  const resultObj =
+    typeof result === "object" && result !== null
+      ? (result as { structuredContent?: unknown; isError?: boolean })
+      : {};
+  const warnings: string[] = [];
+  if (hasOutputSchema && !resultObj.structuredContent && !resultObj.isError) {
+    warnings.push("Tool has an output schema but did not return structured content");
+  } else if (validator && resultObj.structuredContent) {
+    try {
+      const validationResult = validator(resultObj.structuredContent);
+      if (!validationResult.valid) {
+        warnings.push(validationWarning(validationResult.errorMessage ?? "unknown validation error"));
+      }
+    } catch (e) {
+      warnings.push(
+        `Failed to validate structured content: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  return { result, warnings: warnings.length > 0 ? warnings : undefined };
 }
 
 async function actionDiscoverActivities(
@@ -234,11 +306,12 @@ export const serversRouter = router({
           const { name: toolName, arguments: toolArgs } = item;
           if (typeof toolName !== "string")
             return errorActivity("tool-call", "", "missing `name`");
-          return runActivity("tool-call", toolName, () =>
-            session.client.callTool({
-              name: toolName,
-              arguments: toolArgs ?? {},
-            }),
+          return runActivityWithWarnings("tool-call", toolName, () =>
+            callToolAllowingStructuredContentWarnings(
+              session,
+              toolName,
+              toolArgs ?? {},
+            ),
           );
         }),
       );

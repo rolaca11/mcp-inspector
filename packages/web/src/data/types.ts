@@ -196,6 +196,7 @@ export interface ActivityResult<T = unknown> {
   tokenCount: number | null;
   result?: T;
   error?: string;
+  warnings?: string[];
 }
 
 export interface ActivitiesResponse<T = unknown> {

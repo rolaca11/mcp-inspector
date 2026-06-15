@@ -48,6 +48,14 @@ function createMockClient() {
     }) => ({
       content: [{ type: "text" as const, text: `called ${name}` }],
     }),
+    request: async ({
+      params,
+    }: {
+      method: "tools/call";
+      params: { name: string; arguments?: Record<string, unknown> };
+    }) => ({
+      content: [{ type: "text" as const, text: `called ${params.name}` }],
+    }),
     listPrompts: async () => ({
       prompts: [{ name: "test-prompt", description: "A test prompt" }],
     }),
@@ -463,6 +471,50 @@ describe("servers router", () => {
       items: [{ name: "tool-a" }, { name: "tool-b" }],
     });
     expect(result.activities).toHaveLength(2);
+  });
+
+  it("callTool returns structured content schema mismatches as warnings", async () => {
+    const client = {
+      ...createMockClient(),
+      listTools: async () => ({
+        tools: [
+          {
+            name: "test-tool",
+            inputSchema: { type: "object" as const },
+            outputSchema: { type: "object" as const },
+          },
+        ],
+      }),
+      getToolOutputValidator: () => () => ({
+        valid: false,
+        errorMessage: "expected number",
+      }),
+      request: async () => ({
+        content: [{ type: "text" as const, text: "called test-tool" }],
+        structuredContent: { value: "not a number" },
+      }),
+    };
+    const caller = createCaller(
+      createContext({
+        sessions: createMockSessionPool({
+          ...createMockSession(),
+          client: client as unknown as Session["client"],
+        }),
+      }),
+    );
+
+    const result = await caller.servers.callTool({
+      serverName: "http://test.example.com",
+      items: { name: "test-tool", arguments: {} },
+    });
+
+    expect(result.activities[0]!.outcome).toBe("ok");
+    expect(result.activities[0]!.result).toMatchObject({
+      structuredContent: { value: "not a number" },
+    });
+    expect(result.activities[0]!.warnings).toEqual([
+      "Structured content does not match the tool's output schema: expected number",
+    ]);
   });
 
   it("listPrompts returns prompts from mock session", async () => {

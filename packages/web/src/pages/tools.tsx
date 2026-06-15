@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   AlertCircle,
+  AlertTriangle,
   AppWindow,
   Asterisk,
   ChevronDown,
@@ -530,8 +531,20 @@ function ToolDetail({
                 {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
               </Badge>
             ) : callState.activity?.result ? (
-              <Badge variant={callState.activity.result.isError ? "destructive" : "success"}>
-                {callState.activity.result.isError ? "isError" : "ok"}
+              <Badge
+                variant={
+                  callState.activity.result.isError
+                    ? "destructive"
+                    : callState.activity.warnings?.length
+                      ? "warning"
+                      : "success"
+                }
+              >
+                {callState.activity.result.isError
+                  ? "isError"
+                  : callState.activity.warnings?.length
+                    ? "warning"
+                    : "ok"}
                 {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
                 {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
               </Badge>
@@ -1883,6 +1896,15 @@ function ToolResultView({
   const r = state.activity.result;
   return (
     <div className="space-y-3">
+      {state.activity.warnings?.map((warning) => (
+        <div
+          key={warning}
+          className="flex gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>{warning}</span>
+        </div>
+      ))}
       {r.content.map((block, i) => (
         <ContentBlockView
           key={i}

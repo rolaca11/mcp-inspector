@@ -78,6 +78,7 @@ function pushActivities<T>(
       durationMs: a.durationMs,
       tokenCount: a.tokenCount,
       error: a.error,
+      warnings: a.warnings,
       response: a.result,
     })),
   );
