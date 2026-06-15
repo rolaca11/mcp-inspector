@@ -66,7 +66,7 @@ export function ServersPage({
 
   if (servers.length === 0) {
     return (
-      <PageShell title="Servers" actions={addButton}>
+      <PageShell actions={addButton}>
         <Empty
           icon={FolderTree}
           title="No servers configured"
@@ -77,10 +77,7 @@ export function ServersPage({
   }
 
   return (
-    <PageShell
-      title="Servers"
-      description="Resolved view of every named server across your `.mcp.json` files."
-    >
+    <PageShell description="Resolved view of every named server across your `.mcp.json` files.">
       <div className="columns-1 gap-5 xl:columns-2">
         {sources.map(([path, list]) => {
           const isInspectorSource = list[0]?.sourceLabel === "inspector";

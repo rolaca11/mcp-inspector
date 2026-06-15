@@ -54,8 +54,8 @@ export function CompletionsPage() {
 
   if (!data && state === "connecting") {
     return (
-      <PageShell title="Completions">
-        <div className="rounded-xl border border-border/60 bg-card/30 px-6 py-12 grid place-items-center text-muted-foreground">
+      <PageShell>
+        <div className="rounded-sm border border-border/60 bg-card/30 px-6 py-12 grid place-items-center text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
         </div>
       </PageShell>
@@ -63,7 +63,7 @@ export function CompletionsPage() {
   }
   if (!data) {
     return (
-      <PageShell title="Completions">
+      <PageShell>
         <Empty
           title="Not connected"
           description="Connect to this server to use completions."
@@ -73,7 +73,7 @@ export function CompletionsPage() {
   }
   if (!data.capabilities.completions) {
     return (
-      <PageShell title="Completions">
+      <PageShell>
         <Empty
           icon={Sparkles}
           title="Completions not supported"
@@ -84,10 +84,7 @@ export function CompletionsPage() {
   }
 
   return (
-    <PageShell
-      title="Completions"
-      description="Ask the server to autocomplete an argument value. Useful for cascading dropdowns where one argument depends on another."
-    >
+    <PageShell description="Ask the server to autocomplete an argument value. Useful for cascading dropdowns where one argument depends on another.">
       <CompletionsPlayground
         serverName={server!.id}
         prompts={data.prompts}

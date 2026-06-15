@@ -47,6 +47,10 @@
   --input: oklch(0.37 0.014 var(--hue));
   --ring: oklch(0.6 0.02 var(--hue));
 
+  /* The "you are here / this fires" accent — drives sidebar/rail markers,
+     selected list rows, and the focused command-palette row. */
+  --signature: oklch(0.72 0.17 285);
+
   --chart-1: oklch(0.78 0.16 158);
   --chart-2: oklch(0.78 0.13 240);
   --chart-3: oklch(0.82 0.16 80);
@@ -55,13 +59,13 @@
 
   --radius: 0.625rem;
 
-  --sidebar: oklch(0.25 0.008 var(--hue));
+  --sidebar: oklch(0.19 0.006 var(--hue));
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.78 0.16 var(--hue));
   --sidebar-primary-foreground: oklch(0.18 0 0);
   --sidebar-accent: oklch(0.33 0.014 var(--hue));
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.35 0.012 var(--hue) / 0.8);
+  --sidebar-border: oklch(0.32 0.012 var(--hue) / 0.7);
   --sidebar-ring: oklch(0.6 0.02 var(--hue));
 }
 
@@ -99,6 +103,8 @@
 
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+
+  --color-signature: var(--signature);
 
   --color-border: var(--border);
   --color-input: var(--input);
@@ -140,8 +146,23 @@
   * {
     border-color: var(--border);
   }
+
+  /* Visible keyboard focus for every hand-rolled chrome control (icon
+     buttons, nav links, selector triggers, etc.). The shadcn <Button> keeps
+     its own token ring; everything else gets this outline, which swaps colour
+     per skin via --ring. */
+  a:focus-visible,
+  summary:focus-visible,
+  [role="button"]:not([data-slot="button"]):focus-visible,
+  button:not([data-slot="button"]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
   html,
-  body {
+  body,
+  #root {
     height: 100%;
   }
   body {
@@ -149,6 +170,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow: hidden; /* the app shell owns scrolling, not the window */
   }
 
   ::selection {
@@ -252,5 +274,14 @@
   .mono {
     font-family: var(--font-mono);
     font-feature-settings: "calt" 0, "liga" 0;
+  }
+
+  /* Hide the scrollbar (and its reserved gutter) without disabling scroll —
+     used by the collapsed sidebar rail so its icons center in the full width. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

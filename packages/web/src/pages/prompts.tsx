@@ -5,7 +5,7 @@ import { PageShell } from "@/components/page-shell";
 
 export function PromptsPage() {
   return (
-    <PageShell title="Prompts">
+    <PageShell>
       <Empty
         icon={MessageSquare}
         title="Not yet supported"

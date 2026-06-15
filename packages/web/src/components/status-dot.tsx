@@ -8,13 +8,14 @@ interface StatusDotProps {
   className?: string;
 }
 
+// Colour both the fill and `currentColor` so the glow (shadow + ping) is
+// derived from the same token and swaps with the active skin.
 const TONE: Record<Tone, string> = {
-  success: "bg-success shadow-[0_0_10px_oklch(0.78_0.16_158/0.6)]",
-  warning: "bg-warning shadow-[0_0_10px_oklch(0.82_0.16_80/0.5)]",
-  destructive:
-    "bg-destructive shadow-[0_0_10px_oklch(0.65_0.21_24/0.55)]",
-  info: "bg-info shadow-[0_0_10px_oklch(0.78_0.13_240/0.5)]",
-  muted: "bg-muted-foreground/60",
+  success: "bg-success text-success",
+  warning: "bg-warning text-warning",
+  destructive: "bg-destructive text-destructive",
+  info: "bg-info text-info",
+  muted: "bg-muted-foreground/60 text-transparent",
 };
 
 export function StatusDot({
@@ -27,17 +28,13 @@ export function StatusDot({
       className={cn(
         "relative inline-block size-2 rounded-full",
         TONE[tone],
+        tone !== "muted" && "shadow-[0_0_8px_currentColor]",
         className,
       )}
       aria-hidden
     >
       {pulse && (
-        <span
-          className={cn(
-            "absolute inset-0 rounded-full animate-ping opacity-60",
-            TONE[tone],
-          )}
-        />
+        <span className="absolute inset-0 animate-ping rounded-full bg-current opacity-60 motion-reduce:animate-none" />
       )}
     </span>
   );

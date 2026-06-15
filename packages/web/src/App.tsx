@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Navigate,
-  Outlet,
   Route,
   Routes,
   useLocation,
@@ -10,17 +9,16 @@ import {
   useParams,
 } from "react-router-dom";
 
-import { ExternalLink } from "lucide-react";
-
 import { AddServerDialog } from "@/components/add-server-dialog";
-
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
-import { NavTabs, type NavKey } from "@/components/nav-tabs";
+import { CommandPalette } from "@/components/command-palette";
+import { ClassicShell } from "@/components/shell/classic-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useServersStore, type ApiState } from "@/stores/servers-store";
-import { useConnectionStore, type ConnectionState } from "@/stores/connection-store";
+import {
+  useConnectionStore,
+  type ConnectionState,
+} from "@/stores/connection-store";
 import type { MCPServer } from "@/data/types";
 
 import { OverviewPage } from "@/pages/overview";
@@ -57,8 +55,8 @@ export default function App() {
 
   if (apiState === "loading" && servers.length === 0) {
     return (
-      <div className="min-h-screen grid place-items-center text-muted-foreground">
-        <div className="text-sm font-mono">loading…</div>
+      <div className="grid h-screen place-items-center text-muted-foreground">
+        <div className="font-mono text-sm">loading…</div>
       </div>
     );
   }
@@ -66,7 +64,7 @@ export default function App() {
   if (servers.length === 0) {
     return (
       <TooltipProvider>
-        <div className="min-h-screen flex flex-col">
+        <div className="flex h-screen flex-col">
           <NoServersScreen
             apiState={apiState}
             error={error}
@@ -80,13 +78,10 @@ export default function App() {
   const fallback = `/${encodeURIComponent(servers[0]!.id)}/overview`;
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={300}>
       <Routes>
         <Route path="/" element={<Navigate to={fallback} replace />} />
-        <Route
-          path=":serverName"
-          element={<ServerLayout />}
-        >
+        <Route path=":serverName" element={<ServerLayout />}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="resources" element={<ResourcesPage />} />
@@ -126,25 +121,17 @@ function ServerLayout() {
     );
   }
 
-  return (
-    <ServerShell
-      servers={servers}
-      active={active}
-    />
-  );
-}
-
-interface ServerShellProps {
-  servers: MCPServer[];
-  active: MCPServer;
+  return <ServerShell servers={servers} active={active} />;
 }
 
 function ServerShell({
   servers,
   active,
-}: ServerShellProps) {
-  const { data, connectionState, pendingAuthUrl, rediscover } =
-    useConnectionStore();
+}: {
+  servers: MCPServer[];
+  active: MCPServer;
+}) {
+  const connectionState = useConnectionStore((s) => s.connectionState);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -158,13 +145,6 @@ function ServerShell({
     [navigate, location.pathname],
   );
 
-  const counts: Partial<Record<NavKey, number>> = {
-    resources: (data?.resources.length ?? 0) + (data?.resourceTemplates.length ?? 0),
-    tools: data?.tools.length ?? 0,
-    prompts: data?.prompts.length ?? 0,
-    servers: servers.length,
-  };
-
   const outletContext: ServerLayoutContext = {
     servers,
     active,
@@ -173,43 +153,19 @@ function ServerShell({
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header
+    <>
+      <ClassicShell
         servers={servers}
         active={active}
-        onSelect={switchToServer}
-        connection={connectionState}
-        onConnect={rediscover}
-        onRediscover={rediscover}
-      >
-        <NavTabs serverName={active.id} counts={counts} />
-      </Header>
-
-      {pendingAuthUrl && (
-        <div className="border-b border-blue-500/30 bg-blue-500/10 px-8 py-3">
-          <div className="mx-auto flex max-w-450 items-center gap-3 text-sm">
-            <span className="text-blue-400">
-              OAuth authorization required —
-            </span>
-            <a
-              href={pendingAuthUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
-            >
-              <ExternalLink className="size-3.5" />
-              Open authorization page
-            </a>
-          </div>
-        </div>
-      )}
-
-      <main className="flex-1">
-        <Outlet context={outletContext} />
-      </main>
-
-      <Footer />
-    </div>
+        onSelectServer={switchToServer}
+        outletContext={outletContext}
+      />
+      <CommandPalette
+        servers={servers}
+        active={active}
+        onSelectServer={switchToServer}
+      />
+    </>
   );
 }
 
@@ -235,7 +191,7 @@ function NoServersScreen({
   onRetry: () => void;
 }) {
   return (
-    <div className="flex-1 grid place-items-center px-6 py-20">
+    <div className="grid flex-1 place-items-center px-6 py-20">
       <div className="flex flex-col items-center">
         <Empty
           title={apiState === "offline" ? "API unreachable" : "No servers configured"}
