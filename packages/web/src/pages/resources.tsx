@@ -35,6 +35,7 @@ import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useSyncedForm } from "@/hooks/use-synced-form";
+import { useSubmitShortcut } from "@/hooks/use-submit-shortcut";
 import { templateVariablesToZod } from "@/lib/schema-builder";
 import { api, ApiError } from "@/data/api";
 import {
@@ -376,6 +377,10 @@ function TemplatePreview({
     }
   }, [serverName, expanded, fullyExpanded, resultStore, template.uriTemplate]);
 
+  const onSubmitShortcut = useSubmitShortcut(onRead, {
+    canSubmit: fullyExpanded && !reading,
+  });
+
   return (
     <div className="space-y-5 min-w-0">
       <Card>
@@ -392,7 +397,7 @@ function TemplatePreview({
             {template.uriTemplate}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6" onKeyDown={onSubmitShortcut}>
           {template.description && (
             <MarkdownDescription className="text-muted-foreground">{template.description}</MarkdownDescription>
           )}

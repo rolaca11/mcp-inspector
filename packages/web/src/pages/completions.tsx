@@ -24,6 +24,7 @@ import { CodeBlock } from "@/components/code-block";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useSubmitShortcut } from "@/hooks/use-submit-shortcut";
 import { api, ApiError } from "@/data/api";
 import {
   extractTemplateVariables,
@@ -182,6 +183,10 @@ function CompletionsPlayground({
     }
   }, [serverName, refType, currentRef, argument, value, contextPairs]);
 
+  const onSubmitShortcut = useSubmitShortcut(onRun, {
+    canSubmit: !state.loading && !!currentRef && !!argument,
+  });
+
   if (promptRefs.length === 0 && templateRefs.length === 0) {
     return (
       <Empty
@@ -201,7 +206,7 @@ function CompletionsPlayground({
             <code className="font-mono">completion/complete</code>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-5" onKeyDown={onSubmitShortcut}>
           <div className="space-y-2">
             <Label>Reference type</Label>
             <div className="grid grid-cols-2 gap-2">

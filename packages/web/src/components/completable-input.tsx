@@ -115,9 +115,15 @@ export function CompletableInput({
         setActiveIndex((i) =>
           i <= 0 ? suggestions.length - 1 : i - 1,
         );
-      } else if (e.key === "Enter" && activeIndex >= 0) {
-        e.preventDefault();
-        selectSuggestion(suggestions[activeIndex]!);
+      } else if (e.key === "Enter") {
+        if (activeIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(suggestions[activeIndex]!);
+        } else {
+          // Nothing highlighted: close the popover but let the keypress bubble
+          // so the form's submit shortcut can send the request.
+          setOpen(false);
+        }
       } else if (e.key === "Escape") {
         e.preventDefault();
         setOpen(false);

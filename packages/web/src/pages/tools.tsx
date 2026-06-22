@@ -61,6 +61,7 @@ import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useSyncedForm } from "@/hooks/use-synced-form";
+import { useSubmitShortcut } from "@/hooks/use-submit-shortcut";
 import {
   mcpSchemaToZod,
   partialCoerce,
@@ -372,6 +373,7 @@ function ToolDetail({
 
   const hasArgs = Object.keys(properties).length > 0;
   const canCall = !callState.loading && formState.isValid;
+  const onSubmitShortcut = useSubmitShortcut(onCall, { canSubmit: canCall });
 
   // Validate the watched values directly against the schema so the tooltip can
   // describe the issues without touching react-hook-form's error state (which
@@ -417,7 +419,7 @@ function ToolDetail({
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6" onKeyDown={onSubmitShortcut}>
           {hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
