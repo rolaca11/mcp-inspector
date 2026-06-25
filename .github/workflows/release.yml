@@ -81,7 +81,15 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Publish to npm
+      - name: Publish core to npm
+        run: npm publish --access public
+        working-directory: packages/core/dist
+
+      - name: Publish vitest testing package to npm
+        run: npm publish --access public
+        working-directory: packages/vitest/dist
+
+      - name: Publish CLI to npm
         run: npm publish --access public
         working-directory: packages/cli
 

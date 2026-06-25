@@ -87,27 +87,39 @@ Read more about CLI usage [here](packages/cli/README.md)
 
 ### Testing
 
-Describe expectations as declarative YAML/JSON **suite files** and evaluate them
-with `mcp-inspector test` — a Postman/Newman-style runner for MCP servers. Each
-case is a sequence of steps (call a tool, read a resource, …) with assertions and
-variable capture for chaining. Reports as a console tree, JSON, JUnit XML, TAP, or
-live TeamCity service messages (for JetBrains IDEs / TeamCity), and exits non-zero
-on failure so it drops straight into CI.
+Write test cases against MCP servers in TypeScript and run them with
+[Vitest](https://vitest.dev). The
+[`@rolaca11/mcp-inspector-vitest`](packages/vitest/README.md) package ships a small
+set of primitives — `defineMcpTest()` (a vitest fixture that opens and tears down a
+session) plus MCP-aware matchers (`toBeOk`, `toBeMcpError`, `toHaveText`,
+`toHaveStructured`, …) — so a tool call and its assertion read in two lines:
 
-```sh
-mcp-inspector test ./mcp-tests --reporter junit --out results.xml
+```ts
+import { describe, expect } from "vitest";
+import { defineMcpTest } from "@rolaca11/mcp-inspector-vitest";
+
+const test = defineMcpTest({ target: "everything" });
+
+describe("everything", () => {
+  test("echoes input back", async ({ mcp }) => {
+    const res = await mcp.callTool("echo", { message: "hi" });
+    expect(res).toBeOk();
+    expect(res).toHaveText("hi");
+  });
+});
 ```
 
-See the [Testing section](packages/cli/README.md#testing) of the CLI docs for the
-file format, matchers, and variables.
+Because it's just Vitest, CI reporters (JUnit, TAP, …), watch mode, filtering, and
+`--coverage` all come for free. See the [Testing section](packages/cli/README.md#testing)
+of the CLI docs for the full primitive and matcher reference.
 
 ## Project layout
 
-The repo is a Bun monorepo with four packages:
+The repo is a Bun monorepo with five packages:
 
 ```
 packages/
-├── core/                 # shared library — all other packages depend on this
+├── core/                 # shared library → published as @rolaca11/mcp-inspector-core
 │   └── src/
 │       ├── client.ts     # connect() — picks transport, runs OAuth flow with retry
 │       ├── actions.ts    # primitive actions used by CLI, REPL, and tRPC
@@ -118,9 +130,11 @@ packages/
 │       ├── format.ts     # pretty-printers (resources, tools, prompts, …)
 │       ├── paths.ts      # OAuth config-dir helpers
 │       ├── tokens.ts     # token helpers
-│       ├── testing/      # declarative test-suite runner (mcp-inspector test)
 │       ├── trpc/         # tRPC router, schemas, and activity tracking
 │       └── __tests__/    # vitest unit tests
+│
+├── vitest/               # vitest primitives + matchers → published as @rolaca11/mcp-inspector-vitest
+│   └── src/              # defineMcpTest fixture, wrap() client, expect matchers
 │
 ├── cli/                  # CLI + REPL + HTTP server → published as @rolaca11/mcp-inspector
 │   └── src/

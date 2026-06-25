@@ -7,7 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run build:web && bun run build:cli && bun run build:electron",
+    "build": "bun run build:libs && bun run build:web && bun run build:cli && bun run build:electron",
+    "build:libs": "bun run build:core && bun run build:vitest",
+    "build:core": "bun run --filter @rolaca11/mcp-inspector-core build",
+    "build:vitest": "bun run --filter @rolaca11/mcp-inspector-vitest build",
     "build:cli": "bun run --filter @rolaca11/mcp-inspector build",
     "build:web": "bun run --filter @rolaca11/mcp-inspector-web build",
     "build:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron build",

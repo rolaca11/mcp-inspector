@@ -1,8 +1,21 @@
 {
   "name": "@rolaca11/mcp-inspector-core",
   "version": "1.3.2",
+  "description": "Core library for connecting to MCP (Model Context Protocol) servers over stdio or OAuth-protected HTTP — transport selection, OAuth flow, .mcp.json resolution, and typed actions.",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rolaca11/mcp-inspector.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "client",
+    "oauth",
+    "stdio"
+  ],
   "exports": {
     "./client": "./src/client.ts",
     "./session-pool": "./src/session-pool.ts",
@@ -19,13 +32,13 @@
     "./trpc/router": "./src/trpc/router.ts",
     "./trpc/trpc": "./src/trpc/trpc.ts",
     "./trpc/activity": "./src/trpc/activity.ts",
-    "./trpc/schemas": "./src/trpc/schemas.ts",
-    "./testing": "./src/testing/index.ts"
+    "./trpc/schemas": "./src/trpc/schemas.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build": "tsup && node ../../scripts/write-dist-pkg.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -34,12 +47,12 @@
     "picocolors": "^1.1.1",
     "shell-quote": "^1.8.3",
     "tiktoken": "^1.0.22",
-    "yaml": "^2.8.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/shell-quote": "^1.7.5",
+    "tsup": "^8.5.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   }
