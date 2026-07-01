@@ -11,7 +11,6 @@ import {
   Play,
   Plus,
   Save,
-  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -19,14 +18,7 @@ import { Controller, type Control, type FieldValues } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Section } from "@/components/section";
 import { EditableJsonBlock } from "@/components/editable-json-block";
 import {
   Dialog,
@@ -57,6 +49,7 @@ import { CodeBlock } from "@/components/code-block";
 import { ErrorMessage } from "@/components/error-message";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
+import { ToolsSubNav } from "@/components/shell/sidebar-capability-nav";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
@@ -122,7 +115,6 @@ function conciseIssueMessage(issue: ZodIssueLike): string {
 export function ToolsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
   const selectionStore = useSelectionStore();
-  const [query, setQuery] = React.useState("");
 
   const tools = data?.tools ?? [];
 
@@ -130,24 +122,6 @@ export function ToolsPage() {
   const selectedName = storedName && tools.find((t) => t.name === storedName)
     ? storedName
     : (tools[0]?.name ?? null);
-
-  const setSelectedName = React.useCallback(
-    (name: string) => {
-      if (server) selectionStore.set(server.id, "tools", name);
-    },
-    [server, selectionStore],
-  );
-
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return tools;
-    return tools.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.title?.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q),
-    );
-  }, [query, tools]);
 
   const selected = tools.find((t) => t.name === selectedName) ?? null;
 
@@ -186,73 +160,21 @@ export function ToolsPage() {
 
   return (
     <PageShell>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-2 px-1">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter tools…"
-              className="w-full pl-8"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            {filtered.map((t) => (
-              <ToolListRow
-                key={t.name}
-                tool={t}
-                isActive={t.name === selectedName}
-                onSelect={() => setSelectedName(t.name)}
-              />
-            ))}
-            {filtered.length === 0 && (
-              <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-                No tools match.
-              </div>
-            )}
-          </div>
+      <div className="min-w-0 space-y-4">
+        {/* On small screens the sidebar (which owns the list) is hidden, so
+            surface the picker in-content. */}
+        <div className="lg:hidden">
+          <ToolsSubNav serverName={server.id} variant="page" />
         </div>
-
-        {selected && <ToolDetail key={selected.name} serverName={server!.id} tool={selected} />}
+        {selected && (
+          <ToolDetail key={selected.name} serverName={server.id} tool={selected} />
+        )}
       </div>
     </PageShell>
   );
 }
 
 /* ------------------------------------------------------------------ */
-
-function ToolListRow({
-  tool,
-  isActive,
-  onSelect,
-}: {
-  tool: MCPTool;
-  isActive: boolean;
-  onSelect: () => void;
-}) {
-  const hasUi = toolUiResourceUri(tool._meta) !== undefined;
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer",
-        isActive
-          ? "bg-accent text-foreground font-medium"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <span className="truncate">{tool.title ?? tool.name}</span>
-      {hasUi && (
-        <AppWindow
-          className="ml-auto size-3.5 shrink-0 text-info"
-          aria-label="Has an app UI"
-        />
-      )}
-    </button>
-  );
-}
 
 interface CallState {
   loading: boolean;
@@ -393,10 +315,11 @@ function ToolDetail({
   }, [schema, watchedValues]);
 
   return (
-    <div className="space-y-5 min-w-0">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+    <div className="space-y-8 min-w-0">
+      <Section
+        titleClassName="flex items-center gap-2.5 flex-wrap"
+        title={
+          <>
             <span>{tool.title ?? tool.name}</span>
             {tool.title && (
               <span className="text-muted-foreground font-normal text-sm font-mono">
@@ -412,14 +335,16 @@ function ToolDetail({
                 app
               </Badge>
             )}
-          </CardTitle>
-          <CardDescription>
-            {tool.description && (
-              <MarkdownDescription>{tool.description}</MarkdownDescription>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6" onKeyDown={onSubmitShortcut}>
+          </>
+        }
+        description={
+          tool.description ? (
+            <MarkdownDescription>{tool.description}</MarkdownDescription>
+          ) : undefined
+        }
+        onKeyDown={onSubmitShortcut}
+      >
+        <div className="space-y-6">
           {hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
@@ -486,81 +411,77 @@ function ToolDetail({
               />
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
       {uiResourceUri && callState.activity?.outcome === "ok" && callState.activity.result && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Section
+          titleClassName="flex items-center gap-2"
+          title={
+            <>
               <AppWindow className="size-4 text-info" />
               App
-            </CardTitle>
-            <CardDescription className="font-mono truncate">
-              {uiResourceUri}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ToolAppView
-              serverName={serverName}
-              resourceUri={uiResourceUri}
-              toolName={tool.name}
-              toolInput={callState.input}
-              toolResult={callState.activity.result}
-            />
-          </CardContent>
-        </Card>
+            </>
+          }
+          descriptionClassName="font-mono truncate"
+          description={uiResourceUri}
+        >
+          <ToolAppView
+            serverName={serverName}
+            resourceUri={uiResourceUri}
+            toolName={tool.name}
+            toolInput={callState.input}
+            toolResult={callState.activity.result}
+          />
+        </Section>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Result</CardTitle>
-          <CardAction>
-            {callState.loading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                running…
-              </Badge>
-            ) : callState.error ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : callState.activity?.outcome === "error" ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-                {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
-              </Badge>
-            ) : callState.activity?.result ? (
-              <Badge
-                variant={
-                  callState.activity.result.isError
-                    ? "destructive"
-                    : callState.activity.warnings?.length
-                      ? "warning"
-                      : "success"
-                }
-              >
-                {callState.activity.result.isError
-                  ? "isError"
+      <Section
+        title="Result"
+        action={
+          callState.loading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              running…
+            </Badge>
+          ) : callState.error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
+          ) : callState.activity?.outcome === "error" ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+            </Badge>
+          ) : callState.activity?.result ? (
+            <Badge
+              variant={
+                callState.activity.result.isError
+                  ? "destructive"
                   : callState.activity.warnings?.length
                     ? "warning"
-                    : "ok"}
-                {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
-                {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <ToolResultView
-            state={callState}
-            serverName={serverName}
-            toolInput={callState.input}
-          />
-        </CardContent>
-      </Card>
+                    : "success"
+              }
+            >
+              {callState.activity.result.isError
+                ? "isError"
+                : callState.activity.warnings?.length
+                  ? "warning"
+                  : "ok"}
+              {callState.activity.durationMs != null && ` · ${callState.activity.durationMs}ms`}
+              {callState.activity.tokenCount != null && ` · ${callState.activity.tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null
+        }
+      >
+        <ToolResultView
+          state={callState}
+          serverName={serverName}
+          toolInput={callState.input}
+        />
+      </Section>
     </div>
   );
 }

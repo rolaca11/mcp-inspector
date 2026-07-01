@@ -12,6 +12,10 @@ import { ServerSelector } from "@/components/server-selector";
 import { SourceSelector } from "@/components/source-selector";
 import { useSources } from "@/components/shell/shell-helpers";
 import {
+  ResourcesSubNav,
+  ToolsSubNav,
+} from "@/components/shell/sidebar-capability-nav";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -227,7 +231,22 @@ function NavRow({
     </NavLink>
   );
 
-  if (!collapsed) return link;
+  if (!collapsed) {
+    // When this capability's page is active, its list lives here as sub-items
+    // (only mounted while active) rather than in a column on the page.
+    const subNav =
+      isActive && item.key === "resources" ? (
+        <ResourcesSubNav serverName={serverName} />
+      ) : isActive && item.key === "tools" ? (
+        <ToolsSubNav serverName={serverName} />
+      ) : null;
+    return (
+      <>
+        {link}
+        {subNav}
+      </>
+    );
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
