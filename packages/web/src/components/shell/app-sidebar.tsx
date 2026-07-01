@@ -12,9 +12,10 @@ import { ServerSelector } from "@/components/server-selector";
 import { SourceSelector } from "@/components/source-selector";
 import { useSources } from "@/components/shell/shell-helpers";
 import {
-  ResourcesSubNav,
-  ToolsSubNav,
-} from "@/components/shell/sidebar-capability-nav";
+  SubNav,
+  useCapabilitySubItems,
+  type NavSubItem,
+} from "@/components/shell/sub-nav";
 import {
   Tooltip,
   TooltipContent,
@@ -61,6 +62,7 @@ export function AppSidebar({
     active,
     onSelect,
   );
+  const subItems = useCapabilitySubItems(active.id);
 
   return (
     <aside className="flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -149,6 +151,7 @@ export function AppSidebar({
                   item={byKey(key)}
                   serverName={active.id}
                   count={counts[key]}
+                  subItems={subItems[key]}
                   collapsed={collapsed}
                 />
               ))}
@@ -194,11 +197,15 @@ function NavRow({
   item,
   serverName,
   count,
+  subItems,
   collapsed,
 }: {
   item: NavItem;
   serverName: string;
   count?: number;
+  /** Selectable children of this row; when present, drives the badge count and
+   * the nested list shown while the row is active. */
+  subItems?: NavSubItem[];
   collapsed: boolean;
 }) {
   const Icon = item.icon;
@@ -208,6 +215,7 @@ function NavRow({
   // className stringifies when this link is a Radix Slot child (the collapsed
   // tooltip trigger), which would dump the function source into `class`.
   const isActive = pathname === to || pathname.startsWith(`${to}/`);
+  const badge = subItems ? subItems.length : count;
 
   const link = (
     <NavLink
@@ -223,27 +231,21 @@ function NavRow({
     >
       <Icon className="size-4 shrink-0" />
       {!collapsed && <span className="truncate">{item.label}</span>}
-      {!collapsed && typeof count === "number" && count > 0 && (
+      {!collapsed && typeof badge === "number" && badge > 0 && (
         <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded bg-muted/50 px-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-          {count}
+          {badge}
         </span>
       )}
     </NavLink>
   );
 
   if (!collapsed) {
-    // When this capability's page is active, its list lives here as sub-items
-    // (only mounted while active) rather than in a column on the page.
-    const subNav =
-      isActive && item.key === "resources" ? (
-        <ResourcesSubNav serverName={serverName} />
-      ) : isActive && item.key === "tools" ? (
-        <ToolsSubNav serverName={serverName} />
-      ) : null;
+    // When this row's page is active, its list lives here as sub-items (only
+    // mounted while active) rather than in a column on the page.
     return (
       <>
         {link}
-        {subNav}
+        {isActive && subItems && <SubNav items={subItems} variant="sidebar" />}
       </>
     );
   }
@@ -252,7 +254,7 @@ function NavRow({
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side="right">
         {item.label}
-        {typeof count === "number" && count > 0 ? ` · ${count}` : ""}
+        {typeof badge === "number" && badge > 0 ? ` · ${badge}` : ""}
       </TooltipContent>
     </Tooltip>
   );

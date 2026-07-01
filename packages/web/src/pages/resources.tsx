@@ -41,7 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
 import { McpAppFrame } from "@/components/mcp-app-frame";
-import { ResourcesSubNav } from "@/components/shell/sidebar-capability-nav";
+import { SubNav, useCapabilitySubItems } from "@/components/shell/sub-nav";
 import { appPayloadFromContent } from "@/lib/app-content";
 import {
   buildResourceItems,
@@ -104,6 +104,7 @@ function SelectedResource({
   templates: MCPResourceTemplate[];
 }) {
   const selectionStore = useSelectionStore();
+  const subItems = useCapabilitySubItems(serverName);
 
   const items = React.useMemo(
     () => buildResourceItems(resources, templates),
@@ -123,7 +124,7 @@ function SelectedResource({
       {/* On small screens the sidebar (which owns the list) is hidden, so surface
           the picker in-content. */}
       <div className="lg:hidden">
-        <ResourcesSubNav serverName={serverName} variant="page" />
+        <SubNav items={subItems.resources ?? []} variant="page" />
       </div>
       {selected.kind === "static" ? (
         <ResourcePreview

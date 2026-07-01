@@ -49,7 +49,7 @@ import { CodeBlock } from "@/components/code-block";
 import { ErrorMessage } from "@/components/error-message";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
-import { ToolsSubNav } from "@/components/shell/sidebar-capability-nav";
+import { SubNav, useCapabilitySubItems } from "@/components/shell/sub-nav";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
@@ -115,6 +115,7 @@ function conciseIssueMessage(issue: ZodIssueLike): string {
 export function ToolsPage() {
   const { server, data, connectionState: state } = useConnectionStore();
   const selectionStore = useSelectionStore();
+  const subItems = useCapabilitySubItems(server?.id ?? "");
 
   const tools = data?.tools ?? [];
 
@@ -164,7 +165,7 @@ export function ToolsPage() {
         {/* On small screens the sidebar (which owns the list) is hidden, so
             surface the picker in-content. */}
         <div className="lg:hidden">
-          <ToolsSubNav serverName={server.id} variant="page" />
+          <SubNav items={subItems.tools ?? []} variant="page" />
         </div>
         {selected && (
           <ToolDetail key={selected.name} serverName={server.id} tool={selected} />
