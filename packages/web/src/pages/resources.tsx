@@ -8,21 +8,12 @@ import {
   Eye,
   FileText,
   Loader2,
-  Search,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Section } from "@/components/section";
 
 import { Controller } from "react-hook-form";
 
@@ -50,8 +41,12 @@ import {
 import { cn } from "@/lib/utils";
 import { MarkdownDescription } from "@/components/markdown-description";
 import { McpAppFrame } from "@/components/mcp-app-frame";
+import { SubNav, useCapabilitySubItems } from "@/components/shell/sub-nav";
 import { appPayloadFromContent } from "@/lib/app-content";
-import { isRenderableUiResource } from "@/lib/mcp-apps";
+import {
+  buildResourceItems,
+  resourceItemKey,
+} from "@/lib/capability-lists";
 
 export function ResourcesPage() {
   const { server, data, connectionState: state } = useConnectionStore();
@@ -81,7 +76,7 @@ export function ResourcesPage() {
 
   return (
     <PageShell>
-      <CombinedResourcesPanel
+      <SelectedResource
         serverName={server!.id}
         resources={resources}
         templates={templates}
@@ -91,29 +86,15 @@ export function ResourcesPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Combined resources + templates                                      */
+/* Selected resource / template detail                                 */
 /* ------------------------------------------------------------------ */
 
-type ListItem =
-  | { kind: "static"; resource: MCPResource }
-  | { kind: "template"; template: MCPResourceTemplate };
-
-function itemKey(item: ListItem) {
-  return item.kind === "static" ? item.resource.uri : item.template.uriTemplate;
-}
-
-function itemLabel(item: ListItem) {
-  if (item.kind === "static") return item.resource.title ?? item.resource.name;
-  return item.template.title ?? item.template.name;
-}
-
-function itemIsUi(item: ListItem) {
-  return item.kind === "static"
-    ? isRenderableUiResource(item.resource.mimeType, item.resource.uri)
-    : isRenderableUiResource(item.template.mimeType, item.template.uriTemplate);
-}
-
-function CombinedResourcesPanel({
+/**
+ * Renders the detail panel for the resource or template selected in the sidebar
+ * sub-nav (which owns the list). Falls back to the first entry when nothing has
+ * been selected yet.
+ */
+function SelectedResource({
   serverName,
   resources,
   templates,
@@ -123,88 +104,40 @@ function CombinedResourcesPanel({
   templates: MCPResourceTemplate[];
 }) {
   const selectionStore = useSelectionStore();
-  const [query, setQuery] = React.useState("");
+  const subItems = useCapabilitySubItems(serverName);
 
-  const items = React.useMemo<ListItem[]>(() => {
-    const q = query.trim().toLowerCase();
-    const statics: ListItem[] = resources
-      .filter(
-        (r) =>
-          !q ||
-          r.uri.toLowerCase().includes(q) ||
-          r.name.toLowerCase().includes(q) ||
-          r.title?.toLowerCase().includes(q),
-      )
-      .map((resource) => ({ kind: "static", resource }));
-    const tmpls: ListItem[] = templates
-      .filter(
-        (t) =>
-          !q ||
-          t.uriTemplate.toLowerCase().includes(q) ||
-          t.name.toLowerCase().includes(q) ||
-          t.title?.toLowerCase().includes(q),
-      )
-      .map((template) => ({ kind: "template", template }));
-    return [...statics, ...tmpls];
-  }, [query, resources, templates]);
-
-  const storedKey = selectionStore.get(serverName, "resources-selected");
-  const selected = (storedKey ? items.find((i) => itemKey(i) === storedKey) : undefined) ?? items[0] ?? null;
-
-  const setSelected = React.useCallback(
-    (item: ListItem) => {
-      selectionStore.set(serverName, "resources-selected", itemKey(item));
-    },
-    [serverName, selectionStore],
+  const items = React.useMemo(
+    () => buildResourceItems(resources, templates),
+    [resources, templates],
   );
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-      <div className="flex flex-col gap-2 px-1">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by URI or name…"
-            className="w-full pl-8"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          {items.map((item) => (
-            <button
-              key={itemKey(item)}
-              type="button"
-              onClick={() => setSelected(item)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors cursor-pointer",
-                itemKey(item) === (selected ? itemKey(selected) : null)
-                  ? "bg-accent text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <span className="truncate">{itemLabel(item)}</span>
-              {itemIsUi(item) && (
-                <AppWindow
-                  className="ml-auto size-3.5 shrink-0 text-info"
-                  aria-label="UI resource"
-                />
-              )}
-            </button>
-          ))}
-          {items.length === 0 && (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              No resources match "{query}".
-            </div>
-          )}
-        </div>
-      </div>
+  const storedKey = selectionStore.get(serverName, "resources-selected");
+  const selected =
+    (storedKey ? items.find((i) => resourceItemKey(i) === storedKey) : undefined) ??
+    items[0] ??
+    null;
 
-      {selected?.kind === "static" && (
-        <ResourcePreview key={selected.resource.uri} serverName={serverName} resource={selected.resource} />
-      )}
-      {selected?.kind === "template" && (
-        <TemplatePreview key={selected.template.uriTemplate} serverName={serverName} template={selected.template} />
+  if (!selected) return null;
+
+  return (
+    <div className="min-w-0 space-y-4">
+      {/* On small screens the sidebar (which owns the list) is hidden, so surface
+          the picker in-content. */}
+      <div className="lg:hidden">
+        <SubNav items={subItems.resources ?? []} variant="page" />
+      </div>
+      {selected.kind === "static" ? (
+        <ResourcePreview
+          key={selected.resource.uri}
+          serverName={serverName}
+          resource={selected.resource}
+        />
+      ) : (
+        <TemplatePreview
+          key={selected.template.uriTemplate}
+          serverName={serverName}
+          template={selected.template}
+        />
       )}
     </div>
   );
@@ -251,22 +184,23 @@ function ResourcePreview({
   }, [serverName, resource.uri, resultStore]);
 
   return (
-    <div className="space-y-5 min-w-0">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+    <div className="space-y-8 min-w-0">
+      <Section
+        titleClassName="flex items-center gap-2.5 flex-wrap"
+        title={
+          <>
             <span className="font-mono">{resource.title ?? resource.name}</span>
             {resource.mimeType && (
               <Badge variant="muted" className="font-mono">
                 {resource.mimeType}
               </Badge>
             )}
-          </CardTitle>
-          <CardDescription className="font-mono truncate">
-            {resource.uri}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </>
+        }
+        descriptionClassName="font-mono truncate"
+        description={resource.uri}
+      >
+        <div className="space-y-6">
           {resource.description && (
             <MarkdownDescription className="text-muted-foreground">{resource.description}</MarkdownDescription>
           )}
@@ -278,45 +212,42 @@ function ResourcePreview({
             )}
             Read
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Contents</CardTitle>
-          <CardAction>
-            {reading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                reading…
-              </Badge>
-            ) : error ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : result ? (
-              <Badge variant="success">
-                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-                {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
-                {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <ErrorMessage error={error} errorResponse={errorResponse} />
+      <Section
+        title="Contents"
+        action={
+          reading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              reading…
+            </Badge>
+          ) : error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
           ) : result ? (
-            <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
-          ) : (
-            <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-              Click <span className="font-medium text-foreground">Read</span> to
-              fetch this resource through the server.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Badge variant="success">
+              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null
+        }
+      >
+        {error ? (
+          <ErrorMessage error={error} errorResponse={errorResponse} />
+        ) : result ? (
+          <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
+        ) : (
+          <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+            Click <span className="font-medium text-foreground">Read</span> to
+            fetch this resource through the server.
+          </div>
+        )}
+      </Section>
     </div>
   );
 }
@@ -382,22 +313,24 @@ function TemplatePreview({
   });
 
   return (
-    <div className="space-y-5 min-w-0">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5 flex-wrap">
+    <div className="space-y-8 min-w-0">
+      <Section
+        titleClassName="flex items-center gap-2.5 flex-wrap"
+        title={
+          <>
             <span className="font-mono">{template.title ?? template.name}</span>
             {template.mimeType && (
               <Badge variant="muted" className="font-mono">
                 {template.mimeType}
               </Badge>
             )}
-          </CardTitle>
-          <CardDescription className="font-mono truncate">
-            {template.uriTemplate}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6" onKeyDown={onSubmitShortcut}>
+          </>
+        }
+        descriptionClassName="font-mono truncate"
+        description={template.uriTemplate}
+        onKeyDown={onSubmitShortcut}
+      >
+        <div className="space-y-6">
           {template.description && (
             <MarkdownDescription className="text-muted-foreground">{template.description}</MarkdownDescription>
           )}
@@ -462,48 +395,45 @@ function TemplatePreview({
             </code>
             {fullyExpanded && <CopyUriButton text={expanded} />}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Contents</CardTitle>
-          <CardAction>
-            {reading ? (
-              <Badge variant="muted">
-                <Loader2 className="size-3 animate-spin" />
-                reading…
-              </Badge>
-            ) : error ? (
-              <Badge variant="destructive">
-                <AlertCircle className="size-3" />
-                error
-              </Badge>
-            ) : result ? (
-              <Badge variant="success">
-                {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
-                {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
-                {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
-              </Badge>
-            ) : null}
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <ErrorMessage error={error} errorResponse={errorResponse} />
+      <Section
+        title="Contents"
+        action={
+          reading ? (
+            <Badge variant="muted">
+              <Loader2 className="size-3 animate-spin" />
+              reading…
+            </Badge>
+          ) : error ? (
+            <Badge variant="destructive">
+              <AlertCircle className="size-3" />
+              error
+            </Badge>
           ) : result ? (
-            <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
-          ) : (
-            <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-              {fullyExpanded ? (
-                <>Click <span className="font-medium text-foreground">Resolve &amp; read</span> to fetch this resource.</>
-              ) : (
-                <>Fill in the variables above to resolve the template.</>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Badge variant="success">
+              {result.contents.length} item{result.contents.length === 1 ? "" : "s"}
+              {activity?.durationMs != null && ` · ${activity.durationMs}ms`}
+              {activity?.tokenCount != null && ` · ${activity.tokenCount.toLocaleString()} tokens`}
+            </Badge>
+          ) : null
+        }
+      >
+        {error ? (
+          <ErrorMessage error={error} errorResponse={errorResponse} />
+        ) : result ? (
+          <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
+        ) : (
+          <div className="rounded-md border border-dashed border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
+            {fullyExpanded ? (
+              <>Click <span className="font-medium text-foreground">Resolve &amp; read</span> to fetch this resource.</>
+            ) : (
+              <>Fill in the variables above to resolve the template.</>
+            )}
+          </div>
+        )}
+      </Section>
     </div>
   );
 }
@@ -719,20 +649,18 @@ function NotConnected() {
 
 function SkeletonCard() {
   return (
-    <Card>
-      <CardContent className="space-y-3">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2"
-          >
-            <span className="h-3 w-3 rounded-full bg-muted/50 animate-pulse" />
-            <span className="h-3 w-32 rounded bg-muted/50 animate-pulse" />
-            <span className="h-3 flex-1 rounded bg-muted/30 animate-pulse" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-md border border-border/40 bg-card/30 px-3 py-2"
+        >
+          <span className="h-3 w-3 rounded-full bg-muted/50 animate-pulse" />
+          <span className="h-3 w-32 rounded bg-muted/50 animate-pulse" />
+          <span className="h-3 flex-1 rounded bg-muted/30 animate-pulse" />
+        </div>
+      ))}
+    </div>
   );
 }
 
