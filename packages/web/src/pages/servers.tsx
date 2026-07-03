@@ -53,18 +53,18 @@ export function ServersPage({
     }
   }
 
-  const sources = Array.from(
-    servers.reduce((map, s) => {
-      const list = map.get(s.source) ?? [];
-      list.push(s);
-      map.set(s.source, list);
-      return map;
-    }, new Map<string, MCPServer[]>()),
-  );
+  // Every config file the backend read gets a card — a source with no
+  // servers (e.g. a fresh inspector config) still shows up so users can
+  // find the file and add to it.
+  const configSources = useServersStore((s) => s.sources);
+  const sources = configSources.map((source) => ({
+    source,
+    list: servers.filter((s) => s.source === source.path),
+  }));
 
   const addButton = <AddServerDialog onAdded={fetchServers} />;
 
-  if (servers.length === 0) {
+  if (sources.length === 0 && servers.length === 0) {
     return (
       <PageShell actions={addButton}>
         <Empty
@@ -79,15 +79,15 @@ export function ServersPage({
   return (
     <PageShell description="Resolved view of every named server across your `.mcp.json` files.">
       <div className="columns-1 gap-5 xl:columns-2">
-        {sources.map(([path, list]) => {
-          const isInspectorSource = list[0]?.sourceLabel === "inspector";
+        {sources.map(({ source, list }) => {
+          const isInspectorSource = source.label === "inspector";
           return (
-            <Card key={path} className="mb-5 min-w-0 break-inside-avoid overflow-hidden">
+            <Card key={source.path} className="mb-5 min-w-0 break-inside-avoid overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex min-w-0 items-center gap-2">
                   <FolderTree className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 truncate font-mono text-foreground">
-                    {path}
+                    {source.path}
                   </span>
                 </CardTitle>
                 <CardDescription>
@@ -96,6 +96,13 @@ export function ServersPage({
                 {isInspectorSource && <CardAction>{addButton}</CardAction>}
               </CardHeader>
               <div className="divide-y divide-border/50">
+                {list.length === 0 && (
+                  <div className="px-6 py-5 text-sm text-muted-foreground">
+                    {isInspectorSource
+                      ? "No servers in this file yet — use the button above to add one."
+                      : "No servers declared in this file."}
+                  </div>
+                )}
                 {list.map((s) => {
                   const isActive = s.id === active.id;
                   const isInspector = s.sourceLabel === "inspector";

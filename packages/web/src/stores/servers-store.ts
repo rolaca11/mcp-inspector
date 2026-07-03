@@ -7,12 +7,14 @@
 import { create } from "zustand";
 
 import { api, ApiError } from "@/data/api";
-import type { MCPServer } from "@/data/types";
+import type { ConfigSource, MCPServer } from "@/data/types";
 
 export type ApiState = "loading" | "ok" | "offline" | "error";
 
 interface ServersState {
   servers: MCPServer[];
+  /** Every config file the backend read, including ones with no servers. */
+  sources: ConfigSource[];
   apiState: ApiState;
   error?: string;
   fetchServers(): Promise<void>;
@@ -23,6 +25,7 @@ let requestId = 0;
 
 export const useServersStore = create<ServersState>((set) => ({
   servers: [],
+  sources: [],
   apiState: "loading",
   error: undefined,
 
@@ -45,16 +48,22 @@ export const useServersStore = create<ServersState>((set) => ({
           ...(s.cwd ? { cwd: s.cwd } : {}),
           ...(s.headers ? { headers: s.headers } : {}),
         })),
+        sources: r.sources.map<ConfigSource>((src) => ({
+          path: src.path,
+          label: (src.label as ConfigSource["label"]) ?? "global",
+          serverCount: src.serverCount,
+        })),
         apiState: "ok",
         error: undefined,
       });
     } catch (e: unknown) {
       if (thisRequest !== requestId) return; // stale
       if (e instanceof ApiError) {
-        set({ servers: [], apiState: "error", error: e.message });
+        set({ servers: [], sources: [], apiState: "error", error: e.message });
       } else {
         set({
           servers: [],
+          sources: [],
           apiState: "offline",
           error: (e as Error).message || "Network error — is the inspector server running?",
         });

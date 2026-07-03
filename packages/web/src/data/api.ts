@@ -90,7 +90,7 @@ function pushActivities<T>(
 /* ------------------------------------------------------------------ */
 
 export interface ServersListResponse {
-  sources: Array<{ path: string; serverCount: number }>;
+  sources: Array<{ path: string; serverCount: number; label: string }>;
   errors: Array<{ path: string; message: string }>;
   servers: Array<{
     id: string;

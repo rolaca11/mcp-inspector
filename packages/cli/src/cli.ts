@@ -20,7 +20,12 @@ import pc from "picocolors";
 import * as actions from "@rolaca11/mcp-inspector-core/actions";
 import { connect } from "@rolaca11/mcp-inspector-core/client";
 import { appendConfigFiles } from "@rolaca11/mcp-inspector-core/config-files";
-import { loadConfigSync, type LoadedConfig, type ServerConfig } from "@rolaca11/mcp-inspector-core/config";
+import {
+  ensureInspectorConfig,
+  loadConfigSync,
+  type LoadedConfig,
+  type ServerConfig,
+} from "@rolaca11/mcp-inspector-core/config";
 import { configDir } from "@rolaca11/mcp-inspector-core/paths";
 import { runRepl } from "./repl.js";
 import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
@@ -849,6 +854,7 @@ program
 async function main() {
   // Load `.mcp.json` from cwd + home and make it available to parseTarget.
   // Errors here don't abort the run — they're surfaced by `mcp-inspector servers`.
+  ensureInspectorConfig();
   const config = loadConfigSync();
   setLoadedConfig(config);
   if (config.errors.length > 0 && !process.env.MCPI_QUIET_CONFIG) {

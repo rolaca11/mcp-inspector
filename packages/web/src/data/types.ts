@@ -8,6 +8,14 @@ export type Transport = "stdio" | "http" | "sse" | "streamable-http";
 
 export type SourceLabel = "inspector" | "global" | "project" | "--config";
 
+/** A `.mcp.json` config file the backend read, whether or not it declares servers. */
+export interface ConfigSource {
+  /** Absolute path to the file on disk. */
+  path: string;
+  label: SourceLabel;
+  serverCount: number;
+}
+
 export interface MCPServer {
   /** Unique identifier used in routes and API calls. */
   id: string;
