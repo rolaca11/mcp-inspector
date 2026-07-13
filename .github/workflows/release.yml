@@ -109,6 +109,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install AppImage update tooling
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install --yes zsync
+
       - name: Build & Package
         run: bun run dist:electron
         env:
@@ -124,6 +128,7 @@ jobs:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
             packages/electron/release/*.AppImage
+            packages/electron/release/*.AppImage.zsync
             packages/electron/release/*.tar.gz
             packages/electron/release/*.dmg
             packages/electron/release/*.zip

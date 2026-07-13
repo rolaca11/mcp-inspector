@@ -10,6 +10,7 @@ extraResources:
     to: web
     filter:
       - "**/*"
+afterAllArtifactBuild: build/appimage-update-info.cjs
 mac:
   target:
     - dmg
