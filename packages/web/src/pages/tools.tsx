@@ -1924,6 +1924,12 @@ function ContentBlockView({
           <CodeBlock language={inner.mimeType ?? "text"}>
             {inner.text}
           </CodeBlock>
+        ) : inner.blob != null && inner.mimeType?.startsWith("audio/") ? (
+          <audio
+            controls
+            src={`data:${inner.mimeType};base64,${inner.blob}`}
+            className="w-full"
+          />
         ) : (
           <div className="text-xs text-muted-foreground">
             binary blob ({inner.mimeType ?? "?"})

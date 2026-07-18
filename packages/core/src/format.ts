@@ -357,6 +357,11 @@ export function printTokenCount(result: TokenCountResult): void {
   if (result.ok) {
     console.log();
     console.log(pc.dim(`Tokens: ${pc.bold(result.tokens.toLocaleString())}`));
+  } else if (result.reason === "too-large") {
+    console.log();
+    console.log(
+      pc.dim(`Tokens: skipped (response too large to tokenize)`),
+    );
   } else {
     console.log();
     console.log(

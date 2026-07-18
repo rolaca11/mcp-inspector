@@ -35,7 +35,14 @@ import { countResponseTokens } from "./tokens.js";
 function emitTokenCount(payload: unknown, opts: FormatOptions): void {
   const result = countResponseTokens(payload);
   if (opts.json) {
-    printJson({ _tokenCount: result.ok ? result.tokens : null, ...(result.ok ? {} : { _tokenCountError: result.error }) });
+    printJson({
+      _tokenCount: result.ok ? result.tokens : null,
+      ...(result.ok
+        ? {}
+        : result.reason === "too-large"
+          ? { _tokenCountSkipped: "too-large" }
+          : { _tokenCountError: result.error }),
+    });
   } else {
     printTokenCount(result);
   }

@@ -521,6 +521,18 @@ function ResourceContentBlock({
     );
   }
   if (content.blob != null) {
+    if (content.mimeType?.startsWith("audio/")) {
+      return (
+        <div className="rounded-md border border-border/60 bg-card/40 px-3 py-3 space-y-2">
+          <div className="text-xs text-muted-foreground font-mono">{meta}</div>
+          <audio
+            controls
+            src={`data:${content.mimeType};base64,${content.blob}`}
+            className="w-full"
+          />
+        </div>
+      );
+    }
     return (
       <div className="rounded-md border border-border/60 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
         <div className="font-mono mb-2">{meta}</div>
