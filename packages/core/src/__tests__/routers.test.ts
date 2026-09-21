@@ -577,6 +577,12 @@ describe("servers router", () => {
     });
     expect(result.activities.length).toBeGreaterThanOrEqual(1);
     expect(result.activities[0]!.kind).toBe("discover");
+    expect(result.activities[0]!.target).toBe("connect");
+    expect(result.activities[0]!.outcome).toBe("ok");
+    expect(result.activities[0]!.result).toMatchObject({
+      server: expect.any(Object),
+      capabilities: expect.any(Object),
+    });
   });
 
   it("authStatus returns auth info for unknown target", async () => {

@@ -103,10 +103,10 @@ async function runDiscover(
     const activities = await api.discover(serverName, ctrl.signal);
     if (ctrl.signal.aborted) return;
 
-    const init = activities.find((a) => a.target === "initialize");
-    if (!init || init.outcome !== "ok" || !init.result) {
+    const connection = activities.find((a) => a.target === "connect");
+    if (!connection || connection.outcome !== "ok" || !connection.result) {
       set({
-        error: init?.error ?? "discover failed",
+        error: connection?.error ?? "discover failed",
         connectionState: "error",
         data: null,
         loading: false,
@@ -115,12 +115,12 @@ async function runDiscover(
       return;
     }
 
-    const initResult = init.result as { server: ServerInfo | null; capabilities: ServerCapabilities };
+    const connectionResult = connection.result as { server: ServerInfo | null; capabilities: ServerCapabilities };
     const byTarget = (t: string) => activities.find((a) => a.target === t);
 
     const data: DiscoverResult = {
-      server: initResult.server,
-      capabilities: initResult.capabilities,
+      server: connectionResult.server,
+      capabilities: connectionResult.capabilities,
       tools: (byTarget("tools")?.outcome === "ok" ? byTarget("tools")!.result : []) as MCPTool[],
       resources: (byTarget("resources")?.outcome === "ok" ? byTarget("resources")!.result : []) as MCPResource[],
       resourceTemplates: (byTarget("templates")?.outcome === "ok" ? byTarget("templates")!.result : []) as MCPResourceTemplate[],
