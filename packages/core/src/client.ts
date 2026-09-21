@@ -4,12 +4,14 @@
  * a session it can `close()` when finished.
  */
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
-import type { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import type { OAuthClientMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  UnauthorizedError,
+  type Implementation,
+  type OAuthClientMetadata,
+} from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 import pc from "picocolors";
 
@@ -28,12 +30,17 @@ const CLIENT_INFO: Implementation = {
   version: VERSION,
 };
 
-/**
- * Capabilities the inspector advertises during `initialize`. We declare the
- * MCP Apps (`io.modelcontextprotocol/ui`) extension so servers expose their
- * UI-enabled tools; the dashboard renders those apps in a sandboxed iframe.
- */
 const CLIENT_CAPABILITIES = { extensions: uiClientExtensions() };
+
+function buildClient(kind: TargetSpec["kind"]): Client {
+  return new Client(CLIENT_INFO, {
+    capabilities: CLIENT_CAPABILITIES,
+    versionNegotiation: {
+      mode: "auto",
+      ...(kind === "stdio" ? { probe: { timeoutMs: 3000 } } : {}),
+    },
+  });
+}
 
 export interface ConnectOptions {
   /** Override the OAuth client name reported during dynamic client registration. */
@@ -92,8 +99,13 @@ async function connectStdio(
     stderr: "inherit",
     ...(target.cwd ? { cwd: target.cwd } : {}),
   });
-  const client = new Client(CLIENT_INFO, { capabilities: CLIENT_CAPABILITIES });
-  await client.connect(transport);
+  const client = buildClient("stdio");
+  try {
+    await client.connect(transport);
+  } catch (error) {
+    await safeClose(client);
+    throw error;
+  }
 
   return {
     client,
@@ -115,11 +127,6 @@ async function connectHttp(
     if (!opts.quiet) console.error(pc.dim("[auth]"), ...args);
   };
 
-  // Reuse stored tokens if any. We start the loopback server only when needed
-  // because once a tab is opened the user expects the CLI to be waiting.
-  const buildClient = () =>
-    new Client(CLIENT_INFO, { capabilities: CLIENT_CAPABILITIES });
-
   // Extra HTTP headers from a named-config entry get forwarded to every
   // transport request via `requestInit.headers`.
   const transportOpts = (extra: { authProvider: FileOAuthProvider }) =>
@@ -132,7 +139,7 @@ async function connectHttp(
   // refresh succeed we'll discard this transport and rebuild with a real
   // loopback URL.
 
-  let client = buildClient();
+  let client = buildClient("http");
   let provider = new FileOAuthProvider({
     file,
     redirectUrl: "http://127.0.0.1:0/callback", // placeholder; not used unless we authorize
@@ -198,7 +205,7 @@ async function connectHttp(
     },
   });
 
-  client = buildClient();
+  client = buildClient("http");
   transport = new StreamableHTTPClientTransport(
     target.url,
     transportOpts({ authProvider: provider }),
@@ -226,16 +233,16 @@ async function connectHttp(
   }
 
   log("waiting for authorization callback...");
-  const { code } = await loopback.waitForCode();
-  log("received authorization code, exchanging for tokens");
+  try {
+    const { code, iss } = await loopback.waitForCode();
+    log("received authorization code, exchanging for tokens");
+    await transport.finishAuth(code, iss ?? undefined);
+  } finally {
+    loopback.close();
+    await safeClose(client);
+  }
 
-  await transport.finishAuth(code);
-
-  // After finishAuth the transport itself is torn down — rebuild a fresh one
-  // that will pick up the freshly stored tokens via the provider.
-  await safeClose(client);
-
-  const finalClient = buildClient();
+  const finalClient = buildClient("http");
   const finalTransport = new StreamableHTTPClientTransport(
     target.url,
     transportOpts({ authProvider: provider }),
@@ -261,11 +268,11 @@ function wrapSession(
     target,
     id,
     async close() {
-      // Spec: clients that no longer need a session SHOULD send a DELETE with
-      // its Mcp-Session-Id so the server can reclaim it. Servers may refuse
-      // (405) or have already dropped the session — proceed with teardown
-      // either way. Must run before close() while the transport is still open.
-      if (transport instanceof StreamableHTTPClientTransport) {
+      if (
+        transport instanceof StreamableHTTPClientTransport &&
+        client.getProtocolEra() === "legacy" &&
+        transport.sessionId
+      ) {
         await transport.terminateSession().catch(() => {});
       }
       await client.close().catch(() => {});
@@ -290,6 +297,7 @@ function defaultClientMetadata(
   scope: string | undefined,
 ): OAuthClientMetadata {
   const meta: OAuthClientMetadata = {
+    application_type: "native",
     client_name: clientName ?? "mcp-inspector",
     client_uri: "https://github.com/modelcontextprotocol",
     redirect_uris: [redirectUrl],

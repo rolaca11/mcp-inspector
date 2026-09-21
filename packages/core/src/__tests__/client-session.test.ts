@@ -34,7 +34,8 @@ describe("MCP session ID handling", () => {
     // correctly carries none.
     expect(init[0]!.sessionId).toBeNull();
 
-    const rest = srv.log.filter((r) => r.rpc !== "initialize");
+    expect(srv.log.filter((r) => r.rpc === "server/discover")).toHaveLength(1);
+    const rest = srv.log.slice(srv.log.indexOf(init[0]!) + 1);
     expect(rest.length).toBeGreaterThanOrEqual(4); // initialized, list, call, ping
     for (const r of rest) {
       expect(r.sessionId).toBe(sid);

@@ -1,4 +1,4 @@
-import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createSessionPool, type SessionPool } from "../session-pool.js";
@@ -86,7 +86,7 @@ describe("createSessionPool", () => {
     await expect(
       session.client.request(
         { method: "tools/bogus", params: {} },
-        EmptyResultSchema,
+        z.object({}),
       ),
     ).rejects.toThrow(/-32601|method not found/i);
 

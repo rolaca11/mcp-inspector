@@ -11,7 +11,7 @@
  * once.
  */
 
-import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { SdkHttpError } from "@modelcontextprotocol/client";
 
 import { connect, type Session } from "./client.js";
 
@@ -56,9 +56,9 @@ const RETRYABLE_METHODS = new Set([
 
 /** True when the server says our session ID is no longer valid. */
 function isSessionExpired(e: unknown): boolean {
-  if (!(e instanceof StreamableHTTPError)) return false;
-  if (e.code === 404) return true; // spec: unknown/terminated session
-  return e.code === 400 && /session|not initialized/i.test(e.message);
+  if (!(e instanceof SdkHttpError)) return false;
+  if (e.status === 404) return true; // spec: unknown/terminated session
+  return e.status === 400 && /session|not initialized/i.test(e.message);
 }
 
 export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
@@ -142,7 +142,11 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
           try {
             return await value.apply(target, args);
           } catch (e) {
-            if (!isSessionExpired(e)) throw e;
+            if (
+              real.client.getProtocolEra() !== "legacy" ||
+              !real.client.transport?.sessionId ||
+              !isSessionExpired(e)
+            ) throw e;
             const fresh = await reacquire(name, real);
             const replay = (fresh.client as unknown as Record<string, unknown>)[
               prop

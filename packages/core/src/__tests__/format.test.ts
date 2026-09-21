@@ -1,5 +1,18 @@
-import { describe, it, expect } from "vitest";
-import { extractTemplateVars, errorMessage } from "../format.js";
+import { describe, it, expect, vi } from "vitest";
+import { extractTemplateVars, errorMessage, printToolResult } from "../format.js";
+
+describe("structured tool output", () => {
+  it.each([null, false, 0, "", [], {}])("prints the JSON value %j", (structuredContent) => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      printToolResult({ content: [{ type: "text", text: "fallback" }], structuredContent });
+      expect(log).toHaveBeenCalledWith(JSON.stringify(structuredContent, null, 2));
+      expect(log).not.toHaveBeenCalledWith("fallback");
+    } finally {
+      log.mockRestore();
+    }
+  });
+});
 
 describe("extractTemplateVars", () => {
   it("extracts simple variable", () => {

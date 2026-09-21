@@ -1,4 +1,10 @@
 
+
+Supports MCP `2026-07-28` over stateless Streamable HTTP and stdio, with automatic
+fallback to earlier protocol revisions. Pass the MCP endpoint URL as usual; no
+stateless flag is required. Modern HTTP requests use `server/discover` and
+per-request metadata instead of `initialize` and session IDs.
+
 ## Targets
 
 Every command takes a single positional `<target>` argument that points at an

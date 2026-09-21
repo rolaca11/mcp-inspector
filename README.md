@@ -21,7 +21,7 @@ See basic server stats, or server communication logs.
 
 <img src="docs/images/resources-with-completion.png">
 
-Query resources, even dynamic ones, with completion, without cache. Find an approximate
+Query resources, even dynamic ones, with completion. Servers can provide cache freshness hints. Find an approximate
 token count for the response.
 
 <img src="docs/images/tools.png">
@@ -31,11 +31,38 @@ or paste into it. You can find an approximate token count for the response. Form
 are saved in global state, so you can switch between tools/resources without needing to
 re-enter your inputs.
 
+### Protocol support
+
+The inspector supports [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28)
+through the official TypeScript SDK v2. HTTP connections automatically probe
+`server/discover` and use stateless Streamable HTTP when supported. Every request
+carries its protocol version, client identity and capabilities, plus the required
+HTTP routing headers. Both JSON and SSE responses work without an initialization
+handshake, session ID, persistent GET stream or session DELETE.
+
+Use the server's MCP endpoint as the target. No stateless flag is needed:
+
+```sh
+mcp-inspector discover https://example.com/mcp
+mcp-inspector tools list https://example.com/mcp
+```
+
+Servers using earlier protocol revisions fall back to the `initialize` handshake.
+Their session IDs and session termination still work. Stdio connections also
+negotiate the protocol; a legacy stdio server that ignores discovery may take up
+to three seconds to fall back. The SDK runs the stdio probe in a separate process.
+HTTP authentication errors and server failures do not trigger a legacy fallback.
+
+The SDK handles version-specific result envelopes, pagination, cache hints and
+routing headers derived from tool schemas. The inspector advertises its MCP Apps
+extension; it does not advertise optional elicitation, sampling, roots or tasks
+capabilities.
+
 ### MCP Apps (interactive UIs)
 
 The inspector supports [MCP Apps](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp)
-(SEP-1865). It advertises the `io.modelcontextprotocol/ui` extension during
-`initialize`, so servers expose their UI-enabled tools, and renders those apps
+(SEP-1865). It advertises the `io.modelcontextprotocol/ui` extension in request capabilities, or during
+`initialize` for older servers, so servers expose their UI-enabled tools, and renders those apps
 in a sandboxed iframe.
 
 - Tools that declare a UI (`_meta.ui.resourceUri`, the deprecated

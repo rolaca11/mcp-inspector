@@ -481,15 +481,11 @@ describe("servers router", () => {
           {
             name: "test-tool",
             inputSchema: { type: "object" as const },
-            outputSchema: { type: "object" as const },
+            outputSchema: { type: "object" as const, properties: { value: { type: "number" } } },
           },
         ],
       }),
-      getToolOutputValidator: () => () => ({
-        valid: false,
-        errorMessage: "expected number",
-      }),
-      request: async () => ({
+      callTool: async () => ({
         content: [{ type: "text" as const, text: "called test-tool" }],
         structuredContent: { value: "not a number" },
       }),
@@ -513,7 +509,7 @@ describe("servers router", () => {
       structuredContent: { value: "not a number" },
     });
     expect(result.activities[0]!.warnings).toEqual([
-      "Structured content does not match the tool's output schema: expected number",
+      expect.stringContaining("Structured content does not match the tool's output schema:"),
     ]);
   });
 

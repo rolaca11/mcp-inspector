@@ -26,17 +26,19 @@ import open from "open";
 
 import type {
   OAuthClientProvider,
-} from "@modelcontextprotocol/sdk/client/auth.js";
+} from "@modelcontextprotocol/client";
 import type {
-  OAuthClientInformationFull,
+  StoredOAuthClientInformation,
+  StoredOAuthTokens,
+  OAuthDiscoveryState,
   OAuthClientMetadata,
-  OAuthTokens,
-} from "@modelcontextprotocol/sdk/shared/auth.js";
+} from "@modelcontextprotocol/client";
 
 type Persisted = {
-  clientInformation?: OAuthClientInformationFull;
-  tokens?: OAuthTokens;
+  clientInformation?: StoredOAuthClientInformation;
+  tokens?: StoredOAuthTokens;
   codeVerifier?: string;
+  discoveryState?: OAuthDiscoveryState;
 };
 
 export interface FileOAuthProviderOptions {
@@ -93,23 +95,23 @@ export class FileOAuthProvider implements OAuthClientProvider {
     );
   }
 
-  async clientInformation(): Promise<OAuthClientInformationFull | undefined> {
+  async clientInformation(): Promise<StoredOAuthClientInformation | undefined> {
     await this.load();
     return this.cache.clientInformation;
   }
 
-  async saveClientInformation(info: OAuthClientInformationFull): Promise<void> {
+  async saveClientInformation(info: StoredOAuthClientInformation): Promise<void> {
     await this.load();
     this.cache.clientInformation = info;
     await this.save();
   }
 
-  async tokens(): Promise<OAuthTokens | undefined> {
+  async tokens(): Promise<StoredOAuthTokens | undefined> {
     await this.load();
     return this.cache.tokens;
   }
 
-  async saveTokens(tokens: OAuthTokens): Promise<void> {
+  async saveTokens(tokens: StoredOAuthTokens): Promise<void> {
     await this.load();
     this.cache.tokens = tokens;
     await this.save();
@@ -129,17 +131,29 @@ export class FileOAuthProvider implements OAuthClientProvider {
     return this.cache.codeVerifier;
   }
 
+  async discoveryState(): Promise<OAuthDiscoveryState | undefined> {
+    await this.load();
+    return this.cache.discoveryState;
+  }
+
+  async saveDiscoveryState(state: OAuthDiscoveryState): Promise<void> {
+    await this.load();
+    this.cache.discoveryState = state;
+    await this.save();
+  }
+
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
     await this.onRedirect(authorizationUrl);
   }
 
   async invalidateCredentials(
-    scope: "all" | "client" | "tokens" | "verifier",
+    scope: "all" | "client" | "tokens" | "verifier" | "discovery",
   ): Promise<void> {
     await this.load();
     if (scope === "all" || scope === "tokens") delete this.cache.tokens;
     if (scope === "all" || scope === "client") delete this.cache.clientInformation;
     if (scope === "all" || scope === "verifier") delete this.cache.codeVerifier;
+    if (scope === "all" || scope === "discovery") delete this.cache.discoveryState;
     await this.save();
   }
 }
@@ -153,6 +167,7 @@ export interface CallbackResult {
   code: string;
   /** Optional state string echoed back, useful for CSRF defence. */
   state: string | null;
+  iss: string | null;
 }
 
 export interface LoopbackHandle {
@@ -201,7 +216,7 @@ export async function startLoopbackCallback(
     if (code) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(SUCCESS_HTML);
-      resolveCode?.({ code, state });
+      resolveCode?.({ code, state, iss: u.searchParams.get("iss") });
     } else {
       const msg = error
         ? `${error}${errorDescription ? `: ${errorDescription}` : ""}`

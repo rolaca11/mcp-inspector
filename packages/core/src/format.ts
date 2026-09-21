@@ -198,7 +198,7 @@ export function printTools(tools: ToolLike[], opts: FormatOptions = {}) {
 
 interface CallToolResult {
   content: ContentBlock[];
-  structuredContent?: Record<string, unknown>;
+  structuredContent?: unknown;
   isError?: boolean;
 }
 
@@ -225,8 +225,7 @@ export function printToolResult(result: CallToolResult, opts: FormatOptions = {}
   // blocks are a human-readable serialization of the same data, included for
   // backwards compatibility with clients that can't parse the structured
   // payload. Show the structured payload only and skip the duplicate prose.
-  const hasStructured =
-    result.structuredContent && Object.keys(result.structuredContent).length > 0;
+  const hasStructured = result.structuredContent !== undefined;
 
   if (hasStructured) {
     console.log(pc.bold("structuredContent:"));

@@ -1,6 +1,5 @@
 import { promises as fs } from "node:fs";
-
-import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { fromJsonSchema, type JsonSchemaType } from "@modelcontextprotocol/client";
 
 import { loadConfigSync, type LoadedConfig } from "../../config.js";
 import { parseTarget, setLoadedConfig, targetId } from "../../target.js";
@@ -117,21 +116,6 @@ async function deleteAuthFile(name: string) {
   }
 }
 
-type ToolOutputValidator = (value: unknown) => {
-  valid: boolean;
-  errorMessage?: string;
-};
-
-interface RawToolClient {
-  request(
-    request: { method: "tools/call"; params: { name: string; arguments: Record<string, unknown> } },
-    resultSchema: typeof CallToolResultSchema,
-  ): Promise<unknown>;
-  listTools(): Promise<{ tools?: Array<{ name: string; outputSchema?: unknown }> }>;
-  getToolOutputValidator?(toolName: string): ToolOutputValidator | undefined;
-  isToolTaskRequired?(toolName: string): boolean;
-}
-
 function validationWarning(message: string): string {
   return `Structured content does not match the tool's output schema: ${message}`;
 }
@@ -141,26 +125,13 @@ async function callToolAllowingStructuredContentWarnings(
   toolName: string,
   toolArgs: Record<string, unknown>,
 ) {
-  const client = session.client as unknown as RawToolClient;
-  if (client.isToolTaskRequired?.(toolName)) {
-    throw new Error(
-      `Tool "${toolName}" requires task-based execution. Use client.experimental.tasks.callToolStream() instead.`,
-    );
-  }
-
-  let hasOutputSchema = false;
-  let validator = client.getToolOutputValidator?.(toolName);
-  if (!validator) {
-    const tools = (await client.listTools())?.tools ?? [];
-    hasOutputSchema = tools.some((tool) => tool.name === toolName && !!tool.outputSchema);
-    validator = client.getToolOutputValidator?.(toolName);
-  } else {
-    hasOutputSchema = true;
-  }
-
-  const result = await client.request(
-    { method: "tools/call", params: { name: toolName, arguments: toolArgs } },
-    CallToolResultSchema,
+  const client = session.client;
+  const { tools } = await client.listTools(undefined, { cacheMode: "refresh" });
+  const tool = tools.find((candidate) => candidate.name === toolName);
+  const hasOutputSchema = tool?.outputSchema !== undefined;
+  const result = await client.callTool(
+    { name: toolName, arguments: toolArgs },
+    tool ? { toolDefinition: { ...tool, outputSchema: undefined } } : undefined,
   );
 
   const resultObj =
@@ -168,13 +139,13 @@ async function callToolAllowingStructuredContentWarnings(
       ? (result as { structuredContent?: unknown; isError?: boolean })
       : {};
   const warnings: string[] = [];
-  if (hasOutputSchema && !resultObj.structuredContent && !resultObj.isError) {
+  if (hasOutputSchema && resultObj.structuredContent === undefined && !resultObj.isError) {
     warnings.push("Tool has an output schema but did not return structured content");
-  } else if (validator && resultObj.structuredContent) {
+  } else if (tool?.outputSchema && resultObj.structuredContent !== undefined) {
     try {
-      const validationResult = validator(resultObj.structuredContent);
-      if (!validationResult.valid) {
-        warnings.push(validationWarning(validationResult.errorMessage ?? "unknown validation error"));
+      const validationResult = await fromJsonSchema(tool.outputSchema as JsonSchemaType)["~standard"].validate(resultObj.structuredContent);
+      if (validationResult.issues) {
+        warnings.push(validationWarning(validationResult.issues.map((issue) => issue.message).join("; ")));
       }
     } catch (e) {
       warnings.push(
@@ -190,9 +161,9 @@ async function actionDiscoverActivities(
   name: string,
   sessions: SessionPool,
 ): Promise<ActivityEntry[]> {
-  const initActivity = await runActivity(
+  const connectActivity = await runActivity(
     "discover",
-    "initialize",
+    "connect",
     async () => {
       const session = await sessions.acquire(name);
       const caps = session.client.getServerCapabilities() ?? {};
@@ -202,8 +173,8 @@ async function actionDiscoverActivities(
     },
   );
 
-  if (initActivity.outcome === "error") {
-    return [initActivity];
+  if (connectActivity.outcome === "error") {
+    return [connectActivity];
   }
 
   const session = await sessions.acquire(name);
@@ -234,7 +205,7 @@ async function actionDiscoverActivities(
   ]);
 
   return [
-    initActivity,
+    connectActivity,
     ...listActivities.filter((a): a is ActivityEntry => a !== null),
   ];
 }
