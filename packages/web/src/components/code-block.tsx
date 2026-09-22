@@ -12,6 +12,7 @@ interface CodeBlockProps {
   copyable?: boolean;
   /** Optional caption rendered above the block. */
   caption?: React.ReactNode;
+  renderedContent?: React.ReactNode;
 }
 
 export function CodeBlock({
@@ -20,6 +21,7 @@ export function CodeBlock({
   className,
   copyable = true,
   caption,
+  renderedContent,
 }: CodeBlockProps) {
   const [copied, setCopied] = React.useState(false);
   const [copiedMinified, setCopiedMinified] = React.useState(false);
@@ -150,19 +152,23 @@ export function CodeBlock({
           </div>
         </div>
       )}
-      <pre className="overflow-x-auto p-4 text-sm leading-relaxed font-mono text-foreground/90">
-        <code>
-          {isTreeView ? (
-            <JsonTree
-              key={treeKey}
-              data={jsonData}
-              defaultCollapsed={defaultCollapsed}
-            />
-          ) : (
-            highlighted ?? children
-          )}
-        </code>
-      </pre>
+      {renderedContent !== undefined ? (
+        <div className="overflow-x-auto p-4 text-foreground/90">{renderedContent}</div>
+      ) : (
+        <pre className="overflow-x-auto p-4 text-sm leading-relaxed font-mono text-foreground/90">
+          <code>
+            {isTreeView ? (
+              <JsonTree
+                key={treeKey}
+                data={jsonData}
+                defaultCollapsed={defaultCollapsed}
+              />
+            ) : (
+              highlighted ?? children
+            )}
+          </code>
+        </pre>
+      )}
     </div>
   );
 }

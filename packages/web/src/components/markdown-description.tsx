@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 export function MarkdownDescription({
@@ -10,7 +11,7 @@ export function MarkdownDescription({
 }) {
   return (
     <div className={cn("md-description text-sm", className)}>
-      <ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
         {children}
       </ReactMarkdown>
     </div>

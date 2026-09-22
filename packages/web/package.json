@@ -1,6 +1,6 @@
 {
   "name": "@rolaca11/mcp-inspector-web",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "highlight.js": "^11.11.1",
     "lowlight": "^3.3.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

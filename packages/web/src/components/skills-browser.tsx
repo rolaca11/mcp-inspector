@@ -120,9 +120,24 @@ export function SkillsBrowser({ serverId, skills, capabilities, connecting }: {
               }}>{file.mimeType === "inode/directory" && <FolderOpen className="size-4 shrink-0" />}{file.uri}</Button>)}
           </div>}
           {result && <div className="space-y-2">
-            {result.contents.map((content) => <CodeBlock key={content.uri} caption={content.uri}>
-              {content.text ?? content.blob ?? ""}
-            </CodeBlock>)}
+            {result.contents.map((content) => {
+              const text = content.text ?? content.blob ?? "";
+              const isMarkdown = content.text != null && (
+                content.uri === skillUri || /\.md$/i.test(content.uri) || content.mimeType === "text/markdown"
+              );
+              const markdown = content.uri === skillUri
+                ? text.replace(/^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/, "")
+                : text;
+
+              return <CodeBlock key={content.uri} caption={content.uri}
+                renderedContent={isMarkdown ? (
+                  <MarkdownDescription className="break-words leading-relaxed [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg">
+                    {markdown}
+                  </MarkdownDescription>
+                ) : undefined}>
+                {text}
+              </CodeBlock>;
+            })}
           </div>}
         </>}
       </div>
