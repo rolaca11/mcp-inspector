@@ -116,6 +116,22 @@ export interface SavedForm {
 }
 
 export const api = {
+  async listSkills(name: string) {
+    const response = await trpc.servers.listSkills.mutate({ serverName: name });
+    return pushActivities(name, response);
+  },
+  async getSkill(name: string, uri: string) {
+    const response = await trpc.servers.getSkill.mutate({ serverName: name, uri });
+    return pushActivities(name, response);
+  },
+  async readSkill(name: string, uri: string, resourceUri?: string) {
+    const response = await trpc.servers.readSkill.mutate({ serverName: name, uri, resourceUri });
+    return pushActivities(name, response);
+  },
+  async readSkillDirectory(name: string, uri: string) {
+    const response = await trpc.servers.readSkillDirectory.mutate({ serverName: name, uri });
+    return pushActivities(name, response);
+  },
   health(): Promise<{ ok: true }> {
     return trpc.health.check.query();
   },

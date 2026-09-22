@@ -190,6 +190,7 @@ export interface DiscoverResult {
   resourceTemplates: MCPResourceTemplate[];
   tools: MCPTool[];
   prompts: MCPPrompt[];
+  skills: import("@rolaca11/mcp-inspector-core/skills").Skill[];
 }
 
 /* ------------------------------------------------------------------ */

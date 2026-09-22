@@ -7,6 +7,8 @@
  */
 
 import pc from "picocolors";
+import * as skills from "./skill-client.js";
+import { skillsCapability } from "./skills.js";
 import { promises as fs } from "node:fs";
 
 import type { Session } from "./client.js";
@@ -58,11 +60,12 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
   const instructions = session.client.getInstructions();
   const info = version ? { ...version, instructions } : undefined;
 
-  const [resources, templates, tools, prompts] = await Promise.all([
+  const [resources, templates, tools, prompts, skillResult] = await Promise.all([
     caps.resources ? safeList(() => session.client.listResources()) : { resources: [] as ResourceLike[] },
     caps.resources ? safeList(() => session.client.listResourceTemplates()) : { resourceTemplates: [] as ResourceTemplateLike[] },
     caps.tools ? safeList(() => session.client.listTools()) : { tools: [] as ToolLike[] },
     caps.prompts ? safeList(() => session.client.listPrompts()) : { prompts: [] as PromptLike[] },
+    skillsCapability(caps) ? safeList(() => skills.listSkills(session.client)) : { skills: [] },
   ]);
 
   // A list call can fail even when the capability is advertised (e.g. a server
@@ -81,6 +84,7 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
       resourceTemplates: templateList,
       tools: toolList,
       prompts: promptList,
+      skills: skillResult.skills ?? [],
     });
     return;
   }
@@ -110,8 +114,12 @@ export async function discover(session: Session, opts: FormatOptions = {}) {
   printTools(toolList, opts);
   console.log();
   printPrompts(promptList, opts);
+  if (skillsCapability(caps)) {
+    console.log();
+    printSkillList(skillResult.skills ?? []);
+  }
   if (opts.countTokens) {
-    const payload = { resources, templates, tools, prompts };
+    const payload = { resources, templates, tools, prompts, skills: skillResult };
     emitTokenCount(payload, opts);
   }
 }
@@ -353,4 +361,42 @@ function isENOENT(e: unknown): boolean {
     "code" in e &&
     (e as { code?: string }).code === "ENOENT"
   );
+}
+
+function printSkillList(entries: import("./skills.js").Skill[]) {
+  console.log(pc.bold(`Skills (${entries.length})`));
+  for (const skill of entries) {
+    console.log(`  ${pc.cyan(skill.frontmatter.name)}  ${pc.dim(skill.uri)}`);
+    console.log(`    ${skill.frontmatter.description}`);
+  }
+}
+
+export async function listSkills(session: Session, opts: FormatOptions = {}) {
+  const result = await skills.listSkills(session.client);
+  if (opts.json) printJson(result);
+  else printSkillList(result.skills);
+  if (opts.countTokens) emitTokenCount(result, opts);
+}
+
+export async function getSkill(session: Session, uri: string, opts: FormatOptions = {}) {
+  const result = await skills.getSkill(session.client, uri);
+  printJson(result);
+  if (opts.countTokens) emitTokenCount(result, opts);
+}
+
+export async function readSkill(session: Session, uri: string, resourceUri: string | undefined, opts: FormatOptions = {}) {
+  const result = await skills.readSkillFile(session.client, uri, resourceUri);
+  if (opts.json) printJson(result);
+  else {
+    console.log(pc.dim(`Content integrity: ${result.verification}`));
+    printResourceContents(result.contents, opts);
+  }
+  if (opts.countTokens) emitTokenCount(result, opts);
+}
+
+export async function readSkillDirectory(session: Session, uri: string, opts: FormatOptions = {}) {
+  const result = await skills.readSkillDirectory(session.client, uri);
+  if (opts.json) printJson(result);
+  else printResources(result.resources, opts);
+  if (opts.countTokens) emitTokenCount(result, opts);
 }

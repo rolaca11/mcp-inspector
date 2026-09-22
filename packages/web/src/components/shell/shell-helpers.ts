@@ -57,6 +57,7 @@ export function computeCounts(
       (data?.resources.length ?? 0) + (data?.resourceTemplates.length ?? 0),
     tools: data?.tools.length ?? 0,
     prompts: data?.prompts.length ?? 0,
+    skills: data?.skills.length ?? 0,
     servers: serverCount,
   };
 }

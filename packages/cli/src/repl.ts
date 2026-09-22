@@ -22,6 +22,11 @@ ${pc.bold("Available commands:")}
   ${pc.cyan("templates")}                                    List resource templates
   ${pc.cyan("read")} <uri>                                   Read a resource
 
+  ${pc.cyan("skills")}                                       List skills
+  ${pc.cyan("skill")} <uri>                                  Get skill metadata and manifest
+  ${pc.cyan("skill-read")} <uri> [resource-uri]              Read and verify a skill file
+  ${pc.cyan("directory")} <uri>                              List directory children
+
   ${pc.cyan("tools")}                                        List tools
   ${pc.cyan("call")} <name> [json-args]                      Call a tool. Args = JSON object.
 
@@ -161,6 +166,20 @@ async function dispatch(
       return false;
     }
 
+    case "skills":
+      await actions.listSkills(session, opts);
+      return false;
+    case "skill":
+    case "skill-read":
+    case "directory": {
+      const uri = tokens[1];
+      if (!uri) throw new Error(`usage: ${cmd} <uri>`);
+      if (cmd === "skill") await actions.getSkill(session, uri, opts);
+      else if (cmd === "directory") await actions.readSkillDirectory(session, uri, opts);
+      else await actions.readSkill(session, uri, tokens[2], opts);
+      return false;
+    }
+
     case "tools":
       await actions.listTools(session, opts);
       return false;
@@ -258,6 +277,7 @@ function makeCompleter(session: Session) {
   const verbs = [
     "discover", "server",
     "resources", "templates", "read",
+    "skills", "skill", "skill-read", "directory",
     "tools", "call",
     "prompts", "prompt",
     "complete",

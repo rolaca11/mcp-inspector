@@ -20,7 +20,9 @@
     "./trpc/trpc": "./src/trpc/trpc.ts",
     "./trpc/activity": "./src/trpc/activity.ts",
     "./trpc/schemas": "./src/trpc/schemas.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./skills": "./src/skills.ts",
+    "./skill-client": "./src/skill-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

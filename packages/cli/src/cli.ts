@@ -213,6 +213,38 @@ attachGlobal(
 /* tools                                                               */
 /* ------------------------------------------------------------------ */
 
+const skills = program.command("skills").description("Inspect MCP skills and their files");
+
+attachGlobal(skills.command("list").argument("<target>").description("List all skills")
+  .action(withSession(async (session, { format }) => actions.listSkills(session, format))));
+
+for (const operation of ["get", "read", "directory"] as const) {
+  const descriptions = {
+    get: "Get skill frontmatter and its file manifest",
+    read: "Read and verify SKILL.md or a supporting file",
+    directory: "List direct children of a directory",
+  };
+  const command = skills.command(operation).description(descriptions[operation]).argument("<target>").argument("<uri>");
+  if (operation === "read") command.argument("[resource-uri]", "Supporting file URI; defaults to SKILL.md");
+  attachGlobal(command.action(async (target: string, uri: string, ...rest: unknown[]) => {
+    const cmd = rest.at(-1) as Command;
+    const opts = collectOpts(cmd);
+    const session = await connect(parseTarget(target), {
+      ...(opts.scope ? { scope: opts.scope } : {}),
+      ...(opts.clientName ? { clientName: opts.clientName } : {}),
+      ...(opts.quiet ? { quiet: true } : {}),
+    });
+    const format = { json: !!opts.json, countTokens: !!opts.countTokens };
+    try {
+      if (operation === "get") await actions.getSkill(session, uri, format);
+      else if (operation === "directory") await actions.readSkillDirectory(session, uri, format);
+      else await actions.readSkill(session, uri, typeof rest[0] === "string" ? rest[0] : undefined, format);
+    } finally {
+      await session.close();
+    }
+  }));
+}
+
 const tools = program
   .command("tools")
   .description("Tool operations");

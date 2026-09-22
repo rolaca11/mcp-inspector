@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import { fromJsonSchema, type JsonSchemaType } from "@modelcontextprotocol/client";
 
+import * as skills from "../../skill-client.js";
+import { skillsCapability } from "../../skills.js";
 import { loadConfigSync, type LoadedConfig } from "../../config.js";
 import { parseTarget, setLoadedConfig, targetId } from "../../target.js";
 import { authFile } from "../../paths.js";
@@ -16,7 +18,9 @@ import {
   completeInput,
   getPromptInput,
   readResourceInput,
+  readSkillInput,
   serverNameInput,
+  skillUriInput,
 } from "../schemas.js";
 import {
   publicProcedure,
@@ -181,6 +185,9 @@ async function actionDiscoverActivities(
   const caps = session.client.getServerCapabilities() ?? {};
 
   const listActivities = await Promise.all([
+    skillsCapability(caps)
+      ? runActivity("discover", "skills", async () => (await skills.listSkills(session.client)).skills)
+      : null,
     caps.tools
       ? runActivity("discover", "tools", async () =>
           (await session.client.listTools())?.tools ?? [],
@@ -215,6 +222,22 @@ async function actionDiscoverActivities(
 /* ------------------------------------------------------------------ */
 
 export const serversRouter = router({
+  listSkills: sessionProcedure.input(serverNameInput).mutation(async ({ ctx }) => ({
+    activities: [await runActivity("skill-list", "skills", () => skills.listSkills(ctx.session.client))],
+  })),
+
+  getSkill: sessionProcedure.input(skillUriInput).mutation(async ({ ctx, input }) => ({
+    activities: [await runActivity("skill-get", input.uri, () => skills.getSkill(ctx.session.client, input.uri))],
+  })),
+
+  readSkill: sessionProcedure.input(readSkillInput).mutation(async ({ ctx, input }) => ({
+    activities: [await runActivity("skill-read", input.resourceUri ?? input.uri, () => skills.readSkillFile(ctx.session.client, input.uri, input.resourceUri))],
+  })),
+
+  readSkillDirectory: sessionProcedure.input(skillUriInput).mutation(async ({ ctx, input }) => ({
+    activities: [await runActivity("skill-directory", input.uri, () => skills.readSkillDirectory(ctx.session.client, input.uri))],
+  })),
+
   list: publicProcedure.query(({ ctx }) => {
     const config = loadConfigSync(ctx.configOpts);
     setLoadedConfig(config);

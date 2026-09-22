@@ -2,6 +2,10 @@ import { z } from "zod";
 
 export const serverNameInput = z.object({ serverName: z.string().min(1) });
 
+export const skillUriInput = serverNameInput.extend({ uri: z.string().min(1) });
+
+export const readSkillInput = skillUriInput.extend({ resourceUri: z.string().min(1).optional() });
+
 export const readResourceInput = serverNameInput.extend({
   items: z.union([
     z.object({ uri: z.string() }),

@@ -124,6 +124,7 @@ async function runDiscover(
       tools: (byTarget("tools")?.outcome === "ok" ? byTarget("tools")!.result : []) as MCPTool[],
       resources: (byTarget("resources")?.outcome === "ok" ? byTarget("resources")!.result : []) as MCPResource[],
       resourceTemplates: (byTarget("templates")?.outcome === "ok" ? byTarget("templates")!.result : []) as MCPResourceTemplate[],
+      skills: (byTarget("skills")?.outcome === "ok" ? byTarget("skills")!.result : []) as DiscoverResult["skills"],
       prompts: (byTarget("prompts")?.outcome === "ok" ? byTarget("prompts")!.result : []) as MCPPrompt[],
     };
 

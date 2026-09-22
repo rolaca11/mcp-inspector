@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 const byKey = (key: NavKey) => NAV_ITEMS.find((i) => i.key === key)!;
 const GROUPS: { label: string | null; keys: NavKey[] }[] = [
   { label: null, keys: ["overview"] },
-  { label: "Capabilities", keys: ["resources", "tools", "prompts", "completions"] },
+  { label: "Capabilities", keys: ["resources", "skills", "tools", "prompts", "completions"] },
   { label: "Workspace", keys: ["auth", "servers"] },
 ];
 

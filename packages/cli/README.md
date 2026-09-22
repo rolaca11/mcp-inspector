@@ -78,6 +78,20 @@ at the start of every run; bad entries are skipped, the rest still loads. Set
 
 ---
 
+## Skills
+
+Skills commands require the server to advertise `io.modelcontextprotocol/skills`
+and `resources`. `skills list` retrieves every page, and `skills get` accepts a
+`SKILL.md` URI even when the skill is absent from the listing. `skills read`
+verifies the requested file against a fresh manifest. Omit `[resource-uri]` to
+read `SKILL.md` itself. `skills directory` requires `directoryRead: true` and
+retrieves every page of direct children. Directory URIs have no trailing slash.
+
+Use `--json` to inspect manifests, cache hints, or file verification results.
+`--count-tokens` works with these commands. Reads inspect content without loading
+skills into an agent or executing their scripts. The REPL provides `skills`,
+`skill <uri>`, `skill-read <uri> [resource-uri]`, and `directory <uri>`.
+
 ## Commands
 
 ```text
@@ -88,6 +102,11 @@ mcp-inspector discover  <target>                         # everything in one sho
 mcp-inspector resources list      <target>
 mcp-inspector resources templates <target>
 mcp-inspector resources read      <target> <uri>
+
+mcp-inspector skills list         <target>
+mcp-inspector skills get          <target> <skill-uri>
+mcp-inspector skills read         <target> <skill-uri> [resource-uri]
+mcp-inspector skills directory    <target> <directory-uri>
 
 mcp-inspector tools list          <target>
 mcp-inspector tools call          <target> <name> --args '<json>'

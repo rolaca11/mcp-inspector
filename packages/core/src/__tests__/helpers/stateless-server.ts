@@ -8,6 +8,7 @@ export async function startStatelessServer(options: {
   failMethod?: string;
   status?: number;
   legacyOnly?: boolean;
+  configure?: (server: McpServer) => void;
 } = {}) {
   const log: Array<{ method: string; headers: Headers; body: JSONRPCRequest }> = [];
   let instances = 0;
@@ -23,6 +24,7 @@ export async function startStatelessServer(options: {
     server.registerPrompt("greet", {}, async () => ({
       messages: [{ role: "user", content: { type: "text", text: "hello" } }],
     }));
+    options.configure?.(server);
     return server;
   }, { legacy: options.legacyOnly ? "stateless" : "reject", responseMode: options.responseMode });
   const http = createServer(toNodeHandler({

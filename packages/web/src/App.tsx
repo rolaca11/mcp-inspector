@@ -23,6 +23,7 @@ import type { MCPServer } from "@/data/types";
 
 import { OverviewPage } from "@/pages/overview";
 import { ResourcesPage } from "@/pages/resources";
+import { SkillsPage } from "@/pages/skills";
 import { ToolsPage } from "@/pages/tools";
 import { PromptsPage } from "@/pages/prompts";
 import { CompletionsPage } from "@/pages/completions";
@@ -85,6 +86,7 @@ export default function App() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="resources" element={<ResourcesPage />} />
+          <Route path="skills" element={<SkillsPage />} />
           <Route path="tools" element={<ToolsPage />} />
           <Route path="prompts" element={<PromptsPage />} />
           <Route path="completions" element={<CompletionsPage />} />

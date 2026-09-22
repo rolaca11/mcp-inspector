@@ -139,6 +139,10 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const kindLabel = {
     "tool-call": "tool",
     "resource-read": "resource",
+    "skill-list": "skills",
+    "skill-get": "skill",
+    "skill-read": "skill file",
+    "skill-directory": "directory",
     "prompt-get": "prompt",
     complete: "complete",
     discover: "discover",

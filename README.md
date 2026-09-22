@@ -58,6 +58,27 @@ routing headers derived from tool schemas. The inspector advertises its MCP Apps
 extension; it does not advertise optional elicitation, sampling, roots or tasks
 capabilities.
 
+### Skills
+
+The inspector supports the official [MCP Skills extension](https://modelcontextprotocol.io/extensions/skills/overview)
+(`io.modelcontextprotocol/skills`). The **Skills** tab lists skills, accepts direct
+`SKILL.md` URI lookups, shows frontmatter and file manifests, and reads files on
+demand. Servers that advertise `directoryRead` also support directory browsing.
+Listings and directory reads follow every pagination cursor.
+
+File reads verify byte lengths and SHA-256 digests against the manifest, and
+compare `SKILL.md` frontmatter with the entry. Failed verification refreshes the
+entry and retries once. Dynamic skills are labeled as lacking digest verification.
+Skills remain scoped to their originating server. The inspector displays their
+content without activating skills, granting permissions, or executing scripts.
+
+```sh
+mcp-inspector skills list https://example.com/mcp
+mcp-inspector skills get https://example.com/mcp skill://review/SKILL.md
+mcp-inspector skills read https://example.com/mcp skill://review/SKILL.md
+mcp-inspector skills directory https://example.com/mcp skill://review/references
+```
+
 ### MCP Apps (interactive UIs)
 
 The inspector supports [MCP Apps](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp)

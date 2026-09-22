@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   FileBox,
   Hammer,
   KeyRound,
@@ -14,6 +15,7 @@ import {
  */
 export type NavKey =
   | "overview"
+  | "skills"
   | "resources"
   | "tools"
   | "prompts"
@@ -32,6 +34,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { key: "overview", label: "Overview", icon: Activity, path: "overview" },
+  { key: "skills", label: "Skills", icon: BookOpen, path: "skills" },
   { key: "resources", label: "Resources", icon: FileBox, path: "resources" },
   { key: "tools", label: "Tools", icon: Hammer, path: "tools" },
   { key: "prompts", label: "Prompts", icon: MessageSquare, path: "prompts" },

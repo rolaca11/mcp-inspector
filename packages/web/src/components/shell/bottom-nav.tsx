@@ -5,7 +5,7 @@ import { NAV_ITEMS, type NavKey } from "@/components/nav-tabs";
 import { useCommandMenu } from "@/components/command-palette";
 import { cn } from "@/lib/utils";
 
-const MOBILE_KEYS: NavKey[] = ["overview", "resources", "tools", "prompts"];
+const MOBILE_KEYS: NavKey[] = ["overview", "resources", "tools", "skills"];
 
 /**
  * Mobile primary navigation: a fixed bottom tab bar (the two desktop navs —

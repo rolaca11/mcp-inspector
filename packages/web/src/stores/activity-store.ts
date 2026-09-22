@@ -11,6 +11,10 @@ import { create } from "zustand";
 const MAX_ENTRIES = 100;
 
 export type ActivityKind =
+  | "skill-list"
+  | "skill-get"
+  | "skill-read"
+  | "skill-directory"
   | "tool-call"
   | "resource-read"
   | "prompt-get"
