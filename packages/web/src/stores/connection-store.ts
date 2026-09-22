@@ -40,6 +40,7 @@ interface ConnectionStoreState {
   pendingAuthUrl: string | null;
 
   setServer(server: MCPServer): void;
+  setSkills(serverId: string, skills: DiscoverResult["skills"]): void;
   rediscover(): Promise<void>;
   disconnect(): Promise<void>;
 }
@@ -167,6 +168,12 @@ export const useConnectionStore = create<ConnectionStoreState>((set) => ({
   lastDiscoveredAt: undefined,
   loading: false,
   pendingAuthUrl: null,
+
+  setSkills(serverId, skills) {
+    set((state) => state.server?.id === serverId && state.data
+      ? { data: { ...state.data, skills } }
+      : {});
+  },
 
   setServer(server: MCPServer) {
     const current = useConnectionStore.getState().server;

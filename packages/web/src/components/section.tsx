@@ -24,7 +24,7 @@ export function Section({
   descriptionClassName?: string;
   action?: React.ReactNode;
   className?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
 }) {
   const hasHeader = title || description || action;

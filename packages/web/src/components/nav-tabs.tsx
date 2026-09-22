@@ -8,6 +8,7 @@ import {
   Server,
   Sparkles,
 } from "lucide-react";
+import { skillsCapability } from "@rolaca11/mcp-inspector-core/skills";
 
 /**
  * The canonical navigation destinations, shared by both app shells (classic
@@ -42,3 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "auth", label: "Auth", icon: KeyRound, path: "auth" },
   { key: "servers", label: "Servers", icon: Server, path: "servers" },
 ];
+
+export function availableNavItems(capabilities: unknown): NavItem[] {
+  return NAV_ITEMS.filter((item) => item.key !== "skills" || skillsCapability(capabilities) !== undefined);
+}

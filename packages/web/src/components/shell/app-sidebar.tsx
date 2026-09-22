@@ -7,7 +7,7 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 
 import { Logo } from "@/components/logo";
-import { NAV_ITEMS, type NavItem, type NavKey } from "@/components/nav-tabs";
+import { availableNavItems, type NavItem, type NavKey } from "@/components/nav-tabs";
 import { ServerSelector } from "@/components/server-selector";
 import { SourceSelector } from "@/components/source-selector";
 import { useSources } from "@/components/shell/shell-helpers";
@@ -21,11 +21,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { ConnectionState } from "@/stores/connection-store";
+import { useConnectionStore, type ConnectionState } from "@/stores/connection-store";
 import type { MCPServer } from "@/data/types";
 import { cn } from "@/lib/utils";
 
-const byKey = (key: NavKey) => NAV_ITEMS.find((i) => i.key === key)!;
 const GROUPS: { label: string | null; keys: NavKey[] }[] = [
   { label: null, keys: ["overview"] },
   { label: "Capabilities", keys: ["resources", "skills", "tools", "prompts", "completions"] },
@@ -63,6 +62,8 @@ export function AppSidebar({
     onSelect,
   );
   const subItems = useCapabilitySubItems(active.id);
+  const capabilities = useConnectionStore((state) => state.data?.capabilities);
+  const items = availableNavItems(capabilities);
 
   return (
     <aside className="flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -145,10 +146,10 @@ export function AppSidebar({
               <div className="mx-auto mb-2 h-px w-6 bg-sidebar-border" />
             )}
             <div className="flex flex-col gap-0.5">
-              {group.keys.map((key) => (
+              {group.keys.filter((key) => items.some((item) => item.key === key)).map((key) => (
                 <NavRow
                   key={key}
-                  item={byKey(key)}
+                  item={items.find((item) => item.key === key)!}
                   serverName={active.id}
                   count={counts[key]}
                   subItems={subItems[key]}

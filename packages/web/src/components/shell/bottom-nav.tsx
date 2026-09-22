@@ -1,7 +1,8 @@
 import { MoreHorizontal } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-import { NAV_ITEMS, type NavKey } from "@/components/nav-tabs";
+import { availableNavItems, type NavKey } from "@/components/nav-tabs";
+import { useConnectionStore } from "@/stores/connection-store";
 import { useCommandMenu } from "@/components/command-palette";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,8 @@ export function BottomNav({
 }) {
   const openMenu = useCommandMenu((s) => s.setOpen);
   const prefix = `/${encodeURIComponent(serverName)}`;
-  const items = NAV_ITEMS.filter((i) => MOBILE_KEYS.includes(i.key));
+  const capabilities = useConnectionStore((state) => state.data?.capabilities);
+  const items = availableNavItems(capabilities).filter((i) => MOBILE_KEYS.includes(i.key));
 
   return (
     <nav

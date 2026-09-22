@@ -21,7 +21,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { NAV_ITEMS } from "@/components/nav-tabs";
+import { availableNavItems } from "@/components/nav-tabs";
 import { StatusDot } from "@/components/status-dot";
 import { transportLabel } from "@/components/transport-icon";
 import { useConnectionStore } from "@/stores/connection-store";
@@ -149,7 +149,7 @@ export function CommandPalette({
         <CommandEmpty>No matches.</CommandEmpty>
 
         <CommandGroup heading="Go to">
-          {NAV_ITEMS.map((item) => {
+          {availableNavItems(data?.capabilities).map((item) => {
             const Icon = item.icon;
             const count = counts[item.key];
             return (

@@ -74,7 +74,18 @@ export function useCapabilitySubItems(
     onSelect: () => selectionStore.set(serverName, "tools", t.name),
   }));
 
-  return { resources, tools };
+  const skillList = data?.skills ?? [];
+  const storedSkill = selectionStore.get(serverName, "skills");
+  const selectedSkill = skillList.find((skill) => skill.uri === storedSkill) ?? skillList[0];
+  const skills: NavSubItem[] = skillList.map((skill) => ({
+    key: skill.uri,
+    label: skill.frontmatter.name,
+    isUi: false,
+    isActive: skill.uri === selectedSkill?.uri,
+    onSelect: () => selectionStore.set(serverName, "skills", skill.uri),
+  }));
+
+  return { resources, tools, skills };
 }
 
 /**
