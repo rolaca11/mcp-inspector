@@ -162,7 +162,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       ? entry.error
       : entry.detail ?? "";
 
-  const hasDetail = entry.response !== undefined || (entry.outcome === "error" && !!entry.error);
+  const hasDetail = entry.request !== undefined || entry.response !== undefined || (entry.outcome === "error" && !!entry.error);
 
   return (
     <div>
@@ -214,6 +214,11 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       </div>
       {open && hasDetail && (
         <div className="px-6 py-4 space-y-3">
+          {entry.request !== undefined && (
+            <CodeBlock language="application/json" caption="Request">
+              {JSON.stringify(entry.request, null, 2)}
+            </CodeBlock>
+          )}
           {entry.outcome === "error" && entry.error && !entry.response && (
             <ErrorMessage error={entry.error} />
           )}

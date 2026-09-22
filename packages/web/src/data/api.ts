@@ -68,9 +68,10 @@ function wrapError(e: unknown): Error {
 function pushActivities<T>(
   serverName: string,
   resp: ActivitiesResponse<T>,
+  request: unknown,
 ): ActivityResult<T>[] {
   useActivityStore.getState().insert(
-    resp.activities.map((a) => ({
+    resp.activities.map((a, index) => ({
       kind: a.kind as ActivityKind,
       serverName,
       target: a.target,
@@ -79,6 +80,7 @@ function pushActivities<T>(
       tokenCount: a.tokenCount,
       error: a.error,
       warnings: a.warnings,
+      request: Array.isArray(request) ? request[index] : request,
       response: a.result,
     })),
   );
@@ -118,19 +120,19 @@ export interface SavedForm {
 export const api = {
   async listSkills(name: string) {
     const response = await trpc.servers.listSkills.mutate({ serverName: name });
-    return pushActivities(name, response);
+    return pushActivities(name, response, { serverName: name });
   },
   async getSkill(name: string, uri: string) {
     const response = await trpc.servers.getSkill.mutate({ serverName: name, uri });
-    return pushActivities(name, response);
+    return pushActivities(name, response, { uri });
   },
   async readSkill(name: string, uri: string, resourceUri?: string) {
     const response = await trpc.servers.readSkill.mutate({ serverName: name, uri, resourceUri });
-    return pushActivities(name, response);
+    return pushActivities(name, response, { uri, resourceUri });
   },
   async readSkillDirectory(name: string, uri: string) {
     const response = await trpc.servers.readSkillDirectory.mutate({ serverName: name, uri });
-    return pushActivities(name, response);
+    return pushActivities(name, response, { uri });
   },
   health(): Promise<{ ok: true }> {
     return trpc.health.check.query();
@@ -149,7 +151,7 @@ export const api = {
         { serverName: name },
         { signal },
       );
-      return pushActivities(name, resp as ActivitiesResponse);
+      return pushActivities(name, resp as ActivitiesResponse, { serverName: name });
     } catch (e) {
       throw wrapError(e);
     }
@@ -169,6 +171,7 @@ export const api = {
       return pushActivities<ToolResult>(
         name,
         resp as ActivitiesResponse<ToolResult>,
+        body,
       );
     } catch (e) {
       throw wrapError(e);
@@ -187,6 +190,7 @@ export const api = {
       return pushActivities<ReadResourceResult>(
         name,
         resp as ActivitiesResponse<ReadResourceResult>,
+        body,
       );
     } catch (e) {
       throw wrapError(e);
@@ -207,6 +211,7 @@ export const api = {
       return pushActivities<GetPromptResult>(
         name,
         resp as ActivitiesResponse<GetPromptResult>,
+        body,
       );
     } catch (e) {
       throw wrapError(e);
@@ -239,6 +244,7 @@ export const api = {
       return pushActivities<CompleteResult>(
         name,
         resp as ActivitiesResponse<CompleteResult>,
+        body,
       );
     } catch (e) {
       throw wrapError(e);
@@ -273,6 +279,7 @@ export const api = {
       return pushActivities<{ removed: boolean; file: string }>(
         name,
         resp as ActivitiesResponse<{ removed: boolean; file: string }>,
+        { serverName: name },
       );
     } catch (e) {
       throw wrapError(e);
@@ -287,6 +294,7 @@ export const api = {
       return pushActivities<{ ok: true }>(
         name,
         resp as ActivitiesResponse<{ ok: true }>,
+        { serverName: name },
       );
     } catch (e) {
       throw wrapError(e);

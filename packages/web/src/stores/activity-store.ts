@@ -35,6 +35,7 @@ export interface ActivityEntry {
   tokenCount?: number | null;
   error?: string;
   warnings?: string[];
+  request?: unknown;
   response?: unknown;
   at: string;
 }
@@ -57,6 +58,7 @@ interface ActivityState {
     tokenCount?: number | null;
     error?: string;
     warnings?: string[];
+    request?: unknown;
     response?: unknown;
   }>): void;
 
@@ -124,6 +126,7 @@ export const useActivityStore = create<ActivityState>((set) => ({
       ...(e.tokenCount != null ? { tokenCount: e.tokenCount } : {}),
       ...(e.error != null ? { error: e.error } : {}),
       ...(e.warnings?.length ? { warnings: e.warnings } : {}),
+      ...(e.request !== undefined ? { request: e.request } : {}),
       ...(e.response !== undefined ? { response: e.response } : {}),
       at: now,
     }));
