@@ -35,24 +35,34 @@ export const useServersStore = create<ServersState>((set) => ({
     try {
       const r = await api.servers();
       if (thisRequest !== requestId) return; // stale
+      const servers = r.servers.map<MCPServer>((s) => ({
+        id: s.id,
+        name: s.name,
+        source: s.source,
+        sourceLabel: (s.sourceLabel as MCPServer["sourceLabel"]) ?? "global",
+        transport: s.transport,
+        target: s.target,
+        ...(s.args ? { args: s.args } : {}),
+        ...(s.env ? { env: s.env } : {}),
+        ...(s.cwd ? { cwd: s.cwd } : {}),
+        ...(s.headers ? { headers: s.headers } : {}),
+      }));
+      const sources = r.sources.map<ConfigSource>((src) => ({
+        path: src.path,
+        label: (src.label as ConfigSource["label"]) ?? "global",
+        serverCount: src.serverCount,
+      }));
+      servers.sort(
+        (a, b) => Number(b.sourceLabel === "project") - Number(a.sourceLabel === "project"),
+      );
+      sources.sort(
+        (a, b) =>
+          Number(b.label === "project" && b.serverCount > 0) -
+          Number(a.label === "project" && a.serverCount > 0),
+      );
       set({
-        servers: r.servers.map<MCPServer>((s) => ({
-          id: s.id,
-          name: s.name,
-          source: s.source,
-          sourceLabel: (s.sourceLabel as MCPServer["sourceLabel"]) ?? "global",
-          transport: s.transport,
-          target: s.target,
-          ...(s.args ? { args: s.args } : {}),
-          ...(s.env ? { env: s.env } : {}),
-          ...(s.cwd ? { cwd: s.cwd } : {}),
-          ...(s.headers ? { headers: s.headers } : {}),
-        })),
-        sources: r.sources.map<ConfigSource>((src) => ({
-          path: src.path,
-          label: (src.label as ConfigSource["label"]) ?? "global",
-          serverCount: src.serverCount,
-        })),
+        servers,
+        sources,
         apiState: "ok",
         error: undefined,
       });
