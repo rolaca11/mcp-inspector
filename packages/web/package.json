@@ -1,6 +1,6 @@
 {
   "name": "@rolaca11/mcp-inspector-web",
-  "version": "0.0.0-dev",
+  "version": "1.6.3",
   "private": true,
   "type": "module",
   "scripts": {
