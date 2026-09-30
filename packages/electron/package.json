@@ -1,6 +1,6 @@
 {
   "name": "@rolaca11/mcp-inspector-electron",
-  "version": "0.0.0-dev",
+  "version": "1.6.4",
   "private": true,
   "type": "module",
   "main": "dist/main.js",
@@ -13,14 +13,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@trpc/server": "^11.17.0",
     "open": "^11.0.0",
     "picocolors": "^1.1.1",
     "shell-quote": "^1.8.3",
     "tiktoken": "^1.0.22",
     "yaml": "^2.8.1",
-    "zod": "^4.4.3",
-    "@modelcontextprotocol/client": "^2.0.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@rolaca11/mcp-inspector-core": "workspace:*",
