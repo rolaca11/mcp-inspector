@@ -1,6 +1,6 @@
 {
   "name": "@rolaca11/mcp-inspector-core",
-  "version": "1.6.2",
+  "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {

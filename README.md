@@ -133,6 +133,14 @@ mcp-inspector serve --config /path/to/first/.mcp.json /path/to/second/.mcp.json
 
 Read more about CLI usage [here](packages/cli/README.md)
 
+### Releasing
+
+Package versions on `main` are `0.0.0-dev`. Run the **Release** workflow from
+`main` and enter a version such as `1.7.0`. The workflow sets every workspace
+version, builds and tests the release, then creates a versioned commit and tag.
+The release commit is reachable through the tag; `main` keeps its development
+versions.
+
 ### Testing
 
 Describe expectations as declarative YAML/JSON **suite files** and evaluate them
