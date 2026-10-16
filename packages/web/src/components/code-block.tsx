@@ -26,26 +26,33 @@ export function CodeBlock({
   const [copied, setCopied] = React.useState(false);
   const [copiedMinified, setCopiedMinified] = React.useState(false);
 
-  const onCopy = React.useCallback(() => {
-    void navigator.clipboard.writeText(children).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    });
-  }, [children]);
-
   const isJson =
     language === "json" ||
     language === "application/json" ||
     language?.endsWith("+json");
 
   const jsonData = React.useMemo(() => {
-    if (!isJson) return undefined;
+    if (!isJson && language != null && language !== "text" && language !== "text/plain") {
+      return undefined;
+    }
     try {
       return JSON.parse(children) as unknown;
     } catch {
       return undefined;
     }
-  }, [isJson, children]);
+  }, [isJson, language, children]);
+
+  const code = React.useMemo(
+    () => jsonData === undefined ? children : JSON.stringify(jsonData, null, 2),
+    [jsonData, children],
+  );
+
+  const onCopy = React.useCallback(() => {
+    void navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    });
+  }, [code]);
 
   const minifiedJson = React.useMemo(() => {
     if (jsonData === undefined) return null;
