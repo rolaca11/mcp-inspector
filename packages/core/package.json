@@ -10,6 +10,7 @@
     "./apps": "./src/apps.ts",
     "./config": "./src/config.ts",
     "./config-files": "./src/config-files.ts",
+    "./desktop": "./src/desktop.ts",
     "./oauth": "./src/oauth.ts",
     "./target": "./src/target.ts",
     "./paths": "./src/paths.ts",

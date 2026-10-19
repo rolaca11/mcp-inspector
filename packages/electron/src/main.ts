@@ -15,13 +15,17 @@ import {
 } from "@rolaca11/mcp-inspector-core/config";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
+import { readDesktopLaunchOptions } from "@rolaca11/mcp-inspector-core/desktop";
+
+const launchOptions = readDesktopLaunchOptions(process.argv);
+if (launchOptions) process.chdir(launchOptions.cwd);
 
 // Packaged Electron apps launched from a desktop environment inherit a minimal
 // PATH that is missing user-installed tools (node, npx, etc.) which are often
 // set up in .bashrc (nvm, fnm, volta). We run the user's shell interactively
 // to pick up those additions, using a marker so we can extract PATH from any
 // other output the shell may produce.
-if (app.isPackaged && process.platform !== "win32") {
+if (app.isPackaged && !launchOptions && process.platform !== "win32") {
   try {
     const shell = process.env.SHELL || "/bin/bash";
     const marker = `__mcp_path_${process.pid}__`;
@@ -97,10 +101,17 @@ function resolveWebDir(): string {
 }
 
 async function createWindow(): Promise<void> {
-  const configOpts = {};
+  const configOpts = launchOptions
+    ? { cwd: launchOptions.cwd, extraFiles: launchOptions.extraFiles }
+    : {};
   ensureInspectorConfig();
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
+  if (!launchOptions?.quiet && !process.env.MCPI_QUIET_CONFIG) {
+    for (const error of initial.errors) {
+      console.error(`config warning: ${error.path}: ${error.message}`);
+    }
+  }
 
   const sessions = createSessionPool({
     onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),

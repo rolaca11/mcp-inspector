@@ -130,6 +130,9 @@ mcp-inspector serve               [--port 8765]          # web dashboard at http
                                   [--no-open]            # don't open the browser
                                   [--no-ui]              # tRPC API only
 
+mcp-inspector desktop             [--config a.json b.json] # open the local desktop app
+                                  [-q, --quiet]
+
 mcp-inspector test                [paths...]             # run test suites (default: ./mcp-tests)
                                   [--target <target>]    # target for suites that omit one
                                   [--reporter console|json|junit|tap|teamcity]
@@ -363,6 +366,21 @@ Tab completion is on for verbs, tool names, prompt names, resource URIs, and
 resource-template variable names (lazily populated after connect).
 
 ---
+
+## Desktop app
+
+`mcp-inspector desktop` opens the local app at `./packages/electron` using that
+package's Electron dependency. Run it from this repository's root after
+`bun install` and `bun run build:electron`. It uses the same default config
+sources and current working directory as `serve`, and
+`-c, --config` accepts multiple paths, repeated options, and comma-separated paths.
+Config changes remain visible when the app reloads its server list.
+
+```sh
+mcp-inspector desktop
+mcp-inspector desktop --config team.json local.json
+mcp-inspector desktop -c team.json -c local.json
+```
 
 ## Web dashboard
 

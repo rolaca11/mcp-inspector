@@ -831,19 +831,32 @@ attachGlobal(
 /* serve                                                               */
 /* ------------------------------------------------------------------ */
 
-program
-  .command("serve")
-  .description(
-    "Start the web dashboard. Hosts the bundled UI at / and the tRPC API at /api/trpc.",
-  )
-  .option("-p, --port <port>", "port to bind", "8765")
-  .option("--host <host>", "interface to bind", "127.0.0.1")
-  .option(
+function attachDashboardConfig(cmd: Command): Command {
+  return cmd.option(
     "-c, --config <paths...>",
     "path(s) to .mcp.json files (repeatable; loaded after defaults)",
     appendConfigFiles,
     [] as string[],
-  )
+  );
+}
+
+attachDashboardConfig(program.command("desktop"))
+  .description("Open the desktop app from the current directory with the same server configuration as serve")
+  .option("-q, --quiet", "suppress informational logs")
+  .action(async (opts) => {
+    const { launchDesktop } = await import("./desktop.js");
+    await launchDesktop(opts);
+  });
+
+attachDashboardConfig(
+  program
+    .command("serve")
+    .description(
+      "Start the web dashboard. Hosts the bundled UI at / and the tRPC API at /api/trpc.",
+    )
+    .option("-p, --port <port>", "port to bind", "8765")
+    .option("--host <host>", "interface to bind", "127.0.0.1"),
+)
   .option("--no-open", "don't open the dashboard in the default browser")
   .option("--no-ui", "expose the API only — skip serving the static UI")
   .option("-q, --quiet", "suppress informational logs")
