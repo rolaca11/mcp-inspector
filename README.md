@@ -127,16 +127,17 @@ You can also specify one, or more files to read in the CLI with:
 mcp-inspector serve --config /path/to/first/.mcp.json /path/to/second/.mcp.json
 ```
 
-Use `desktop` from this repository's root to open the local desktop app with the
-same config sources, including the current directory's `.mcp.json`:
+Use `desktop` from your project directory to open the installed desktop app with
+the same config sources, including the current directory's `.mcp.json`:
 
 ```bash
 mcp-inspector desktop
 mcp-inspector desktop --config team.json local.json
 ```
 
-`--config` also accepts repeated options and comma-separated paths. Run
-`bun install` and `bun run build:electron` before launching the desktop app.
+`--config` also accepts repeated options and comma-separated paths. The command
+opens a `mcp-inspector://` link through the OS launcher, such as `xdg-open` on
+Linux. Install a desktop build with the `mcp-inspector` URL handler registered.
 
 ---
 

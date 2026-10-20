@@ -841,7 +841,7 @@ function attachDashboardConfig(cmd: Command): Command {
 }
 
 attachDashboardConfig(program.command("desktop"))
-  .description("Open the desktop app from the current directory with the same server configuration as serve")
+  .description("Open the desktop app using the OS launcher with the same server configuration as serve")
   .option("-q, --quiet", "suppress informational logs")
   .action(async (opts) => {
     const { launchDesktop } = await import("./desktop.js");

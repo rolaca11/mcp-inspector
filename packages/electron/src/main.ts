@@ -12,20 +12,68 @@ import {
 import {
   ensureInspectorConfig,
   loadConfigSync,
+  type LoadConfigOptions,
 } from "@rolaca11/mcp-inspector-core/config";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
-import { readDesktopLaunchOptions } from "@rolaca11/mcp-inspector-core/desktop";
+import {
+  DESKTOP_SCHEME,
+  readDesktopLaunchOptions,
+  type DesktopLaunchOptions,
+} from "@rolaca11/mcp-inspector-core/desktop";
 
-const launchOptions = readDesktopLaunchOptions(process.argv);
-if (launchOptions) process.chdir(launchOptions.cwd);
+let launchOptions = parseLaunchOptions(process.argv);
+let configOpts: LoadConfigOptions = {};
+let mainWindow: BrowserWindow | null = null;
+let launchQueue: Promise<void> = Promise.resolve();
+
+function parseLaunchOptions(args: string[]): DesktopLaunchOptions | undefined {
+  try {
+    return readDesktopLaunchOptions(args);
+  } catch (error) {
+    console.error("Invalid desktop launch configuration:", error);
+    return undefined;
+  }
+}
+
+function focusWindow(): void {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function receiveLaunch(args: string[]): void {
+  const options = parseLaunchOptions(args);
+  if (!app.isReady()) {
+    if (options) launchOptions = options;
+    return;
+  }
+  launchQueue = launchQueue.then(async () => {
+    if (options) {
+      await activeSessions?.closeAll();
+      pendingAuthUrls.clear();
+      launchOptions = options;
+      loadLaunchConfig();
+      if (mainWindow) await mainWindow.loadURL(`${SCHEME}://${HOST}/`);
+    }
+    if (!mainWindow) await createWindow();
+    focusWindow();
+  }).catch((error) => console.error("Could not open desktop configuration:", error));
+}
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  receiveLaunch([url]);
+});
+app.on("second-instance", (_event, args) => receiveLaunch(args));
 
 // Packaged Electron apps launched from a desktop environment inherit a minimal
 // PATH that is missing user-installed tools (node, npx, etc.) which are often
 // set up in .bashrc (nvm, fnm, volta). We run the user's shell interactively
 // to pick up those additions, using a marker so we can extract PATH from any
 // other output the shell may produce.
-if (app.isPackaged && !launchOptions && process.platform !== "win32") {
+if (app.isPackaged && process.platform !== "win32") {
   try {
     const shell = process.env.SHELL || "/bin/bash";
     const marker = `__mcp_path_${process.pid}__`;
@@ -100,8 +148,9 @@ function resolveWebDir(): string {
   return path.resolve(__dirname, "../../web/dist");
 }
 
-async function createWindow(): Promise<void> {
-  const configOpts = launchOptions
+function loadLaunchConfig(): void {
+  if (launchOptions) process.chdir(launchOptions.cwd);
+  configOpts = launchOptions
     ? { cwd: launchOptions.cwd, extraFiles: launchOptions.extraFiles }
     : {};
   ensureInspectorConfig();
@@ -112,15 +161,19 @@ async function createWindow(): Promise<void> {
       console.error(`config warning: ${error.path}: ${error.message}`);
     }
   }
+}
 
-  const sessions = createSessionPool({
+async function createWindow(): Promise<void> {
+  loadLaunchConfig();
+  const registerProtocol = !activeSessions;
+  const sessions = activeSessions ?? createSessionPool({
     onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),
   });
   activeSessions = sessions;
 
   const webDir = resolveWebDir();
 
-  protocol.handle(SCHEME, async (request) => {
+  if (registerProtocol) protocol.handle(SCHEME, async (request) => {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
@@ -170,6 +223,8 @@ async function createWindow(): Promise<void> {
       sandbox: true,
     },
   });
+  mainWindow = win;
+  win.on("closed", () => { mainWindow = null; });
 
   win.webContents.on("did-finish-load", () => {
     void win.webContents.insertCSS(`
@@ -186,17 +241,22 @@ async function createWindow(): Promise<void> {
     `);
   });
 
-  win.loadURL(`${SCHEME}://${HOST}/`);
+  await win.loadURL(`${SCHEME}://${HOST}/`);
 }
 
-app.whenReady().then(createWindow);
+if (app.requestSingleInstanceLock()) {
+  if (app.isPackaged) app.setAsDefaultProtocolClient(DESKTOP_SCHEME);
+  launchQueue = app.whenReady().then(createWindow);
+} else {
+  app.quit();
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) void createWindow();
+  receiveLaunch([]);
 });
 
 app.on("will-quit", (e) => {

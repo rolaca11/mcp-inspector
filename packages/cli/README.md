@@ -130,7 +130,7 @@ mcp-inspector serve               [--port 8765]          # web dashboard at http
                                   [--no-open]            # don't open the browser
                                   [--no-ui]              # tRPC API only
 
-mcp-inspector desktop             [--config a.json b.json] # open the local desktop app
+mcp-inspector desktop             [--config a.json b.json] # open the installed desktop app
                                   [-q, --quiet]
 
 mcp-inspector test                [paths...]             # run test suites (default: ./mcp-tests)
@@ -369,10 +369,10 @@ resource-template variable names (lazily populated after connect).
 
 ## Desktop app
 
-`mcp-inspector desktop` opens the local app at `./packages/electron` using that
-package's Electron dependency. Run it from this repository's root after
-`bun install` and `bun run build:electron`. It uses the same default config
-sources and current working directory as `serve`, and
+`mcp-inspector desktop` opens the installed app through the OS URL launcher,
+using `xdg-open` on Linux, Launch Services on macOS, and the default URL handler
+on Windows. It uses the same default config sources and current working
+directory as `serve`, and
 `-c, --config` accepts multiple paths, repeated options, and comma-separated paths.
 Config changes remain visible when the app reloads its server list.
 
@@ -381,6 +381,11 @@ mcp-inspector desktop
 mcp-inspector desktop --config team.json local.json
 mcp-inspector desktop -c team.json -c local.json
 ```
+
+The desktop app must be installed with its `mcp-inspector://` URL handler
+registered. The packaged app includes this association. On Linux, integrate
+the AppImage with your desktop so its launcher is registered. Launching again
+updates the running app's configuration and brings its window forward.
 
 ## Web dashboard
 

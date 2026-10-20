@@ -1,5 +1,9 @@
 appId: dev.ropi.mcp-inspector
 productName: MCP Inspector
+protocols:
+  - name: MCP Inspector
+    schemes:
+      - mcp-inspector
 directories:
   output: release
 files:
