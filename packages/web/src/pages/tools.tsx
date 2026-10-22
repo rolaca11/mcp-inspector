@@ -53,6 +53,7 @@ import { SubNav, useCapabilitySubItems } from "@/components/shell/sub-nav";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useResultStore } from "@/stores/result-store";
 import { useSelectionStore } from "@/stores/selection-store";
+import { useToolSchemaStore } from "@/stores/tool-schema-store";
 import { useSyncedForm } from "@/hooks/use-synced-form";
 import { useSubmitShortcut } from "@/hooks/use-submit-shortcut";
 import {
@@ -73,6 +74,7 @@ import type {
   ToolResult,
 } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { parseToolInputSchema, toolSchemaFormValues } from "@/lib/tool-input-schema";
 import { MarkdownDescription } from "@/components/markdown-description";
 import { McpAppFrame } from "@/components/mcp-app-frame";
 import { isUiResourceUri, toolUiResourceUri } from "@/lib/mcp-apps";
@@ -168,7 +170,7 @@ export function ToolsPage() {
           <SubNav items={subItems.tools ?? []} variant="page" />
         </div>
         {selected && (
-          <ToolDetail key={selected.name} serverName={server.id} tool={selected} />
+          <ToolDetail key={JSON.stringify([server.id, selected.name])} serverName={server.id} tool={selected} />
         )}
       </div>
     </PageShell>
@@ -193,23 +195,27 @@ function ToolDetail({
   serverName: string;
   tool: MCPTool;
 }) {
+  const schemaStore = useToolSchemaStore();
+  const schemaOverride = schemaStore.getSchema(serverName, tool.name);
+  const inputSchema = schemaOverride ?? tool.inputSchema;
+  const [schemaDraft, setSchemaDraft] = React.useState<string | null>(null);
+  const draftSchema = React.useMemo(() => {
+    if (schemaDraft === null) return null;
+    try {
+      return { schema: parseToolInputSchema(schemaDraft), error: null };
+    } catch (error) {
+      return { schema: null, error: (error as Error).message };
+    }
+  }, [schemaDraft]);
+
   const resolvedSchema = React.useMemo(
-    () => resolveSchemaRefs(tool.inputSchema),
-    [tool.inputSchema],
+    () => resolveSchemaRefs(inputSchema),
+    [inputSchema],
   );
   const properties = resolvedSchema.properties ?? {};
   const required = new Set(resolvedSchema.required ?? []);
 
-  const initial = React.useMemo(() => {
-    const init: Record<string, string> = {};
-    for (const [name, prop] of Object.entries(properties)) {
-      if (prop.default !== undefined) init[name] = typeof prop.default === "object" && prop.default !== null
-        ? JSON.stringify(prop.default)
-        : String(prop.default);
-      else init[name] = "";
-    }
-    return init;
-  }, [properties]);
+  const initial = React.useMemo(() => toolSchemaFormValues(inputSchema), [inputSchema]);
 
   const schema = React.useMemo(
     () => mcpSchemaToZod(resolvedSchema),
@@ -223,7 +229,7 @@ function ToolDetail({
     defaults: initial,
   });
 
-  const { formState, handleSubmit, watch, setAllValues } = form;
+  const { handleSubmit, watch, setAllValues } = form;
 
   const resultStore = useResultStore();
   const [loading, setLoading] = React.useState(false);
@@ -264,8 +270,17 @@ function ToolDetail({
     setJsonError(null);
   }, []);
 
+  const applyInputSchema = (override: MCPToolSchema | undefined) => {
+    const nextSchema = override ?? tool.inputSchema;
+    schemaStore.setSchema(serverName, tool.name, override);
+    setAllValues(toolSchemaFormValues(nextSchema, form.getValues() as Record<string, string>));
+    setJsonError(null);
+    setSchemaDraft(null);
+  };
+
   const onCall = React.useCallback(
-    () =>
+    () => {
+      if (schemaDraft !== null) return;
       void handleSubmit(async (coercedData) => {
         setLoading(true);
         try {
@@ -290,13 +305,12 @@ function ToolDetail({
         } finally {
           setLoading(false);
         }
-      })(),
-    [serverName, tool.name, handleSubmit, resultStore],
+      })();
+    },
+    [serverName, tool.name, handleSubmit, resultStore, schemaDraft],
   );
 
   const hasArgs = Object.keys(properties).length > 0;
-  const canCall = !callState.loading && formState.isValid;
-  const onSubmitShortcut = useSubmitShortcut(onCall, { canSubmit: canCall });
 
   // Validate the watched values directly against the schema so the tooltip can
   // describe the issues without touching react-hook-form's error state (which
@@ -314,6 +328,9 @@ function ToolDetail({
     }
     return issues;
   }, [schema, watchedValues]);
+
+  const canCall = schemaDraft === null && !callState.loading && validationIssues.length === 0;
+  const onSubmitShortcut = useSubmitShortcut(onCall, { canSubmit: canCall });
 
   return (
     <div className="space-y-8 min-w-0">
@@ -336,6 +353,7 @@ function ToolDetail({
                 app
               </Badge>
             )}
+            {schemaOverride && <Badge variant="muted">Custom input schema</Badge>}
           </>
         }
         description={
@@ -346,7 +364,39 @@ function ToolDetail({
         onKeyDown={onSubmitShortcut}
       >
         <div className="space-y-6">
-          {hasArgs && (
+          {schemaDraft !== null ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Override the input schema for this tool in the inspector. The server's schema stays unchanged.
+              </p>
+              <EditableJsonBlock
+                key="input-schema"
+                value={schemaDraft}
+                onChange={setSchemaDraft}
+                label="Input schema"
+                pasteable
+              />
+              {draftSchema?.error && (
+                <p role="alert" className="text-sm text-destructive">{draftSchema.error}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!draftSchema?.schema}
+                  onClick={() => draftSchema?.schema && applyInputSchema(draftSchema.schema)}
+                >
+                  Apply schema
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setSchemaDraft(null)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => applyInputSchema(undefined)}>
+                  Reset to server schema
+                </Button>
+              </div>
+            </div>
+          ) : hasArgs && (
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="flex flex-col gap-6">
                 {Object.entries(properties).map(([name, prop]) => (
@@ -361,6 +411,7 @@ function ToolDetail({
                 ))}
               </div>
               <EditableJsonBlock
+                key="tool-arguments"
                 value={canonicalJson}
                 onChange={onJsonChange}
                 onBlur={onJsonBlur}
@@ -403,7 +454,15 @@ function ToolDetail({
                 </TooltipContent>
               )}
             </Tooltip>
-            {hasArgs && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={schemaDraft !== null || callState.loading}
+              onClick={() => setSchemaDraft(JSON.stringify(inputSchema, null, 2))}
+            >
+              Edit input schema
+            </Button>
+            {hasArgs && schemaDraft === null && (
               <SavedFormsControls
                 serverName={serverName}
                 toolName={tool.name}
