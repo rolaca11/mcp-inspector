@@ -13,3 +13,9 @@ export function minifyJsonText(text: string): string | null {
     return null;
   }
 }
+
+export function jsonValueText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value !== null && typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}

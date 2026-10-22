@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatJsonText, minifyJsonText } from "@/lib/json-text";
+import { formatJsonText, jsonValueText, minifyJsonText } from "@/lib/json-text";
 
 describe("json text helpers", () => {
   it("formats valid JSON with two-space indentation", () => {
@@ -16,5 +16,17 @@ describe("json text helpers", () => {
   it("returns null for invalid JSON", () => {
     expect(formatJsonText("{a:1}")).toBeNull();
     expect(minifyJsonText("")).toBeNull();
+  });
+
+  it("copies strings without quotes and scalars as their literal", () => {
+    expect(jsonValueText("https://example.com")).toBe("https://example.com");
+    expect(jsonValueText(42)).toBe("42");
+    expect(jsonValueText(false)).toBe("false");
+    expect(jsonValueText(null)).toBe("null");
+  });
+
+  it("copies objects and arrays as indented JSON", () => {
+    expect(jsonValueText({ a: [1] })).toBe('{\n  "a": [\n    1\n  ]\n}');
+    expect(jsonValueText([])).toBe("[]");
   });
 });
