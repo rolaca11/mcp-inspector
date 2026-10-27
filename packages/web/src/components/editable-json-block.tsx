@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AlignLeft, Check, ClipboardPaste, Copy, Minimize2 } from "lucide-react";
-import { EditorState } from "@codemirror/state";
+import { Annotation, EditorState } from "@codemirror/state";
 import {
   EditorView,
   drawSelection,
@@ -181,6 +181,7 @@ function jsonDiagnostics(view: EditorView): Diagnostic[] {
 }
 
 const jsonLinter = linter(jsonDiagnostics, { delay: 300 });
+const externalUpdate = Annotation.define<boolean>();
 
 function formatDocument(view: EditorView): boolean {
   const current = view.state.doc.toString();
@@ -319,7 +320,7 @@ export function EditableJsonBlock({
             indentWithTab,
           ]),
           EditorView.updateListener.of((update) => {
-            if (!update.docChanged) return;
+            if (!update.docChanged || update.transactions.some((transaction) => transaction.annotation(externalUpdate))) return;
             onChangeRef.current(update.state.doc.toString());
           }),
           EditorView.domEventHandlers({
@@ -328,6 +329,7 @@ export function EditableJsonBlock({
               if (current !== valueRef.current) {
                 view.dispatch({
                   changes: { from: 0, to: current.length, insert: valueRef.current },
+                  annotations: externalUpdate.of(true),
                 });
               }
               onBlurRef.current?.();
@@ -349,7 +351,10 @@ export function EditableJsonBlock({
     if (!view || view.hasFocus) return;
     const current = view.state.doc.toString();
     if (current === value) return;
-    view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
+    view.dispatch({
+      changes: { from: 0, to: current.length, insert: value },
+      annotations: externalUpdate.of(true),
+    });
   }, [value]);
 
   const replaceDocument = React.useCallback((text: string) => {

@@ -11,7 +11,9 @@ export function useSyncedForm(opts: {
   defaults: Record<string, string>;
 }) {
   const { serverName, formKey, schema, defaults } = opts;
-  const { getArgs, setArg, setArgs } = useToolArgsStore();
+  const getArgs = useToolArgsStore((state) => state.getArgs);
+  const setArg = useToolArgsStore((state) => state.setArg);
+  const setArgs = useToolArgsStore((state) => state.setArgs);
 
   const cached = getArgs(serverName, formKey);
   const defaultValues = cached ?? defaults;

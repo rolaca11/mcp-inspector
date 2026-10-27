@@ -1,8 +1,9 @@
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
-export function MarkdownDescription({
+export const MarkdownDescription = memo(function MarkdownDescription({
   children,
   className,
 }: {
@@ -16,4 +17,4 @@ export function MarkdownDescription({
       </ReactMarkdown>
     </div>
   );
-}
+});

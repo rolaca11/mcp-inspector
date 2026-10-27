@@ -15,7 +15,7 @@ interface CodeBlockProps {
   renderedContent?: React.ReactNode;
 }
 
-export function CodeBlock({
+export const CodeBlock = React.memo(function CodeBlock({
   children,
   language,
   className,
@@ -178,7 +178,7 @@ export function CodeBlock({
       )}
     </div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /* Lightweight JSON syntax highlighting (fallback for malformed JSON)  */

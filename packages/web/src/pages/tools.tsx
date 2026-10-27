@@ -241,12 +241,12 @@ function ToolDetail({
   const callState: CallState = loading ? { loading: true } : (cachedResult ?? { loading: false });
 
   const watchedValues = watch() as Record<string, string>;
+  const parsedValues = React.useMemo(() => schema.safeParse(watchedValues), [schema, watchedValues]);
 
   const canonicalJson = React.useMemo(() => {
-    const parsed = schema.safeParse(watchedValues);
-    if (parsed.success) return JSON.stringify(parsed.data, null, 2);
+    if (parsedValues.success) return JSON.stringify(parsedValues.data, null, 2);
     return JSON.stringify(partialCoerce(watchedValues, properties), null, 2);
-  }, [watchedValues, schema, properties]);
+  }, [watchedValues, parsedValues, properties]);
 
   const onJsonChange = React.useCallback(
     (text: string) => {
@@ -316,18 +316,17 @@ function ToolDetail({
   // describe the issues without touching react-hook-form's error state (which
   // would surface inline errors under each field).
   const validationIssues = React.useMemo(() => {
-    const parsed = schema.safeParse(watchedValues);
-    if (parsed.success) return [];
+    if (parsedValues.success) return [];
     const seen = new Set<string>();
     const issues: { name: string; message: string }[] = [];
-    for (const issue of parsed.error.issues) {
+    for (const issue of parsedValues.error.issues) {
       const name = issue.path.length > 0 ? String(issue.path[0]) : "(form)";
       if (seen.has(name)) continue;
       seen.add(name);
       issues.push({ name, message: conciseIssueMessage(issue) });
     }
     return issues;
-  }, [schema, watchedValues]);
+  }, [parsedValues]);
 
   const canCall = schemaDraft === null && !callState.loading && validationIssues.length === 0;
   const onSubmitShortcut = useSubmitShortcut(onCall, { canSubmit: canCall });
@@ -560,7 +559,7 @@ interface AppFetchState {
  * Fetches a tool's linked `ui://` template and renders it as an app, fed the
  * tool's input arguments and result. Re-fetches when the template URI changes.
  */
-function ToolAppView({
+const ToolAppView = React.memo(function ToolAppView({
   serverName,
   resourceUri,
   toolName,
@@ -637,7 +636,7 @@ function ToolAppView({
       title={`${toolName} · ${resourceUri}`}
     />
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /* Saved forms (persist / load tool input presets)                     */
@@ -877,7 +876,7 @@ function SavedFormRow({
 /* Form fields                                                         */
 /* ------------------------------------------------------------------ */
 
-function ArgField({
+const ArgField = React.memo(function ArgField({
   name,
   prop,
   required,
@@ -1010,7 +1009,7 @@ function ArgField({
       )}
     />
   );
-}
+});
 
 type AlternativeSet = NonNullable<ReturnType<typeof schemaAlternativeOptions>>;
 
@@ -1856,7 +1855,7 @@ function JsonSubField({
 /* Result rendering                                                    */
 /* ------------------------------------------------------------------ */
 
-function ToolResultView({
+const ToolResultView = React.memo(function ToolResultView({
   state,
   serverName,
   toolInput,
@@ -1904,7 +1903,7 @@ function ToolResultView({
       )}
     </div>
   );
-}
+});
 
 function ContentBlockView({
   block,
