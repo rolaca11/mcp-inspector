@@ -41,3 +41,15 @@ jobs:
 
       - name: Test
         run: bun run test
+
+      - name: Build Debian package
+        if: runner.os == 'Linux'
+        run: bun run dist:deb
+
+      - name: Install and verify Debian package
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ./packages/electron/release/*.deb
+          mcp-inspector --version
+          bun scripts/verify-deb.mjs packages/electron/release/*.deb

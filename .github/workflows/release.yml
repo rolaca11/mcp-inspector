@@ -169,6 +169,10 @@ jobs:
         if: matrix.platform == 'linux'
         run: tar -czf packages/electron/release/mcp-inspector-linux-x86_64.tar.gz -C packages/electron/release linux-unpacked
 
+      - name: Verify Debian package
+        if: matrix.platform == 'linux'
+        run: bun scripts/verify-deb.mjs packages/electron/release/*.deb
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
@@ -176,6 +180,7 @@ jobs:
           files: |
             packages/electron/release/*.AppImage
             packages/electron/release/*.AppImage.zsync
+            packages/electron/release/*.deb
             packages/electron/release/*.tar.gz
             packages/electron/release/*.dmg
             packages/electron/release/*.zip

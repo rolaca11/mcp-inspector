@@ -1,3 +1,4 @@
+import "./system-certificates.js";
 import { app, BrowserWindow, Menu, protocol } from "electron";
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";

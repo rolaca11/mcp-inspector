@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfigSync } from "@rolaca11/mcp-inspector-core/config";
 import { desktopLaunchUrl } from "@rolaca11/mcp-inspector-core/desktop";
 
+vi.mock("../system-certificates.js", () => ({}));
+
 const runtime = vi.hoisted(() => ({
   ready: false,
   readyResolve: () => {},

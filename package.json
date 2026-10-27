@@ -15,6 +15,7 @@
     "dev:ui": "bun run --filter @rolaca11/mcp-inspector-web dev",
     "dev:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron dev",
     "dist:electron": "bun run build:electron && bun run --filter @rolaca11/mcp-inspector-electron dist",
+    "dist:deb": "bun run dist:electron --linux deb",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
     "clean": "rm -rf packages/*/dist"

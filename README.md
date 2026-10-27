@@ -15,6 +15,20 @@ or you can run the following command for a server-client setup in your browser:
 npx @rolaca11/mcp-inspector serve
 ```
 
+On Debian or Ubuntu, download the `.deb` from the release and install it:
+
+```bash
+sudo apt install ./mcp-inspector_*.deb
+```
+
+The package installs the desktop app, its `mcp-inspector://` URL handler, and the
+`mcp-inspector` command. The CLI uses the bundled runtime, so Node.js and Bun are
+not required. Open MCP Inspector from the application menu or run
+`mcp-inspector desktop`.
+
+The desktop app and bundled CLI trust your operating system's certificate
+authorities, including locally installed development CAs.
+
 <img src="docs/images/overview.png">
 
 See basic server stats, or server communication logs.
@@ -232,6 +246,7 @@ bun run dev:ui                                # Vite dev server on :5173 with /a
 
 # Electron:
 bun run dev:electron                          # launches the desktop app in dev mode
+bun run dist:deb                              # builds the Linux desktop app and CLI .deb
 
 bun run typecheck    # type-check all packages
 bun run test         # run tests across all packages
