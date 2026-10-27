@@ -26,6 +26,9 @@ The package installs the desktop app, its `mcp-inspector://` URL handler, and th
 not required. Open MCP Inspector from the application menu or run
 `mcp-inspector desktop`.
 
+Linux packages install the commands in `/usr/bin` and the application files in
+`/usr/lib/mcp-inspector`.
+
 The desktop app and bundled CLI trust your operating system's certificate
 authorities, including locally installed development CAs.
 
@@ -166,6 +169,10 @@ Package versions on `main` are `0.0.0-dev`. Run the **Release** workflow from
 version, builds and tests the release, then creates a versioned commit and tag.
 The release commit is reachable through the tag; `main` keeps its development
 versions.
+
+Stable releases also prepare and verify source packages for every supported
+Ubuntu target, then sign and upload them to the PPA. See
+[PPA publishing](docs/ppa.md) for CI credentials and local commands.
 
 ### Testing
 

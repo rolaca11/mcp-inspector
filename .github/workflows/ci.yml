@@ -11,6 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ppa:
+    name: PPA packaging
+    uses: ./.github/workflows/ppa.yml
+    with:
+      version: "0.0.0"
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
   ci:
     name: Build & Typecheck
     runs-on: ${{ matrix.os }}

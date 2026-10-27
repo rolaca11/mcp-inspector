@@ -16,6 +16,9 @@
     "dev:electron": "bun run build:web && bun run --filter @rolaca11/mcp-inspector-electron dev",
     "dist:electron": "bun run build:electron && bun run --filter @rolaca11/mcp-inspector-electron dist",
     "dist:deb": "bun run dist:electron --linux deb",
+    "ppa:source": "node scripts/prepare-ppa.mjs",
+    "ppa:verify": "node scripts/verify-ppa.mjs",
+    "ppa:upload": "node scripts/upload-ppa.mjs",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
     "clean": "rm -rf packages/*/dist"

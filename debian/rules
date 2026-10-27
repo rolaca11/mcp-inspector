@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	ELECTRON_RUN_AS_NODE=1 vendor/electron/electron scripts/build-ppa.mjs
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	mkdir -p debian/mcp-inspector/usr/lib/mcp-inspector
+	cp -a packages/electron/release/linux-unpacked/. debian/mcp-inspector/usr/lib/mcp-inspector/
+	install -Dm755 packages/electron/build/mcp-inspector debian/mcp-inspector/usr/bin/mcp-inspector
+	mkdir -p debian/mcp-inspector/usr/bin
+	ln -s /usr/lib/mcp-inspector/mcp-inspector-desktop debian/mcp-inspector/usr/bin/mcp-inspector-desktop
+	install -Dm644 debian/mcp-inspector-desktop.desktop debian/mcp-inspector/usr/share/applications/mcp-inspector-desktop.desktop
+	install -Dm644 packages/electron/build/icon.png debian/mcp-inspector/usr/share/icons/hicolor/512x512/apps/mcp-inspector.png
+
+override_dh_auto_clean:
+	rm -rf packages/web/dist packages/electron/dist packages/electron/release
+	find packages -type d \( -name .vite -o -name .vite-temp \) -prune -exec rm -rf {} +
+
+override_dh_strip:
+
+override_dh_dwz:
+
+override_dh_makeshlibs:
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(CURDIR)/debian/mcp-inspector/usr/lib/mcp-inspector
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 4755 debian/mcp-inspector/usr/lib/mcp-inspector/chrome-sandbox
