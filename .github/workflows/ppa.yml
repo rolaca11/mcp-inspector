@@ -46,8 +46,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends debhelper dpkg-dev devscripts gnupg unzip xz-utils
 
-      - name: Test noninteractive signing
-        run: node --test scripts/__tests__/ppa-signing.test.mjs
+      - name: Test signing and upload retries
+        run: node --test scripts/__tests__/ppa-*.test.mjs
 
       - name: Read Ubuntu targets
         id: targets

@@ -133,6 +133,13 @@ and their referenced source files. Launchpad builds the `.deb` itself. Check the
 acceptance email and the PPA's package page for every series before announcing
 installation instructions.
 
+Each failed `dput` transfer gets up to four attempts, with delays of 10, 20, and
+40 seconds. Retries use the same signed files and do not repeat earlier completed
+uploads. Signing failures stop immediately. If the job still fails, rerun only
+the failed job while its source artifact is available. Do not rerun the full
+release or regenerate the original archive for a version already accepted by
+Launchpad.
+
 For noninteractive signing, add `--batch --passphrase-file PATH`. Use
 `--sign-only` to prepare signed uploads without transferring them. Omitting
 `--key` uses the configured `signingKey` fingerprint.

@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { uploadWithRetry } from "./ppa-upload-retry.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -61,7 +62,7 @@ try {
     for (const upload of manifest.uploads) {
       const args = [destination, path.join(output, upload.changes)];
       if (values["dry-run"]) console.log("dput", ...args);
-      else execFileSync("dput", args, { stdio: "inherit" });
+      else await uploadWithRetry(args);
     }
   }
 } finally {
