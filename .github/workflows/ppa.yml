@@ -1,0 +1,155 @@
+name: PPA
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      publish:
+        type: boolean
+        default: false
+    secrets:
+      PPA_GPG_PRIVATE_KEY:
+        required: false
+      PPA_GPG_PASSPHRASE:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Prepare source uploads
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends debhelper dpkg-dev devscripts gnupg unzip xz-utils
+
+      - name: Test noninteractive signing
+        run: node --test scripts/__tests__/ppa-signing.test.mjs
+
+      - name: Read Ubuntu targets
+        id: targets
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFileSync, readFileSync } from "node:fs";
+          const { series } = JSON.parse(readFileSync("debian/ppa.json", "utf8"));
+          appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(series)}\n`);
+          JS
+
+      - name: Prepare source packages
+        env:
+          PPA_VERSION: ${{ inputs.version }}
+          XZ_OPT: "-T2 -3"
+        run: bun run ppa:source --version "$PPA_VERSION" --output "$RUNNER_TEMP/ppa-source"
+
+      - name: Save unsigned source uploads
+        uses: actions/upload-artifact@v7
+        with:
+          name: ppa-source
+          overwrite: true
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ppa-source/*.dsc
+            ${{ runner.temp }}/ppa-source/*.tar.xz
+            ${{ runner.temp }}/ppa-source/*_source.buildinfo
+            ${{ runner.temp }}/ppa-source/*_source.changes
+            ${{ runner.temp }}/ppa-source/manifest.json
+
+  verify:
+    name: Verify Ubuntu ${{ matrix.target.version }}
+    needs: source
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.source.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ppa-source
+          path: ${{ runner.temp }}/ppa-source
+
+      - name: Build and test without network access
+        env:
+          PPA_SERIES: ${{ matrix.target.name }}
+        run: node scripts/verify-ppa.mjs --output "$RUNNER_TEMP/ppa-source" --series "$PPA_SERIES"
+
+      - name: Save verification result
+        uses: actions/upload-artifact@v7
+        with:
+          name: ppa-check-${{ matrix.target.name }}
+          overwrite: true
+          retention-days: 3
+          if-no-files-found: error
+          path: ${{ runner.temp }}/ppa-source/verification-${{ matrix.target.name }}.json
+
+  publish:
+    name: Upload to Launchpad
+    if: ${{ inputs.publish }}
+    needs: [source, verify]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ppa-source
+          path: ${{ runner.temp }}/ppa-source
+
+      - name: Install upload tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends devscripts dput gnupg
+
+      - name: Import and test signing key
+        env:
+          PPA_GPG_PRIVATE_KEY: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
+          PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
+        run: node scripts/ppa-gpg.mjs setup
+
+      - name: Sign and upload all Ubuntu source packages
+        run: node scripts/upload-ppa.mjs --output "$RUNNER_TEMP/ppa-source" --batch --passphrase-file "$PPA_GPG_PASSPHRASE_FILE"
+
+      - name: Remove signing credentials
+        if: ${{ always() && env.PPA_GPG_CREDENTIALS_DIRECTORY != '' }}
+        run: node scripts/ppa-gpg.mjs cleanup

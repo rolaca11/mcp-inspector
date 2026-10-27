@@ -1,2 +1,2 @@
 #!/bin/sh
-ELECTRON_RUN_AS_NODE=1 exec "/opt/MCP Inspector/mcp-inspector-desktop" "/opt/MCP Inspector/resources/app.asar/dist/cli.js" "$@"
+ELECTRON_RUN_AS_NODE=1 exec /usr/lib/mcp-inspector/mcp-inspector-desktop /usr/lib/mcp-inspector/resources/app.asar/dist/cli.js "$@"

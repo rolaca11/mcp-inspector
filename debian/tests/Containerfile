@@ -1,0 +1,5 @@
+ARG UBUNTU_VERSION=22.04
+FROM docker.io/library/ubuntu:${UBUNTU_VERSION}
+WORKDIR /packaging
+COPY . debian/
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends build-essential libnotify4 libsecret-1-0 libuuid1 libxss1 libxtst6 xdg-utils openssl ca-certificates && DEBIAN_FRONTEND=noninteractive apt-get build-dep --yes --no-install-recommends . && apt-get clean

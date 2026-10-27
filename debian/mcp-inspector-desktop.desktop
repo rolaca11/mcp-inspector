@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=MCP Inspector
+Comment=Inspect Model Context Protocol servers
+Exec=/usr/lib/mcp-inspector/mcp-inspector-desktop %U
+Terminal=false
+Type=Application
+Icon=mcp-inspector
+Categories=Development;
+MimeType=x-scheme-handler/mcp-inspector;
+StartupWMClass=mcp-inspector-desktop

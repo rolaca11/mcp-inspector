@@ -1,0 +1,40 @@
+Source: mcp-inspector
+Section: devel
+Priority: optional
+Maintainer: Laszlo Stahorszki <rolaca12@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ libasound2t64 | libasound2,
+ libatk-bridge2.0-0t64 | libatk-bridge2.0-0,
+ libatk1.0-0t64 | libatk1.0-0,
+ libatspi2.0-0t64 | libatspi2.0-0,
+ libcairo2,
+ libcups2t64 | libcups2,
+ libdbus-1-3,
+ libexpat1,
+ libgbm1,
+ libglib2.0-0t64 | libglib2.0-0,
+ libgtk-3-0t64 | libgtk-3-0,
+ libnspr4,
+ libnss3,
+ libpango-1.0-0,
+ libudev1,
+ libx11-6,
+ libxcb1,
+ libxcomposite1,
+ libxdamage1,
+ libxext6,
+ libxfixes3,
+ libxkbcommon0,
+ libxrandr2
+Standards-Version: 4.7.0
+Homepage: https://github.com/rolaca11/mcp-inspector
+Rules-Requires-Root: no
+
+Package: mcp-inspector
+Architecture: amd64
+Depends: ${misc:Depends}, ${shlibs:Depends}, libnotify4, libsecret-1-0, libuuid1, libxss1, libxtst6, xdg-utils
+Description: MCP Inspector desktop app and command-line client
+ Connect to Model Context Protocol servers, inspect their resources and
+ prompts, and call tools through a desktop interface or command-line client.
+ Includes the Electron runtime; Node.js and Bun are not required at runtime.

@@ -59,6 +59,12 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Validate PPA version
+        if: ${{ !contains(inputs.version, '-') }}
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/check-ppa-version.mjs "$RELEASE_VERSION"
+
       - name: Set package versions
         env:
           RELEASE_VERSION: ${{ inputs.version }}
@@ -131,6 +137,19 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public
         working-directory: packages/cli
+
+  ppa:
+    if: ${{ !contains(inputs.version, '-') }}
+    name: Publish PPA
+    needs: build
+    uses: ./.github/workflows/ppa.yml
+    with:
+      version: ${{ inputs.version }}
+      ref: ${{ needs.build.outputs.tag }}
+      publish: true
+    secrets:
+      PPA_GPG_PRIVATE_KEY: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
+      PPA_GPG_PASSPHRASE: ${{ secrets.PPA_GPG_PASSPHRASE }}
 
   electron:
     name: Electron (${{ matrix.platform }})

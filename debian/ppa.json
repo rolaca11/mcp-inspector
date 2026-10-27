@@ -1,0 +1,12 @@
+{
+  "owner": "ropi11",
+  "name": "mcp-inspector",
+  "signingKey": "D753B1F4031F6234DD76A57C2E2DBC57B0BD8064",
+  "architectures": ["amd64"],
+  "series": [
+    { "name": "jammy", "version": "22.04" },
+    { "name": "noble", "version": "24.04" },
+    { "name": "resolute", "version": "26.04" },
+    { "name": "stonking", "version": "26.10" }
+  ]
+}

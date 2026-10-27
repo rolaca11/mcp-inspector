@@ -8,6 +8,8 @@ import { setTimeout } from "node:timers/promises";
 import { createServer } from "node:https";
 import { promisify } from "node:util";
 
+if (process.versions.electron) process.noAsar = true;
+
 const artifact = process.argv[2];
 assert.ok(artifact, "Usage: bun scripts/verify-deb.mjs <package.deb>");
 
@@ -16,7 +18,9 @@ let server;
 let tlsServer;
 try {
   execFileSync("dpkg-deb", ["--extract", artifact, root]);
-  const app = path.join(root, "opt/MCP Inspector");
+  const contents = execFileSync("dpkg-deb", ["--contents", artifact], { encoding: "utf8" });
+  assert.doesNotMatch(contents, /\s\.\/opt(?:\/|$)/m);
+  const app = path.join(root, "usr/lib/mcp-inspector");
   const executable = path.join(app, "mcp-inspector-desktop");
   const cli = path.join(app, "resources/app.asar/dist/cli.js");
   const env = {
@@ -32,12 +36,15 @@ try {
 
   const desktop = await readFile(path.join(root, "usr/share/applications/mcp-inspector-desktop.desktop"), "utf8");
   assert.match(desktop, /Exec=.*mcp-inspector-desktop.*%U/);
+  assert.match(desktop, /Exec=.*\/usr\/lib\/mcp-inspector\/mcp-inspector-desktop/);
   assert.match(desktop, /MimeType=.*x-scheme-handler\/mcp-inspector/);
   assert.match(run("--version"), /^\d+\.\d+\.\d+/);
   assert.match(run("--help"), /desktop/);
 
   const launcher = path.join(root, "usr/bin/mcp-inspector");
-  await writeFile(launcher, (await readFile(launcher, "utf8")).replaceAll("/opt/MCP Inspector", app));
+  const launcherText = await readFile(launcher, "utf8");
+  assert.match(launcherText, /\/usr\/lib\/mcp-inspector/);
+  await writeFile(launcher, launcherText.replaceAll("/usr/lib/mcp-inspector", app));
   assert.match(execFileSync(launcher, ["--version"], { encoding: "utf8", timeout: 15000 }), /^\d+\.\d+\.\d+/);
 
   const opener = path.join(root, "usr/bin/xdg-open");

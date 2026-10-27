@@ -1,6 +1,7 @@
 const { execFileSync } = require("node:child_process");
 const { basename } = require("node:path");
 const { closeSync, openSync, writeSync } = require("node:fs");
+const { relocateDeb } = require("./relocate-deb.cjs");
 
 const GITHUB_OWNER = "rolaca11";
 const GITHUB_REPOSITORY = "mcp-inspector";
@@ -54,6 +55,9 @@ function embedUpdateInformation(appImage) {
 }
 
 exports.afterAllArtifactBuild = function afterAllArtifactBuild(buildResult) {
+  for (const artifact of buildResult.artifactPaths) {
+    if (artifact.endsWith(".deb")) relocateDeb(artifact);
+  }
   return buildResult.artifactPaths
     .filter((artifact) => artifact.endsWith(".AppImage"))
     .map(embedUpdateInformation);
