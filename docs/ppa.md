@@ -134,11 +134,19 @@ acceptance email and the PPA's package page for every series before announcing
 installation instructions.
 
 Each failed `dput` transfer gets up to four attempts, with delays of 10, 20, and
-40 seconds. Retries use the same signed files and do not repeat earlier completed
-uploads. Signing failures stop immediately. If the job still fails, rerun only
-the failed job while its source artifact is available. Do not rerun the full
-release or regenerate the original archive for a version already accepted by
-Launchpad.
+40 seconds. Retries use the same signed files. Signing failures stop immediately.
+Before uploading, the command lists the PPA's sources and skips every series
+whose exact version Launchpad already has, so a repeated upload sends only the
+missing series. The listing also gets four attempts and stops the upload if
+Launchpad does not answer.
+
+If the release's upload job still fails, run the PPA upload workflow from
+`main` with the Release run ID while its source artifact is available (three
+days). It checks that the run passed every Ubuntu check, downloads that run's
+source uploads, and sends the missing series with the upload scripts from
+`main`. Rerunning the failed job reuses the scripts from the release tag. Do not
+rerun the full release or regenerate the original archive for a version already
+accepted by Launchpad.
 
 For noninteractive signing, add `--batch --passphrase-file PATH`. Use
 `--sign-only` to prepare signed uploads without transferring them. Omitting
