@@ -234,6 +234,10 @@ function JsonArray({
         <ToggleBtn collapsed={false} onToggle={() => setCollapsed(true)}>
           <span className="text-muted-foreground">{"["}</span>
         </ToggleBtn>
+        <span className="text-muted-foreground/40 select-none text-[0.85em]">
+          {" "}
+          {items.length} {items.length === 1 ? "item" : "items"}
+        </span>
       </RowHead>
       {"\n"}
       {items.map((item, i) => (
