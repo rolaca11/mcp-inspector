@@ -1,0 +1,62 @@
+name: PPA upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Release run ID whose verified source uploads to send"
+        required: true
+        type: string
+
+concurrency:
+  group: ppa-upload
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  publish:
+    name: Upload to Launchpad
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the release run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run-id }}
+        run: |
+          if [[ ! "$RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "Enter a numeric run ID" >&2
+            exit 1
+          fi
+          workflow=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .path)
+          if [ "$workflow" != ".github/workflows/release.yml" ]; then
+            echo "Run $RUN_ID is not a Release run" >&2
+            exit 1
+          fi
+          upload=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs" --jq '.jobs[] | select(.name == "Publish PPA / Upload to Launchpad") | .conclusion')
+          if [ -z "$upload" ] || [ "$upload" = "skipped" ]; then
+            echo "Run $RUN_ID did not pass every Ubuntu check" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ppa-source
+          path: ${{ runner.temp }}/ppa-source
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+
+      - uses: ./.github/actions/ppa-upload
+        with:
+          source-directory: ${{ runner.temp }}/ppa-source
+          gpg-private-key: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.PPA_GPG_PASSPHRASE }}

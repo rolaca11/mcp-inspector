@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { publishedVersions } from "./ppa-published.mjs";
 import { uploadWithRetry } from "./ppa-upload-retry.mjs";
 
 const { values } = parseArgs({
@@ -59,7 +60,12 @@ try {
     else execFileSync("debsign", args, { env: signingEnv, stdio: "inherit" });
   }
   if (!values["sign-only"]) {
+    const published = await publishedVersions(ppa);
     for (const upload of manifest.uploads) {
+      if (published.has(upload.version)) {
+        console.log(`Skipping ${upload.changes}: Launchpad already has ${upload.version}.`);
+        continue;
+      }
       const args = [destination, path.join(output, upload.changes)];
       if (values["dry-run"]) console.log("dput", ...args);
       else await uploadWithRetry(args);
