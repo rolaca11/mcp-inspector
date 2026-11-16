@@ -207,11 +207,13 @@ describe("tool argument editing", () => {
     expect(JSON.parse(editor().state.doc.toString())).toEqual({ id: "item-42" });
   });
 
-  it("stretches nested inputs and JSON fields to the full row width at every depth", async () => {
+  it("applies w-full to nested inputs and JSON fields at every depth", async () => {
     await openTools();
     await act(async () => button("batch").click());
     await act(async () => button("Add item").click());
-    for (const addItem of [...container.querySelectorAll("button")].filter((element) => element.textContent?.trim() === "Add item").slice(0, -1)) {
+    for (const field of ["tags", "steps"]) {
+      const label = [...container.querySelectorAll("label")].find((element) => element.firstElementChild?.textContent === field)!;
+      const addItem = [...label.parentElement!.querySelectorAll("button")].find((element) => element.textContent?.trim() === "Add item")!;
       await act(async () => addItem.click());
     }
 
