@@ -71,6 +71,31 @@ beforeEach(() => {
           properties: { id: { type: "string" } },
           required: ["id"],
         },
+      }, {
+        name: "batch",
+        inputSchema: {
+          type: "object",
+          properties: {
+            calls: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  arguments: { type: "object" },
+                  tags: { type: "array", items: { type: "string" } },
+                  steps: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: { key: { type: "string" }, payload: { type: "object" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       }],
     },
   });
@@ -180,5 +205,20 @@ describe("tool argument editing", () => {
     await act(async () => button("lookup").click());
     expect(container.querySelector("input")!.value).toBe("item-42");
     expect(JSON.parse(editor().state.doc.toString())).toEqual({ id: "item-42" });
+  });
+
+  it("applies w-full to nested inputs and JSON fields at every depth", async () => {
+    await openTools();
+    await act(async () => button("batch").click());
+    await act(async () => button("Add item").click());
+    for (const field of ["tags", "steps"]) {
+      const label = [...container.querySelectorAll("label")].find((element) => element.firstElementChild?.textContent === field)!;
+      const addItem = [...label.parentElement!.querySelectorAll("button")].find((element) => element.textContent?.trim() === "Add item")!;
+      await act(async () => addItem.click());
+    }
+
+    const fields = [...container.querySelectorAll("input, textarea")];
+    expect(fields.map((field) => (field as HTMLInputElement).placeholder)).toEqual(["value", "{}", "value", "value", "{}"]);
+    for (const field of fields) expect(field.classList).toContain("w-full");
   });
 });
