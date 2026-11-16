@@ -1737,7 +1737,7 @@ function ValueField({
             ? "0"
             : "value"
       }
-      className="font-mono text-xs"
+      className="w-full font-mono text-xs"
     />
   );
 }
@@ -1846,7 +1846,7 @@ function JsonSubField({
       }}
       placeholder={placeholder}
       rows={3}
-      className="text-xs font-mono"
+      className="w-full text-xs font-mono"
     />
   );
 }
