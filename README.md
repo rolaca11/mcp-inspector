@@ -156,6 +156,17 @@ mcp-inspector desktop --config team.json local.json
 opens a `mcp-inspector://` link through the OS launcher, such as `xdg-open` on
 Linux. Install a desktop build with the `mcp-inspector` URL handler registered.
 
+### Usage analytics
+
+Release builds of the dashboard and desktop app send anonymous usage events to
+PostHog: page views, clicks and web vitals. Server names are replaced with
+`:server` in every URL, query strings are dropped, and clicks carry no element
+text or attributes. Session recording is off. The CLI sends nothing.
+
+Enabling Do Not Track in your browser turns analytics off. Builds read the
+project token from `packages/web/.env.production`. Development builds skip that
+file, and a build with `VITE_POSTHOG_PROJECT_TOKEN` empty never initializes PostHog.
+
 ---
 
 ### CLI
