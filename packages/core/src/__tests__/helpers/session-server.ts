@@ -31,7 +31,9 @@ export interface SessionTestServer {
   close(): Promise<void>;
 }
 
-export async function startSessionServer(): Promise<SessionTestServer> {
+export async function startSessionServer(
+  options: { configure?: (server: McpServer) => void } = {},
+): Promise<SessionTestServer> {
   const log: LoggedRequest[] = [];
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
@@ -42,6 +44,7 @@ export async function startSessionServer(): Promise<SessionTestServer> {
       { description: "echo", inputSchema: { text: z.string() } },
       async ({ text }) => ({ content: [{ type: "text", text }] }),
     );
+    options.configure?.(mcp);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sid) => {

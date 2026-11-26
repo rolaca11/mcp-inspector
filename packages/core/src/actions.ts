@@ -12,6 +12,7 @@ import { skillsCapability } from "./skills.js";
 import { promises as fs } from "node:fs";
 
 import type { Session } from "./client.js";
+import { LONG_REQUEST_OPTIONS } from "./elicitation.js";
 import {
   printCompletions,
   printJson,
@@ -145,7 +146,7 @@ export async function readResource(
   uri: string,
   opts: FormatOptions = {},
 ) {
-  const result = await session.client.readResource({ uri });
+  const result = await session.client.readResource({ uri }, LONG_REQUEST_OPTIONS);
   printResourceContents(result.contents, opts);
   if (opts.countTokens) emitTokenCount(result, opts);
 }
@@ -170,10 +171,13 @@ export async function callTool(
   args: CallToolArgs,
   opts: FormatOptions = {},
 ) {
-  const result = await session.client.callTool({
-    name: args.name,
-    arguments: args.arguments ?? {},
-  });
+  const result = await session.client.callTool(
+    {
+      name: args.name,
+      arguments: args.arguments ?? {},
+    },
+    LONG_REQUEST_OPTIONS,
+  );
   printToolResult(result as Parameters<typeof printToolResult>[0], opts);
   if (opts.countTokens) emitTokenCount(result, opts);
 }
@@ -194,7 +198,7 @@ export async function getPrompt(
   args: Record<string, string>,
   opts: FormatOptions = {},
 ) {
-  const result = await session.client.getPrompt({ name, arguments: args });
+  const result = await session.client.getPrompt({ name, arguments: args }, LONG_REQUEST_OPTIONS);
   printPromptResult(result as Parameters<typeof printPromptResult>[0], opts);
   if (opts.countTokens) emitTokenCount(result, opts);
 }

@@ -8,6 +8,7 @@ import {
   Client,
   StreamableHTTPClientTransport,
   UnauthorizedError,
+  type ClientCapabilities,
   type Implementation,
   type OAuthClientMetadata,
 } from "@modelcontextprotocol/client";
@@ -17,6 +18,11 @@ import pc from "picocolors";
 
 import { authFile } from "./paths.js";
 import { uiClientExtensions } from "./apps.js";
+import {
+  normalizeElicitationParams,
+  normalizeElicitationResult,
+  type ElicitationHandler,
+} from "./elicitation.js";
 import {
   FileOAuthProvider,
   openInBrowser,
@@ -30,16 +36,44 @@ const CLIENT_INFO: Implementation = {
   version: VERSION,
 };
 
-const CLIENT_CAPABILITIES = { extensions: uiClientExtensions() };
+function elicitationCapability(
+  elicitation: NonNullable<ConnectOptions["elicitation"]>,
+): ClientCapabilities["elicitation"] | undefined {
+  const form = elicitation.modes?.form !== false;
+  const url = elicitation.modes?.url !== false;
+  if (!form && !url) return undefined;
+  return {
+    ...(form ? { form: { applyDefaults: true } } : {}),
+    ...(url ? { url: {} } : {}),
+  };
+}
 
-function buildClient(kind: TargetSpec["kind"]): Client {
-  return new Client(CLIENT_INFO, {
-    capabilities: CLIENT_CAPABILITIES,
+function buildClient(kind: TargetSpec["kind"], opts: ConnectOptions = {}): Client {
+  const capabilities: ClientCapabilities = { extensions: uiClientExtensions() };
+  const elicitation = opts.elicitation;
+  const elicitationCaps = elicitation ? elicitationCapability(elicitation) : undefined;
+  if (elicitationCaps) capabilities.elicitation = elicitationCaps;
+
+  const client = new Client(CLIENT_INFO, {
+    capabilities,
     versionNegotiation: {
       mode: "auto",
       ...(kind === "stdio" ? { probe: { timeoutMs: 3000 } } : {}),
     },
   });
+
+  if (elicitation && elicitationCaps) {
+    client.setRequestHandler("elicitation/create", async (request, ctx) => {
+      const params = normalizeElicitationParams(request.params);
+      const result = await elicitation.handler(params, { signal: ctx.mcpReq.signal });
+      return { ...normalizeElicitationResult(params, result) };
+    });
+    client.setNotificationHandler("notifications/elicitation/complete", (notification) => {
+      elicitation.onComplete?.(notification.params.elicitationId);
+    });
+  }
+
+  return client;
 }
 
 export interface ConnectOptions {
@@ -55,6 +89,11 @@ export interface ConnectOptions {
    * client instead of launching the OS default browser.
    */
   onRedirect?: (url: URL) => void | Promise<void>;
+  elicitation?: {
+    handler: ElicitationHandler;
+    modes?: { form?: boolean; url?: boolean };
+    onComplete?: (elicitationId: string) => void;
+  };
 }
 
 export interface Session {
@@ -80,7 +119,7 @@ export async function connect(
   const id = targetId(target);
 
   if (target.kind === "stdio") {
-    return connectStdio(target, id);
+    return connectStdio(target, id, opts);
   }
   return connectHttp(target, id, opts);
 }
@@ -88,6 +127,7 @@ export async function connect(
 async function connectStdio(
   target: Extract<TargetSpec, { kind: "stdio" }>,
   id: string,
+  opts: ConnectOptions,
 ): Promise<Session> {
   const baseEnv = process.env as Record<string, string>;
   const env = target.env ? { ...baseEnv, ...target.env } : baseEnv;
@@ -99,7 +139,7 @@ async function connectStdio(
     stderr: "inherit",
     ...(target.cwd ? { cwd: target.cwd } : {}),
   });
-  const client = buildClient("stdio");
+  const client = buildClient("stdio", opts);
   try {
     await client.connect(transport);
   } catch (error) {
@@ -139,7 +179,7 @@ async function connectHttp(
   // refresh succeed we'll discard this transport and rebuild with a real
   // loopback URL.
 
-  let client = buildClient("http");
+  let client = buildClient("http", opts);
   let provider = new FileOAuthProvider({
     file,
     redirectUrl: "http://127.0.0.1:0/callback", // placeholder; not used unless we authorize
@@ -205,7 +245,7 @@ async function connectHttp(
     },
   });
 
-  client = buildClient("http");
+  client = buildClient("http", opts);
   transport = new StreamableHTTPClientTransport(
     target.url,
     transportOpts({ authProvider: provider }),
@@ -242,7 +282,7 @@ async function connectHttp(
     await safeClose(client);
   }
 
-  const finalClient = buildClient("http");
+  const finalClient = buildClient("http", opts);
   const finalTransport = new StreamableHTTPClientTransport(
     target.url,
     transportOpts({ authProvider: provider }),

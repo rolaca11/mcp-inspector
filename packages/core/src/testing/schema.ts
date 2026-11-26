@@ -41,6 +41,14 @@ export const stepSchema = z
     expect: z.record(z.string(), z.unknown()).optional(),
     /** Variable name -> result path, bound into scope for later steps. */
     capture: z.record(z.string(), z.string()).optional(),
+    elicit: z
+      .array(
+        z.strictObject({
+          action: z.enum(["accept", "decline", "cancel"]),
+          content: z.record(z.string(), z.unknown()).optional(),
+        }),
+      )
+      .optional(),
   })
   .refine(
     (s) =>

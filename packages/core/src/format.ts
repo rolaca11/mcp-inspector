@@ -7,6 +7,7 @@
 import pc from "picocolors";
 
 import { toolUiResourceUri } from "./apps.js";
+import { extractUrlElicitationError } from "./elicitation.js";
 
 export interface FormatOptions {
   /** Print machine-readable JSON only. */
@@ -28,6 +29,15 @@ export function printJson(value: unknown): void {
 }
 
 export function errorMessage(e: unknown): string {
+  const urlElicitation = extractUrlElicitationError(e);
+  if (urlElicitation) {
+    const lines = [urlElicitation.message];
+    for (const el of urlElicitation.elicitations) {
+      const id = el.elicitationId ? ` (elicitationId: ${el.elicitationId})` : "";
+      lines.push(`  - ${el.message ? `${el.message}: ` : ""}${el.url}${id}`);
+    }
+    return lines.join("\n");
+  }
   const parts: string[] = [];
   let cur: unknown = e;
   while (cur instanceof Error) {

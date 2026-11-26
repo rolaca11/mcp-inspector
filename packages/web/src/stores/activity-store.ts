@@ -21,7 +21,8 @@ export type ActivityKind =
   | "complete"
   | "discover"
   | "auth"
-  | "disconnect";
+  | "disconnect"
+  | "elicitation";
 
 export interface ActivityEntry {
   id: string;

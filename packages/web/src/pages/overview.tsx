@@ -148,6 +148,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
     discover: "discover",
     auth: "auth",
     disconnect: "disconnect",
+    elicitation: "elicit",
   }[entry.kind];
 
   const tone =

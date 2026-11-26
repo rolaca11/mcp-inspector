@@ -71,9 +71,9 @@ to three seconds to fall back. The SDK runs the stdio probe in a separate proces
 HTTP authentication errors and server failures do not trigger a legacy fallback.
 
 The SDK handles version-specific result envelopes, pagination, cache hints and
-routing headers derived from tool schemas. The inspector advertises its MCP Apps
-extension; it does not advertise optional elicitation, sampling, roots or tasks
-capabilities.
+routing headers derived from tool schemas. The inspector advertises elicitation
+(form and URL modes) when a handler is available (see [CLI docs](packages/cli/README.md#elicitation))
+along with its MCP Apps extension. It does not advertise sampling, roots or tasks.
 
 ### Skills
 
@@ -129,6 +129,36 @@ relative-URL resolution). If no sibling origin is reachable, the host falls back
 to an opaque-origin inline `srcdoc` (no same-origin; simple apps still render).
 When a resource declares `_meta.ui.csp`, its origin allowlist is enforced exactly;
 otherwise a permissive policy is used so apps actually render.
+
+### Elicitation
+
+Servers can ask the user for input in the middle of a tool call, resource read or
+prompt request. The inspector supports both modes from the MCP spec:
+
+- **Form mode.** The server sends a flat `requestedSchema`. The inspector renders
+  every primitive type the spec allows: strings (with `email`, `uri`, `date` and
+  `date-time` formats), numbers, integers, booleans, single-select enums (plain
+  `enum`, titled `oneOf`, legacy `enumNames`) and multi-select arrays. Defaults
+  are prefilled, and the answer is checked against the schema before it is sent.
+- **URL mode.** The server sends a link for the user to open, for example to sign
+  in to a third party. The inspector shows the origin and full URL, never opens it
+  on its own, and refuses anything that is not `http:` or `https:`. A
+  `notifications/elicitation/complete` from the server marks the request done.
+
+Requests arrive as `input_required` results from `2026-07-28` servers, or as
+server-initiated `elicitation/create` requests from `2025-11-25` servers. A
+`-32042` (URL elicitation required) error is shown with the links the server
+listed and a Retry button.
+
+In the dashboard and desktop app, an inline panel opens directly below the form
+(or at the top of pages without a form) with Accept, Decline and Cancel. If
+another server is waiting for input, a banner offers to switch to it. Answers
+appear in the activity feed.
+
+The CLI and REPL ask each question on the terminal. Scripts and CI can pass a
+canned answer with `--elicit-response '<json>'`, or turn the capability off with
+`--no-elicitation`. Test suites script answers per step with `elicit:`. See the
+[CLI docs](packages/cli/README.md#elicitation) for details.
 
 ### Server sources
 

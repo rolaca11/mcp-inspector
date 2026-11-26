@@ -1,6 +1,9 @@
 import { TRPCClientError } from "@trpc/client";
 
+import type { ElicitationAction, ElicitationContent } from "@rolaca11/mcp-inspector-core/elicitation";
+
 import { useActivityStore, type ActivityKind } from "@/stores/activity-store";
+import { useElicitationStore } from "@/stores/elicitation-store";
 import type {
   ActivitiesResponse,
   ActivityResult,
@@ -46,6 +49,7 @@ function wrapError(e: unknown): Error {
       CONFLICT: 409,
       INTERNAL_SERVER_ERROR: 500,
       METHOD_NOT_SUPPORTED: 405,
+      PRECONDITION_FAILED: 412,
     };
     const responseBody =
       typeof data === "object" && data !== null ? data : undefined;
@@ -87,6 +91,15 @@ function pushActivities<T>(
   return resp.activities;
 }
 
+async function trackOperation<T>(run: () => Promise<T>): Promise<T> {
+  useElicitationStore.getState().beginOperation();
+  try {
+    return await run();
+  } finally {
+    useElicitationStore.getState().endOperation();
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Endpoints                                                           */
 /* ------------------------------------------------------------------ */
@@ -119,19 +132,23 @@ export interface SavedForm {
 
 export const api = {
   async listSkills(name: string) {
-    const response = await trpc.servers.listSkills.mutate({ serverName: name });
+    const response = await trackOperation(() => trpc.servers.listSkills.mutate({ serverName: name }));
     return pushActivities(name, response, { serverName: name });
   },
   async getSkill(name: string, uri: string) {
-    const response = await trpc.servers.getSkill.mutate({ serverName: name, uri });
+    const response = await trackOperation(() => trpc.servers.getSkill.mutate({ serverName: name, uri }));
     return pushActivities(name, response, { uri });
   },
   async readSkill(name: string, uri: string, resourceUri?: string) {
-    const response = await trpc.servers.readSkill.mutate({ serverName: name, uri, resourceUri });
+    const response = await trackOperation(() =>
+      trpc.servers.readSkill.mutate({ serverName: name, uri, resourceUri }),
+    );
     return pushActivities(name, response, { uri, resourceUri });
   },
   async readSkillDirectory(name: string, uri: string) {
-    const response = await trpc.servers.readSkillDirectory.mutate({ serverName: name, uri });
+    const response = await trackOperation(() =>
+      trpc.servers.readSkillDirectory.mutate({ serverName: name, uri }),
+    );
     return pushActivities(name, response, { uri });
   },
   health(): Promise<{ ok: true }> {
@@ -147,9 +164,8 @@ export const api = {
     signal?: AbortSignal,
   ): Promise<ActivityResult[]> {
     try {
-      const resp = await trpc.servers.discover.mutate(
-        { serverName: name },
-        { signal },
+      const resp = await trackOperation(() =>
+        trpc.servers.discover.mutate({ serverName: name }, { signal }),
       );
       return pushActivities(name, resp as ActivitiesResponse, { serverName: name });
     } catch (e) {
@@ -164,10 +180,9 @@ export const api = {
       | Array<{ name: string; arguments?: Record<string, unknown> }>,
   ): Promise<ActivityResult<ToolResult>[]> {
     try {
-      const resp = await trpc.servers.callTool.mutate({
-        serverName: name,
-        items: body,
-      });
+      const resp = await trackOperation(() =>
+        trpc.servers.callTool.mutate({ serverName: name, items: body }),
+      );
       return pushActivities<ToolResult>(
         name,
         resp as ActivitiesResponse<ToolResult>,
@@ -183,10 +198,9 @@ export const api = {
     body: { uri: string } | Array<{ uri: string }>,
   ): Promise<ActivityResult<ReadResourceResult>[]> {
     try {
-      const resp = await trpc.servers.readResource.mutate({
-        serverName: name,
-        items: body,
-      });
+      const resp = await trackOperation(() =>
+        trpc.servers.readResource.mutate({ serverName: name, items: body }),
+      );
       return pushActivities<ReadResourceResult>(
         name,
         resp as ActivitiesResponse<ReadResourceResult>,
@@ -204,10 +218,9 @@ export const api = {
       | Array<{ name: string; arguments?: Record<string, string> }>,
   ): Promise<ActivityResult<GetPromptResult>[]> {
     try {
-      const resp = await trpc.servers.getPrompt.mutate({
-        serverName: name,
-        items: body,
-      });
+      const resp = await trackOperation(() =>
+        trpc.servers.getPrompt.mutate({ serverName: name, items: body }),
+      );
       return pushActivities<GetPromptResult>(
         name,
         resp as ActivitiesResponse<GetPromptResult>,
@@ -296,6 +309,26 @@ export const api = {
         resp as ActivitiesResponse<{ ok: true }>,
         { serverName: name },
       );
+    } catch (e) {
+      throw wrapError(e);
+    }
+  },
+
+  async pendingElicitations(serverName?: string) {
+    try {
+      return await trpc.elicitations.pending.query(serverName ? { serverName } : undefined);
+    } catch (e) {
+      throw wrapError(e);
+    }
+  },
+
+  async respondElicitation(input: {
+    id: string;
+    action: ElicitationAction;
+    content?: ElicitationContent;
+  }) {
+    try {
+      return await trpc.elicitations.respond.mutate(input);
     } catch (e) {
       throw wrapError(e);
     }

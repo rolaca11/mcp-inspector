@@ -12,13 +12,19 @@ const runtime = vi.hoisted(() => ({
   quit: vi.fn(),
   listeners: new Map<string, (...args: unknown[]) => void>(),
   windowListeners: new Map<string, () => void>(),
+  webContentsListeners: new Map<string, (...args: unknown[]) => void>(),
   handle: vi.fn(),
   loadURL: vi.fn(),
   focus: vi.fn(),
   restore: vi.fn(),
   closeAll: vi.fn(),
+  setWindowOpenHandler: vi.fn(),
+  openExternal: vi.fn(),
+  poolOptions: undefined as { elicitations?: unknown } | undefined,
   windowCount: 0,
-  context: undefined as { configOpts: { cwd?: string; extraFiles?: string[] } } | undefined,
+  context: undefined as
+    | { configOpts: { cwd?: string; extraFiles?: string[] }; elicitations?: unknown }
+    | undefined,
 }));
 
 vi.mock("electron", () => ({
@@ -33,7 +39,11 @@ vi.mock("electron", () => ({
   BrowserWindow: class {
     constructor() { runtime.windowCount++; }
     on(event: string, listener: () => void) { runtime.windowListeners.set(event, listener); }
-    webContents = { on: vi.fn(), insertCSS: vi.fn() };
+    webContents = {
+      on: (event: string, listener: (...args: unknown[]) => void) => runtime.webContentsListeners.set(event, listener),
+      insertCSS: vi.fn(),
+      setWindowOpenHandler: runtime.setWindowOpenHandler,
+    };
     loadURL = runtime.loadURL;
     isMinimized = () => true;
     restore = runtime.restore;
@@ -41,6 +51,7 @@ vi.mock("electron", () => ({
     focus = runtime.focus;
   },
   Menu: { setApplicationMenu: vi.fn() },
+  shell: { openExternal: runtime.openExternal },
   protocol: { registerSchemesAsPrivileged: vi.fn(), handle: runtime.handle },
 }));
 vi.mock("@rolaca11/mcp-inspector-core/config", () => ({
@@ -49,7 +60,10 @@ vi.mock("@rolaca11/mcp-inspector-core/config", () => ({
 }));
 vi.mock("@rolaca11/mcp-inspector-core/target", () => ({ setLoadedConfig: vi.fn() }));
 vi.mock("@rolaca11/mcp-inspector-core/session-pool", () => ({
-  createSessionPool: () => ({ closeAll: runtime.closeAll }),
+  createSessionPool: (options: { elicitations?: unknown }) => {
+    runtime.poolOptions = options;
+    return { closeAll: runtime.closeAll };
+  },
 }));
 vi.mock("@rolaca11/mcp-inspector-core/trpc/router", () => ({ appRouter: {} }));
 vi.mock("@trpc/server/adapters/fetch", () => ({
@@ -67,8 +81,11 @@ beforeEach(() => {
   runtime.ready = false;
   runtime.listeners.clear();
   runtime.windowListeners.clear();
+  runtime.webContentsListeners.clear();
   runtime.windowCount = 0;
   runtime.context = undefined;
+  runtime.poolOptions = undefined;
+  runtime.openExternal.mockResolvedValue(undefined);
   runtime.lock.mockReturnValue(true);
   runtime.loadURL.mockResolvedValue(undefined);
   runtime.closeAll.mockResolvedValue(undefined);
@@ -143,6 +160,52 @@ describe("OS desktop launches", () => {
     await vi.waitFor(() => expect(runtime.loadURL).toHaveBeenCalledTimes(2));
     expect(runtime.windowCount).toBe(2);
     expect(runtime.handle).toHaveBeenCalledOnce();
+  });
+
+  it("opens only http and https window targets in the system browser", async () => {
+    await import("../main.js");
+    becomeReady();
+    await vi.waitFor(() => expect(runtime.setWindowOpenHandler).toHaveBeenCalledOnce());
+    const openHandler = runtime.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    expect(openHandler({ url: "https://auth.example.com/start" })).toEqual({ action: "deny" });
+    expect(openHandler({ url: "javascript:alert(1)" })).toEqual({ action: "deny" });
+    expect(openHandler({ url: "file:///etc/passwd" })).toEqual({ action: "deny" });
+    expect(runtime.openExternal.mock.calls).toEqual([["https://auth.example.com/start"]]);
+  });
+
+  it("blocks navigation away from the app origin", async () => {
+    await import("../main.js");
+    becomeReady();
+    await vi.waitFor(() => expect(runtime.webContentsListeners.has("will-navigate")).toBe(true));
+    const onNavigate = runtime.webContentsListeners.get("will-navigate")!;
+
+    const externalEvent = { preventDefault: vi.fn() };
+    onNavigate(externalEvent, "https://evil.example/phish");
+    expect(externalEvent.preventDefault).toHaveBeenCalledOnce();
+
+    const appEvent = { preventDefault: vi.fn() };
+    onNavigate(appEvent, "app://inspector/tools");
+    expect(appEvent.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("shares one elicitation broker between the session pool and the API and cancels it on quit", async () => {
+    await import("../main.js");
+    becomeReady();
+    await vi.waitFor(() => expect(runtime.loadURL).toHaveBeenCalledOnce());
+    const broker = runtime.poolOptions?.elicitations as {
+      request(name: string, params: unknown): Promise<unknown>;
+      hasPending(name: string): boolean;
+    };
+    expect(broker).toBeDefined();
+    const handler = runtime.handle.mock.calls[0]![1] as (request: Request) => Promise<Response>;
+    await handler(new Request("app://inspector/api/trpc/elicitations.pending"));
+    expect(runtime.context?.elicitations).toBe(broker);
+
+    const pending = broker.request("srv", { mode: "url", message: "Go", url: "https://x.test" });
+    expect(broker.hasPending("srv")).toBe(true);
+    runtime.listeners.get("will-quit")!({ preventDefault: vi.fn() });
+    await expect(pending).rejects.toThrow("Application quitting");
+    expect(broker.hasPending("srv")).toBe(false);
   });
 
   it("quits a secondary process without creating a window", async () => {

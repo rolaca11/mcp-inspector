@@ -12,6 +12,8 @@ import * as actions from "@rolaca11/mcp-inspector-core/actions";
 import { errorMessage, extractTemplateVars } from "@rolaca11/mcp-inspector-core/format";
 import type { Session } from "@rolaca11/mcp-inspector-core/client";
 
+import { createStdioAskLine, type AskLine } from "./elicitation-prompt.js";
+
 const HELP = `
 ${pc.bold("Available commands:")}
 
@@ -37,6 +39,10 @@ ${pc.bold("Available commands:")}
   ${pc.cyan("complete resource")} <uri-template> <var> [val] Completions for a resource-template variable
 
   ${pc.cyan("json on|off")}                                  Toggle JSON output mode (default: off)
+
+  When a server asks for input (elicitation) during call/read/prompt, answer
+  the questions inline. Type :decline or :cancel at any field to stop.
+
   ${pc.cyan("help")} | ${pc.cyan("?")}                                       Show this help
   ${pc.cyan("quit")} | ${pc.cyan("exit")}                                    Disconnect and exit
 `;
@@ -45,7 +51,57 @@ export interface ReplState {
   json: boolean;
 }
 
-export async function runRepl(session: Session): Promise<void> {
+export interface ReplLineBridge {
+  askLine: AskLine;
+  attach(rl: readline.Interface, isBusy: () => boolean): () => void;
+}
+
+export function createReplLineBridge(fallback: AskLine = createStdioAskLine()): ReplLineBridge {
+  let current: { rl: readline.Interface; isBusy: () => boolean } | null = null;
+
+  const askLine: AskLine = (prompt, opts = {}) => {
+    if (!current) return fallback(prompt, opts);
+    const { rl, isBusy } = current;
+    return new Promise<string>((resolve, reject) => {
+      const settle = () => {
+        rl.off("close", onClose);
+        opts.signal?.removeEventListener("abort", onAbort);
+        if (isBusy()) rl.pause();
+      };
+      const onClose = () => {
+        settle();
+        reject(new Error("input closed"));
+      };
+      const onAbort = () => {
+        settle();
+        reject(opts.signal?.reason ?? new Error("Elicitation was cancelled"));
+      };
+      rl.once("close", onClose);
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      rl.question(prompt, opts.signal ? { signal: opts.signal } : {}, (answer) => {
+        settle();
+        resolve(answer);
+      });
+    });
+  };
+
+  return {
+    askLine,
+    attach(rl, isBusy) {
+      const entry = { rl, isBusy };
+      current = entry;
+      return () => {
+        if (current === entry) current = null;
+      };
+    },
+  };
+}
+
+export interface ReplOptions {
+  lineBridge?: ReplLineBridge;
+}
+
+export async function runRepl(session: Session, options: ReplOptions = {}): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -55,6 +111,8 @@ export async function runRepl(session: Session): Promise<void> {
   });
 
   const state: ReplState = { json: false };
+  let busy = false;
+  const detach = options.lineBridge?.attach(rl, () => busy);
 
   // Introduce the session.
   const info = session.client.getServerVersion();
@@ -79,24 +137,28 @@ export async function runRepl(session: Session): Promise<void> {
       return;
     }
     rl.pause();
+    busy = true;
+    let done = false;
     try {
-      const done = await dispatch(line, session, state);
-      if (done) {
-        rl.close();
-        return;
-      }
+      done = await dispatch(line, session, state);
     } catch (e) {
       console.error(pc.red(`error: ${errorMessage(e)}`));
     } finally {
-      rl.resume();
-      rl.prompt();
+      busy = false;
     }
+    if (done) {
+      rl.close();
+      return;
+    }
+    rl.resume();
+    rl.prompt();
   };
   rl.on("line", lineHandler);
 
   await new Promise<void>((resolve) => {
     rl.once("close", () => resolve());
   });
+  detach?.();
 }
 
 /**

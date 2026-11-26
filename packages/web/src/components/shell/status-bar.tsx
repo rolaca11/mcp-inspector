@@ -5,6 +5,8 @@ import { TransportIcon, transportLabel } from "@/components/transport-icon";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useActivityStore } from "@/stores/activity-store";
 import { useServersStore } from "@/stores/servers-store";
+import { useElicitationStore } from "@/stores/elicitation-store";
+import type { MCPServer } from "@/data/types";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import {
   CONNECTION_LABEL,
@@ -29,12 +31,17 @@ function Sep({ className }: { className?: string }) {
  * activity echo (latency + tokens) — the strongest "this is an app, not a page"
  * signal.
  */
-export function StatusBar() {
+export function StatusBar({
+  onSelectServer,
+}: {
+  onSelectServer?: (server: MCPServer) => void;
+}) {
   const navigate = useNavigate();
   const { server, data, connectionState, lastDiscoveredAt, pendingAuthUrl } =
     useConnectionStore();
   const servers = useServersStore((s) => s.servers);
   const entries = useActivityStore((s) => s.entries);
+  const pendingElicitations = useElicitationStore((s) => s.pending);
 
   if (!server) return null;
 
@@ -44,6 +51,16 @@ export function StatusBar() {
   );
   const go = (path: string) =>
     navigate(`/${encodeURIComponent(server.id)}/${path}`);
+  const focusElicitation = () => {
+    if (pendingElicitations.some((p) => p.serverName === server.id)) {
+      document
+        .querySelector('[data-testid="elicitation-panel"]')
+        ?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    const target = servers.find((s) => s.id === pendingElicitations[0]?.serverName);
+    if (target) onSelectServer?.(target);
+  };
 
   return (
     <footer className="z-20 flex h-7 shrink-0 select-none items-center gap-2.5 border-t border-border/60 bg-chrome px-3 font-mono text-[11px] tabular-nums text-muted-foreground">
@@ -105,6 +122,20 @@ export function StatusBar() {
       )}
 
       <span className="ml-auto flex items-center gap-2.5">
+        {pendingElicitations.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={focusElicitation}
+              className="flex cursor-pointer items-center gap-1.5 text-info transition-colors hover:text-foreground"
+              title="Pending elicitation requests"
+            >
+              <StatusDot tone="info" pulse />
+              elicit {pendingElicitations.length}
+            </button>
+            <Sep />
+          </>
+        )}
         {pendingAuthUrl && (
           <>
             <span className="flex items-center gap-1.5 text-warning">

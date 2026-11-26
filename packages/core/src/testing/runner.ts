@@ -6,6 +6,11 @@
  */
 
 import { connect, type ConnectOptions, type Session } from "../client.js";
+import {
+  LONG_REQUEST_OPTIONS,
+  type ElicitationRequestParams,
+  type ElicitationResult,
+} from "../elicitation.js";
 import { errorMessage } from "../format.js";
 import { parseTarget, targetId } from "../target.js";
 import { evaluateExpect, type AssertionResult } from "./matchers.js";
@@ -69,12 +74,43 @@ export interface RunOptions {
   onCaseComplete?: (report: CaseReport) => void;
 }
 
+interface ElicitationScript {
+  responses: ElicitationResult[];
+  captured: ElicitationRequestParams[];
+}
+
+interface TargetSession {
+  session: Session;
+  elicitation?: ElicitationScript;
+}
+
+function targetKey(targetStr: string): string | null {
+  try {
+    return targetId(parseTarget(targetStr));
+  } catch {
+    return null;
+  }
+}
+
+function scriptedElicitationHandler(script: ElicitationScript) {
+  return async (params: ElicitationRequestParams): Promise<ElicitationResult> => {
+    script.captured.push(params);
+    const next = script.responses.shift();
+    if (!next) {
+      throw new Error(
+        `server requested an elicitation ("${params.message}") but the step has no scripted \`elicit\` response left`,
+      );
+    }
+    return next;
+  };
+}
+
 export async function runSuites(
   suites: LoadedSuite[],
   opts: RunOptions = {},
 ): Promise<RunReport> {
   const connectFn = opts.connectFn ?? connect;
-  const sessions = new Map<string, Session>();
+  const sessions = new Map<string, TargetSession>();
   const cases: CaseReport[] = [];
   const runStart = performance.now();
 
@@ -84,16 +120,24 @@ export async function runSuites(
       .map((tc) => ({ tc, suite, source })),
   );
 
+  const elicitTargets = new Set<string>();
+  for (const { tc, suite } of planned) {
+    const targetStr = tc.target ?? suite.target ?? opts.defaultTarget;
+    if (!targetStr || !tc.steps.some((step) => step.elicit !== undefined)) continue;
+    const key = targetKey(targetStr);
+    if (key) elicitTargets.add(key);
+  }
+
   try {
     for (const { tc, suite, source } of planned) {
       opts.onCaseStart?.({ name: tc.name, source });
-      const report = await runCase(tc, suite, source, sessions, connectFn, opts);
+      const report = await runCase(tc, suite, source, sessions, elicitTargets, connectFn, opts);
       cases.push(report);
       opts.onCaseComplete?.(report);
       if (!report.ok && opts.bail) break;
     }
   } finally {
-    for (const s of sessions.values()) await s.close().catch(() => {});
+    for (const s of sessions.values()) await s.session.close().catch(() => {});
   }
 
   const passed = cases.filter((c) => c.ok).length;
@@ -111,7 +155,8 @@ async function runCase(
   tc: Case,
   suite: Suite,
   source: string,
-  sessions: Map<string, Session>,
+  sessions: Map<string, TargetSession>,
+  elicitTargets: Set<string>,
   connectFn: typeof connect,
   opts: RunOptions,
 ): Promise<CaseReport> {
@@ -138,9 +183,9 @@ async function runCase(
     ...(tc.vars ?? {}),
   };
 
-  let session: Session;
+  let session: TargetSession;
   try {
-    session = await getSession(targetStr, sessions, connectFn, opts);
+    session = await getSession(targetStr, sessions, elicitTargets, connectFn, opts);
   } catch (e) {
     return {
       name: tc.name,
@@ -171,13 +216,23 @@ async function runCase(
 async function runStep(
   step: Step,
   index: number,
-  session: Session,
+  target: TargetSession,
   scope: Scope,
 ): Promise<StepReport> {
   const stepStart = performance.now();
+  const script = target.elicitation;
+  if (script) {
+    script.captured = [];
+    script.responses = (step.elicit ?? []).map(
+      (response) => interpolate(response, scope) as ElicitationResult,
+    );
+  }
   try {
-    const { action, raw } = await executeStep(step, session.client, scope);
+    const { action, raw } = await executeStep(step, target.session.client, scope);
     const result = normalize(raw);
+    if (script && script.captured.length > 0) {
+      result.elicitations = script.captured;
+    }
 
     if (step.capture) {
       for (const [name, path] of Object.entries(step.capture)) {
@@ -212,12 +267,12 @@ async function executeStep(
 ): Promise<{ action: string; raw: unknown }> {
   if (step.call !== undefined) {
     const args = interpolate(step.with ?? {}, scope) as Record<string, unknown>;
-    const raw = await client.callTool({ name: step.call, arguments: args });
+    const raw = await client.callTool({ name: step.call, arguments: args }, LONG_REQUEST_OPTIONS);
     return { action: `call ${step.call}`, raw };
   }
   if (step.read !== undefined) {
     const uri = String(interpolate(step.read, scope));
-    const raw = await client.readResource({ uri });
+    const raw = await client.readResource({ uri }, LONG_REQUEST_OPTIONS);
     return { action: `read ${uri}`, raw };
   }
   if (step.get !== undefined) {
@@ -226,7 +281,7 @@ async function executeStep(
     for (const [k, v] of Object.entries(args)) {
       stringArgs[k] = typeof v === "string" ? v : JSON.stringify(v);
     }
-    const raw = await client.getPrompt({ name: step.get, arguments: stringArgs });
+    const raw = await client.getPrompt({ name: step.get, arguments: stringArgs }, LONG_REQUEST_OPTIONS);
     return { action: `get ${step.get}`, raw };
   }
   if (step.list !== undefined) {
@@ -284,17 +339,26 @@ function runComplete(client: McpClient, c: CompleteArgs, scope: Scope) {
 
 async function getSession(
   targetStr: string,
-  sessions: Map<string, Session>,
+  sessions: Map<string, TargetSession>,
+  elicitTargets: Set<string>,
   connectFn: typeof connect,
   opts: RunOptions,
-): Promise<Session> {
+): Promise<TargetSession> {
   const spec = parseTarget(targetStr);
   const key = targetId(spec);
   const existing = sessions.get(key);
   if (existing) return existing;
-  const session = await connectFn(spec, opts.connectOptions ?? {});
-  sessions.set(key, session);
-  return session;
+  const connectOptions: ConnectOptions = { ...(opts.connectOptions ?? {}) };
+  let elicitation: ElicitationScript | undefined;
+  if (elicitTargets.has(key)) {
+    const script: ElicitationScript = { responses: [], captured: [] };
+    elicitation = script;
+    connectOptions.elicitation = { handler: scriptedElicitationHandler(script) };
+  }
+  const session = await connectFn(spec, connectOptions);
+  const entry: TargetSession = elicitation ? { session, elicitation } : { session };
+  sessions.set(key, entry);
+  return entry;
 }
 
 /* ------------------------------------------------------------------ */

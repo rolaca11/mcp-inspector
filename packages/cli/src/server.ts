@@ -19,6 +19,7 @@ import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import pc from "picocolors";
 
 import { createSessionPool } from "@rolaca11/mcp-inspector-core/session-pool";
+import { createElicitationBroker } from "@rolaca11/mcp-inspector-core/elicitation-broker";
 import {
   ensureInspectorConfig,
   loadConfigSync,
@@ -94,14 +95,16 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
   const initial = loadConfigSync(configOpts);
   setLoadedConfig(initial);
 
+  const elicitations = createElicitationBroker();
   const sessions = createSessionPool({
     onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),
+    elicitations,
   });
 
   const trpcHandler = createHTTPHandler({
     router: appRouter,
     basePath: "/api/trpc/",
-    createContext: () => ({ sessions, pendingAuthUrls, configOpts }),
+    createContext: () => ({ sessions, pendingAuthUrls, configOpts, elicitations }),
     responseMeta: () => ({
       headers: {
         "access-control-allow-origin": "*",
@@ -165,6 +168,7 @@ export async function startServer(opts: ServeOptions = {}): Promise<{
   }
 
   const teardown = async () => {
+    elicitations.cancelAll("Server shutting down");
     await sessions.closeAll();
     await new Promise<void>((r) => server.close(() => r()));
   };

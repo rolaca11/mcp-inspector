@@ -147,8 +147,34 @@ Global flags (available on every leaf command):
 | `-q, --quiet`         | Suppress informational logs (e.g. OAuth flow messages).                  |
 | `--scope <scope>`     | OAuth scope string to request (HTTP servers only).                       |
 | `--client-name <name>`| Client name advertised during dynamic client registration.               |
+| `--elicit-response <json>` | Answer elicitation requests with this result instead of prompting. See [Elicitation](#elicitation). |
+| `--no-elicitation`    | Do not advertise elicitation support to the server.                      |
 
 `MCPI_DEBUG=1` prints the full stack on errors instead of the short message.
+
+## Elicitation
+
+Servers can ask for input while a command runs. When stdin and stdout are both a
+terminal, the CLI prints the server's message and asks for each form field in
+turn, showing the type, constraints and default. Type `:decline` or `:cancel` at
+any field to stop. URL requests show the site and full URL, then ask whether to
+open it in a browser, accept without opening, decline or cancel. Only `http:` and
+`https:` links can be opened. The REPL asks the same questions inline.
+
+Without a terminal, the CLI does not advertise elicitation unless you pass
+`--elicit-response`. A single JSON object answers every request. A JSON array
+answers requests in order and fails once it runs out. Accepted form content is
+checked against the server's schema first.
+
+```sh
+mcp-inspector tools call everything signup \
+  --elicit-response '{"action":"accept","content":{"name":"Ada","age":36}}'
+
+mcp-inspector tools call everything two-step \
+  --elicit-response '[{"action":"accept","content":{"name":"Ada"}},{"action":"decline"}]'
+
+mcp-inspector tools call everything signup --no-elicitation
+```
 
 ---
 
@@ -237,6 +263,29 @@ Exactly one action key per step:
 | `get: <prompt>` + `with: {…}`                | `prompts/get`          |
 | `list: tools\|resources\|templates\|prompts` | the matching list call |
 | `complete: { refType, ref, argument, value?, context? }` | `completion/complete` |
+
+### Scripted elicitation (`elicit`)
+
+A step can answer elicitation requests the server sends while it runs. List the
+answers in order. Suites that never use `elicit` do not advertise the capability.
+The requests the server sent are added to the result as `elicitations`, so you can
+assert on them.
+
+```yaml
+- call: signup
+  with: { plan: pro }
+  elicit:
+    - action: accept
+      content: { name: "${user}", age: 36 }
+    - action: decline
+  expect:
+    elicitations.0.message: { contains: "name" }
+    isError: false
+```
+
+If the server asks for more input than the step scripted, the step fails (on
+`2025-11-25` the server receives a JSON-RPC error response; on `2026-07-28` the
+client stops the round-trip loop).
 
 ### Assertions (`expect`)
 
@@ -365,6 +414,9 @@ mcp-inspector> quit
 Tab completion is on for verbs, tool names, prompt names, resource URIs, and
 resource-template variable names (lazily populated after connect).
 
+When a server asks for input during `call`, `read` or `prompt`, the REPL asks the
+questions inline (see [Elicitation](#elicitation)).
+
 ---
 
 ## Desktop app
@@ -427,7 +479,16 @@ servers.disconnect
 config.list
 config.add
 config.remove
+elicitations.pending
+elicitations.respond
 ```
+
+`elicitations.pending` lists open elicitation requests, optionally for one
+`serverName`, plus recent `notifications/elicitation/complete` events.
+`elicitations.respond` answers one by `id` with `accept`, `decline` or `cancel`.
+Accepted form content is validated against the request's schema and rejected with
+`BAD_REQUEST` if it does not match; an unknown or expired `id` returns
+`NOT_FOUND`.
 
 `:name` accepts either an alias from `.mcp.json` or a raw target (HTTP URL,
 or a quoted stdio command).

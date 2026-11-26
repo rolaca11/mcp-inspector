@@ -96,3 +96,18 @@ export const savedFormSaveInput = z
   );
 
 export const savedFormRemoveInput = z.object({ id: z.string().min(1) });
+
+export const pendingElicitationsInput = z
+  .object({ serverName: z.string().min(1).optional() })
+  .optional();
+
+export const respondElicitationInput = z.object({
+  id: z.string().min(1),
+  action: z.enum(["accept", "decline", "cancel"]),
+  content: z
+    .record(
+      z.string(),
+      z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+    )
+    .optional(),
+});

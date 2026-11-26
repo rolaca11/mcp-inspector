@@ -1,3 +1,4 @@
+import { extractUrlElicitationError, type ElicitationUrlParams } from "../elicitation.js";
 import { errorMessage } from "../format.js";
 import { countResponseTokens } from "../tokens.js";
 
@@ -10,6 +11,20 @@ export interface ActivityEntry {
   result?: unknown;
   error?: string;
   warnings?: string[];
+  urlElicitations?: ElicitationUrlParams[];
+}
+
+function errorEntry(kind: string, target: string, start: number, e: unknown): ActivityEntry {
+  const urlElicitation = extractUrlElicitationError(e);
+  return {
+    kind,
+    target,
+    outcome: "error",
+    durationMs: Math.round(performance.now() - start),
+    tokenCount: null,
+    error: urlElicitation ? urlElicitation.message : errorMessage(e),
+    ...(urlElicitation ? { urlElicitations: urlElicitation.elicitations } : {}),
+  };
 }
 
 export async function runActivity(
@@ -30,14 +45,7 @@ export async function runActivity(
       result,
     };
   } catch (e) {
-    return {
-      kind,
-      target,
-      outcome: "error",
-      durationMs: Math.round(performance.now() - start),
-      tokenCount: null,
-      error: errorMessage(e),
-    };
+    return errorEntry(kind, target, start, e);
   }
 }
 
@@ -60,14 +68,7 @@ export async function runActivityWithWarnings(
       warnings,
     };
   } catch (e) {
-    return {
-      kind,
-      target,
-      outcome: "error",
-      durationMs: Math.round(performance.now() - start),
-      tokenCount: null,
-      error: errorMessage(e),
-    };
+    return errorEntry(kind, target, start, e);
   }
 }
 

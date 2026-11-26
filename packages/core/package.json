@@ -23,7 +23,9 @@
     "./trpc/schemas": "./src/trpc/schemas.ts",
     "./testing": "./src/testing/index.ts",
     "./skills": "./src/skills.ts",
-    "./skill-client": "./src/skill-client.ts"
+    "./skill-client": "./src/skill-client.ts",
+    "./elicitation": "./src/elicitation.ts",
+    "./elicitation-broker": "./src/elicitation-broker.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -38,15 +40,15 @@
     "tiktoken": "^1.0.22",
     "yaml": "^2.8.1",
     "zod": "^4.4.3",
-    "@modelcontextprotocol/client": "^2.0.0"
+    "@modelcontextprotocol/client": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/shell-quote": "^1.7.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "@modelcontextprotocol/server": "^2.0.0",
-    "@modelcontextprotocol/node": "^2.0.0"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@modelcontextprotocol/server": "^2.4.0",
+    "@modelcontextprotocol/node": "^2.1.2"
   }
 }

@@ -7,6 +7,7 @@ import { loadConfigSync, type LoadedConfig } from "../../config.js";
 import { parseTarget, setLoadedConfig, targetId } from "../../target.js";
 import { authFile } from "../../paths.js";
 import type { Session } from "../../client.js";
+import { LONG_REQUEST_OPTIONS } from "../../elicitation.js";
 import {
   type ActivityEntry,
   errorActivity,
@@ -128,6 +129,7 @@ async function callToolAllowingStructuredContentWarnings(
   session: Session,
   toolName: string,
   toolArgs: Record<string, unknown>,
+  signal?: AbortSignal,
 ) {
   const client = session.client;
   const { tools } = await client.listTools(undefined, { cacheMode: "refresh" });
@@ -135,7 +137,11 @@ async function callToolAllowingStructuredContentWarnings(
   const hasOutputSchema = tool?.outputSchema !== undefined;
   const result = await client.callTool(
     { name: toolName, arguments: toolArgs },
-    tool ? { toolDefinition: { ...tool, outputSchema: undefined } } : undefined,
+    {
+      ...LONG_REQUEST_OPTIONS,
+      ...(signal ? { signal } : {}),
+      ...(tool ? { toolDefinition: { ...tool, outputSchema: undefined } } : {}),
+    },
   );
 
   const resultObj =
@@ -269,16 +275,17 @@ export const serversRouter = router({
 
   readResource: sessionProcedure
     .input(readResourceInput)
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, signal }) => {
       const { session } = ctx as SessionContext;
       const items = Array.isArray(input.items) ? input.items : [input.items];
+      const requestOpts = signal ? { ...LONG_REQUEST_OPTIONS, signal } : LONG_REQUEST_OPTIONS;
       const activities = await Promise.all(
         items.map(async (item) => {
           const { uri } = item;
           if (typeof uri !== "string")
             return errorActivity("resource-read", "", "missing `uri`");
           return runActivity("resource-read", uri, () =>
-            session.client.readResource({ uri }),
+            session.client.readResource({ uri }, requestOpts),
           );
         }),
       );
@@ -292,7 +299,7 @@ export const serversRouter = router({
 
   callTool: sessionProcedure
     .input(callToolInput)
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, signal }) => {
       const { session } = ctx as SessionContext;
       const items = Array.isArray(input.items) ? input.items : [input.items];
       const activities = await Promise.all(
@@ -305,6 +312,7 @@ export const serversRouter = router({
               session,
               toolName,
               toolArgs ?? {},
+              signal,
             ),
           );
         }),
@@ -321,19 +329,20 @@ export const serversRouter = router({
 
   getPrompt: sessionProcedure
     .input(getPromptInput)
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, signal }) => {
       const { session } = ctx as SessionContext;
       const items = Array.isArray(input.items) ? input.items : [input.items];
+      const requestOpts = signal ? { ...LONG_REQUEST_OPTIONS, signal } : LONG_REQUEST_OPTIONS;
       const activities = await Promise.all(
         items.map(async (item) => {
           const { name: promptName, arguments: promptArgs } = item;
           if (typeof promptName !== "string")
             return errorActivity("prompt-get", "", "missing `name`");
           return runActivity("prompt-get", promptName, () =>
-            session.client.getPrompt({
-              name: promptName,
-              arguments: promptArgs ?? {},
-            }),
+            session.client.getPrompt(
+              { name: promptName, arguments: promptArgs ?? {} },
+              requestOpts,
+            ),
           );
         }),
       );

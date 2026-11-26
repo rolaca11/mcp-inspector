@@ -253,9 +253,9 @@ export function McpAppFrame({
       return {};
     };
 
-    bridge.onloggingmessage = ({ level, data }) => {
+    bridge.addEventListener("loggingmessage", ({ level, data }) => {
       log(level === "error" ? "warn" : "out", `log:${level}`, stringifyLog(data));
-    };
+    });
 
     bridge.addEventListener("sizechange", ({ height: h }) => {
       if (typeof h === "number") setHeight(clampHeight(h));

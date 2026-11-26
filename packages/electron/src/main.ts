@@ -1,5 +1,5 @@
 import "./system-certificates.js";
-import { app, BrowserWindow, Menu, protocol } from "electron";
+import { app, BrowserWindow, Menu, protocol, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -15,6 +15,8 @@ import {
   loadConfigSync,
   type LoadConfigOptions,
 } from "@rolaca11/mcp-inspector-core/config";
+import { createElicitationBroker } from "@rolaca11/mcp-inspector-core/elicitation-broker";
+import { validateElicitationUrl } from "@rolaca11/mcp-inspector-core/elicitation";
 import { setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import { appRouter } from "@rolaca11/mcp-inspector-core/trpc/router";
 import {
@@ -52,6 +54,7 @@ function receiveLaunch(args: string[]): void {
   }
   launchQueue = launchQueue.then(async () => {
     if (options) {
+      elicitations.cancelAll("Desktop configuration changed");
       await activeSessions?.closeAll();
       pendingAuthUrls.clear();
       launchOptions = options;
@@ -135,6 +138,7 @@ protocol.registerSchemesAsPrivileged([
 /* ------------------------------------------------------------------ */
 
 const pendingAuthUrls = new Map<string, string>();
+const elicitations = createElicitationBroker();
 
 /* ------------------------------------------------------------------ */
 /* App lifecycle                                                       */
@@ -169,6 +173,7 @@ async function createWindow(): Promise<void> {
   const registerProtocol = !activeSessions;
   const sessions = activeSessions ?? createSessionPool({
     onAuthRedirect: (name, url) => pendingAuthUrls.set(name, url.toString()),
+    elicitations,
   });
   activeSessions = sessions;
 
@@ -183,7 +188,7 @@ async function createWindow(): Promise<void> {
         endpoint: "/api/trpc",
         req: request,
         router: appRouter,
-        createContext: () => ({ sessions, pendingAuthUrls, configOpts }),
+        createContext: () => ({ sessions, pendingAuthUrls, configOpts, elicitations }),
       });
     }
 
@@ -226,6 +231,16 @@ async function createWindow(): Promise<void> {
   });
   mainWindow = win;
   win.on("closed", () => { mainWindow = null; });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (validateElicitationUrl(url).valid) void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  const appOrigin = `${SCHEME}://${HOST}/`;
+  win.webContents.on("will-navigate", (event, targetUrl) => {
+    if (!targetUrl.startsWith(appOrigin)) {
+      event.preventDefault();
+    }
+  });
 
   win.webContents.on("did-finish-load", () => {
     void win.webContents.insertCSS(`
@@ -261,6 +276,7 @@ app.on("activate", () => {
 });
 
 app.on("will-quit", (e) => {
+  elicitations.cancelAll("Application quitting");
   if (activeSessions) {
     e.preventDefault();
     const pool = activeSessions;

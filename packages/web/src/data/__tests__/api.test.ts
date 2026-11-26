@@ -1,10 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useActivityStore } from "@/stores/activity-store";
+import { useElicitationStore } from "@/stores/elicitation-store";
 import { api } from "../api";
-import { trpc } from "../trpc";
+import { isUnbatchedPath, trpc } from "../trpc";
 
-vi.mock("../trpc", () => ({
+vi.mock("../trpc", async (importOriginal) => ({
+  isUnbatchedPath: (await importOriginal<typeof import("../trpc")>()).isUnbatchedPath,
   trpc: {
+    elicitations: {
+      pending: { query: vi.fn() },
+      respond: { mutate: vi.fn() },
+    },
     servers: {
       callTool: { mutate: vi.fn() },
       readResource: { mutate: vi.fn() },
@@ -18,6 +24,7 @@ vi.mock("../trpc", () => ({
 afterEach(() => {
   vi.resetAllMocks();
   useActivityStore.getState().clear();
+  useElicitationStore.setState(useElicitationStore.getInitialState());
 });
 
 describe("activity requests", () => {
@@ -74,5 +81,63 @@ describe("activity requests", () => {
       uri: "skill://example",
       resourceUri: "file:///example.txt",
     });
+  });
+});
+
+describe("elicitation requests", () => {
+  it.each(["callTool", "readResource", "getPrompt"] as const)(
+    "%s raises the in-flight count and polls until it settles",
+    async (method) => {
+      vi.mocked(trpc.elicitations.pending.query).mockResolvedValue({ pending: [], completions: [] });
+      let release!: (value: unknown) => void;
+      vi.mocked(trpc.servers[method].mutate).mockImplementationOnce(
+        () => new Promise((resolve) => (release = resolve)) as never,
+      );
+      const call = (api[method] as (name: string, body: unknown) => Promise<unknown>)("server", { name: "x" });
+      expect(useElicitationStore.getState().inFlightCount).toBe(1);
+      expect(trpc.elicitations.pending.query).toHaveBeenCalledOnce();
+      release({ activities: [] });
+      await call;
+      expect(useElicitationStore.getState().inFlightCount).toBe(0);
+    },
+  );
+
+  it("releases the in-flight count when the call fails", async () => {
+    vi.mocked(trpc.elicitations.pending.query).mockResolvedValue({ pending: [], completions: [] });
+    vi.mocked(trpc.servers.callTool.mutate).mockRejectedValueOnce(new Error("boom"));
+    await expect(api.callTool("server", { name: "x" })).rejects.toThrow("boom");
+    expect(useElicitationStore.getState().inFlightCount).toBe(0);
+  });
+
+  it("lists and answers elicitations through the elicitations router", async () => {
+    vi.mocked(trpc.elicitations.pending.query).mockResolvedValue({ pending: [], completions: [] });
+    await api.pendingElicitations();
+    await api.pendingElicitations("server");
+    expect(vi.mocked(trpc.elicitations.pending.query).mock.calls).toEqual([[undefined], [{ serverName: "server" }]]);
+
+    vi.mocked(trpc.elicitations.respond.mutate).mockResolvedValue({} as never);
+    await api.respondElicitation({ id: "a", action: "accept", content: { name: "Ada" } });
+    expect(trpc.elicitations.respond.mutate).toHaveBeenCalledWith({ id: "a", action: "accept", content: { name: "Ada" } });
+  });
+});
+
+describe("request batching", () => {
+  it("sends long-running calls and elicitation traffic outside the batch link", () => {
+    for (const path of [
+      "elicitations.pending",
+      "elicitations.respond",
+      "servers.callTool",
+      "servers.readResource",
+      "servers.getPrompt",
+      "servers.discover",
+      "servers.listSkills",
+      "servers.getSkill",
+      "servers.readSkill",
+      "servers.readSkillDirectory",
+    ]) {
+      expect(isUnbatchedPath(path)).toBe(true);
+    }
+    expect(isUnbatchedPath("servers.list")).toBe(false);
+    expect(isUnbatchedPath("servers.complete")).toBe(false);
   });
 });

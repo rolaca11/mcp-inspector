@@ -4,6 +4,8 @@
  * client import the same definitions.
  */
 
+import type { ElicitationUrlParams } from "@rolaca11/mcp-inspector-core/elicitation";
+
 export type Transport = "stdio" | "http" | "sse" | "streamable-http";
 
 export type SourceLabel = "inspector" | "global" | "project" | "--config";
@@ -206,6 +208,7 @@ export interface ActivityResult<T = unknown> {
   result?: T;
   error?: string;
   warnings?: string[];
+  urlElicitations?: ElicitationUrlParams[];
 }
 
 export interface ActivitiesResponse<T = unknown> {

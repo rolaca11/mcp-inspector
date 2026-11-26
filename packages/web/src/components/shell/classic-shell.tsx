@@ -1,13 +1,16 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useMatch } from "react-router-dom";
 
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { TopToolbar } from "@/components/shell/top-toolbar";
 import { StatusBar } from "@/components/shell/status-bar";
 import { BottomNav } from "@/components/shell/bottom-nav";
 import { OAuthBanner } from "@/components/shell/oauth-banner";
+import { ElicitationBanner } from "@/components/shell/elicitation-banner";
+import { ElicitationPanel } from "@/components/elicitation-panel";
 import { computeCounts } from "@/components/shell/shell-helpers";
 import { useConnectionStore } from "@/stores/connection-store";
 import { useUIStore } from "@/stores/ui-store";
+import { useElicitationPoller } from "@/stores/elicitation-store";
 import type { ServerLayoutContext } from "@/App";
 import type { MCPServer } from "@/data/types";
 
@@ -34,6 +37,14 @@ export function ClassicShell({
     useConnectionStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const counts = computeCounts(data, servers.length);
+  useElicitationPoller(connectionState);
+
+  const toolsMatch = useMatch("/:serverName/tools");
+  const resourcesMatch = useMatch("/:serverName/resources");
+  const hasPageHost =
+    (Boolean(toolsMatch) && (data?.tools.length ?? 0) > 0) ||
+    (Boolean(resourcesMatch) &&
+      (data?.resources.length ?? 0) + (data?.resourceTemplates.length ?? 0) > 0);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -59,10 +70,14 @@ export function ClassicShell({
           onRediscover={() => void rediscover()}
         />
         {pendingAuthUrl && <OAuthBanner url={pendingAuthUrl} />}
+        <ElicitationBanner servers={servers} active={active} onSelectServer={onSelectServer} />
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+          {!hasPageHost && (
+            <ElicitationPanel serverName={active.id} className="mx-4 mt-4 sm:mx-6 sm:mt-5" />
+          )}
           <Outlet context={outletContext} />
         </main>
-        <StatusBar />
+        <StatusBar onSelectServer={onSelectServer} />
         <BottomNav serverName={active.id} counts={counts} />
       </div>
     </div>

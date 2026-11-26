@@ -83,6 +83,20 @@ describe("HTTP server", () => {
     expect(body.result.data).toEqual({ ok: true });
   });
 
+  it("exposes the elicitation broker through tRPC", async () => {
+    const res = await fetch(`${serverUrl}/api/trpc/elicitations.pending`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.result.data).toEqual({ pending: [], completions: [] });
+
+    const missing = await fetch(`${serverUrl}/api/trpc/elicitations.respond`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "nope", action: "cancel" }),
+    });
+    expect(missing.status).toBe(404);
+  });
+
   it("does not serve the SPA for old /api routes", async () => {
     const res = await fetch(`${serverUrl}/api/health`);
     expect(res.status).toBe(404);

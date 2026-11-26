@@ -18,6 +18,7 @@ import { Section } from "@/components/section";
 import { Controller } from "react-hook-form";
 
 import { CodeBlock } from "@/components/code-block";
+import { ElicitationPanel } from "@/components/elicitation-panel";
 import { ErrorMessage } from "@/components/error-message";
 import { CompletableInput } from "@/components/completable-input";
 import { Empty } from "@/components/empty";
@@ -215,6 +216,8 @@ function ResourcePreview({
         </div>
       </Section>
 
+      <ElicitationPanel serverName={serverName} />
+
       <Section
         title="Contents"
         action={
@@ -238,7 +241,12 @@ function ResourcePreview({
         }
       >
         {error ? (
-          <ErrorMessage error={error} errorResponse={errorResponse} />
+          <ErrorMessage
+            error={error}
+            errorResponse={errorResponse}
+            urlElicitations={activity?.urlElicitations}
+            onRetry={() => void onRead()}
+          />
         ) : result ? (
           <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
         ) : (
@@ -398,6 +406,8 @@ function TemplatePreview({
         </div>
       </Section>
 
+      <ElicitationPanel serverName={serverName} />
+
       <Section
         title="Contents"
         action={
@@ -421,7 +431,12 @@ function TemplatePreview({
         }
       >
         {error ? (
-          <ErrorMessage error={error} errorResponse={errorResponse} />
+          <ErrorMessage
+            error={error}
+            errorResponse={errorResponse}
+            urlElicitations={activity?.urlElicitations}
+            onRetry={() => void onRead()}
+          />
         ) : result ? (
           <ResourceContentsView contents={result.contents} serverName={serverName} readAt={null} tokenCount={null} />
         ) : (

@@ -13,7 +13,8 @@
 
 import { SdkHttpError } from "@modelcontextprotocol/client";
 
-import { connect, type Session } from "./client.js";
+import { connect, type ConnectOptions, type Session } from "./client.js";
+import type { ElicitationBroker } from "./elicitation-broker.js";
 
 export const SESSION_IDLE_MS = 5 * 60 * 1000;
 
@@ -30,6 +31,7 @@ export interface SessionPoolOptions {
   idleMs?: number;
   /** Connection factory — injectable for tests. */
   connectFn?: typeof connect;
+  elicitations?: ElicitationBroker;
 }
 
 /**
@@ -70,20 +72,44 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
     facade: Session | null;
     pending: Promise<Session> | null;
     timer: NodeJS.Timeout | null;
+    inFlight: number;
   }
   const entries = new Map<string, Entry>();
 
   function touch(name: string, entry: Entry): void {
     if (entry.timer) clearTimeout(entry.timer);
-    entry.timer = setTimeout(() => void release(name, true), idleMs);
+    entry.timer = setTimeout(() => {
+      if (entry.inFlight > 0 || opts.elicitations?.hasPending(name)) {
+        touch(name, entry);
+        return;
+      }
+      void release(name, true);
+    }, idleMs);
     entry.timer.unref?.();
+  }
+
+  function connectOptions(name: string): ConnectOptions {
+    const broker = opts.elicitations;
+    return {
+      onRedirect: (url) => {
+        opts.onAuthRedirect?.(name, url);
+      },
+      ...(broker
+        ? {
+            elicitation: {
+              handler: (params, ctx) => broker.request(name, params, ctx),
+              onComplete: (elicitationId) => broker.recordCompletion(name, elicitationId),
+            },
+          }
+        : {}),
+    };
   }
 
   /** Connect (or reuse) and resolve the raw, unwrapped session. */
   async function acquireRaw(name: string): Promise<Session> {
     let entry = entries.get(name);
     if (!entry) {
-      entry = { session: null, facade: null, pending: null, timer: null };
+      entry = { session: null, facade: null, pending: null, timer: null, inFlight: 0 };
       entries.set(name, entry);
     }
 
@@ -92,14 +118,10 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
     if (entry.session) return entry.session;
     if (entry.pending) return entry.pending;
 
-    entry.pending = connectFn(name, {
-      onRedirect: (url) => {
-        opts.onAuthRedirect?.(name, url);
-      },
-    })
+    entry.pending = connectFn(name, connectOptions(name))
       .then((s) => {
         entry.session = s;
-        entry.facade = healingFacade(name, s);
+        entry.facade = healingFacade(name, s, entry);
         entry.pending = null;
         return s;
       })
@@ -120,12 +142,22 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
     return acquireRaw(name);
   }
 
+  async function tracked<T>(name: string, entry: Entry, run: () => Promise<T>): Promise<T> {
+    entry.inFlight++;
+    try {
+      return await run();
+    } finally {
+      entry.inFlight--;
+      if (entries.get(name) === entry) touch(name, entry);
+    }
+  }
+
   /**
    * A `Session` whose round-trip methods reconnect and replay once when the
    * server rejects our session ID. The replay uses the raw client so a
    * pathological server can't trap us in a heal loop.
    */
-  function healingFacade(name: string, real: Session): Session {
+  function healingFacade(name: string, real: Session, entry: Entry): Session {
     const client = new Proxy(real.client, {
       get(target, prop) {
         // Receiver must be the real client: getters/methods may touch private
@@ -138,26 +170,24 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
         ) {
           return typeof value === "function" ? value.bind(target) : value;
         }
-        return async (...args: unknown[]) => {
-          try {
-            return await value.apply(target, args);
-          } catch (e) {
-            if (
-              real.client.getProtocolEra() !== "legacy" ||
-              !real.client.transport?.sessionId ||
-              !isSessionExpired(e)
-            ) throw e;
-            const fresh = await reacquire(name, real);
-            const replay = (fresh.client as unknown as Record<string, unknown>)[
-              prop
-            ];
-            if (typeof replay !== "function") throw e;
-            return (replay as (...a: unknown[]) => unknown).apply(
-              fresh.client,
-              args,
-            );
-          }
-        };
+        return (...args: unknown[]) =>
+          tracked(name, entry, async () => {
+            try {
+              return await value.apply(target, args);
+            } catch (e) {
+              if (
+                real.client.getProtocolEra() !== "legacy" ||
+                !real.client.transport?.sessionId ||
+                !isSessionExpired(e)
+              ) throw e;
+              const fresh = await reacquire(name, real);
+              const replay = (fresh.client as unknown as Record<string, unknown>)[prop];
+              if (typeof replay !== "function") throw e;
+              const run = () => (replay as (...a: unknown[]) => Promise<unknown>).apply(fresh.client, args);
+              const freshEntry = entries.get(name);
+              return freshEntry && freshEntry !== entry ? tracked(name, freshEntry, run) : run();
+            }
+          });
       },
     });
     return {
@@ -176,6 +206,7 @@ export function createSessionPool(opts: SessionPoolOptions = {}): SessionPool {
   }
 
   async function release(name: string, hard = false): Promise<void> {
+    if (hard) opts.elicitations?.cancelForServer(name, "Session closed");
     const entry = entries.get(name);
     if (!entry) return;
     if (entry.timer) {

@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { CodeBlock } from "@/components/code-block";
+import { ElicitationPanel } from "@/components/elicitation-panel";
 import { ErrorMessage } from "@/components/error-message";
 import { Empty } from "@/components/empty";
 import { PageShell } from "@/components/page-shell";
@@ -473,6 +474,8 @@ function ToolDetail({
         </div>
       </Section>
 
+      <ElicitationPanel serverName={serverName} />
+
       {uiResourceUri && callState.activity?.outcome === "ok" && callState.activity.result && (
         <Section
           titleClassName="flex items-center gap-2"
@@ -539,6 +542,7 @@ function ToolDetail({
           state={callState}
           serverName={serverName}
           toolInput={callState.input}
+          onRetry={onCall}
         />
       </Section>
     </div>
@@ -1859,14 +1863,23 @@ const ToolResultView = React.memo(function ToolResultView({
   state,
   serverName,
   toolInput,
+  onRetry,
 }: {
   state: CallState;
   serverName: string;
   toolInput?: Record<string, unknown>;
+  onRetry?: () => void;
 }) {
   const errorMsg = state.error ?? (state.activity?.outcome === "error" ? state.activity.error : null);
   if (errorMsg) {
-    return <ErrorMessage error={errorMsg} errorResponse={state.errorResponse} />;
+    return (
+      <ErrorMessage
+        error={errorMsg}
+        errorResponse={state.errorResponse}
+        urlElicitations={state.activity?.urlElicitations}
+        onRetry={onRetry}
+      />
+    );
   }
   if (!state.activity?.result) {
     return (

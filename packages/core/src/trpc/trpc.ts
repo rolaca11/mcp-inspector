@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 
 import type { Session } from "../client.js";
+import type { ElicitationBroker } from "../elicitation-broker.js";
 import { loadConfigSync, type LoadedConfig } from "../config.js";
 import { setLoadedConfig } from "../target.js";
 
@@ -17,6 +18,7 @@ export interface TRPCContext {
   sessions: SessionPool;
   pendingAuthUrls: Map<string, string>;
   configOpts: { extraFiles?: string[] };
+  elicitations?: ElicitationBroker;
 }
 
 /* ------------------------------------------------------------------ */

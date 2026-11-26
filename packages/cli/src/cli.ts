@@ -18,7 +18,7 @@ import { Command, Option } from "commander";
 import pc from "picocolors";
 
 import * as actions from "@rolaca11/mcp-inspector-core/actions";
-import { connect } from "@rolaca11/mcp-inspector-core/client";
+import { connect, type ConnectOptions } from "@rolaca11/mcp-inspector-core/client";
 import { appendConfigFiles } from "@rolaca11/mcp-inspector-core/config-files";
 import {
   ensureInspectorConfig,
@@ -27,7 +27,8 @@ import {
   type ServerConfig,
 } from "@rolaca11/mcp-inspector-core/config";
 import { configDir } from "@rolaca11/mcp-inspector-core/paths";
-import { runRepl } from "./repl.js";
+import { createReplLineBridge, runRepl } from "./repl.js";
+import { resolveCliElicitationHandler, type AskLine } from "./elicitation-prompt.js";
 import { errorMessage } from "@rolaca11/mcp-inspector-core/format";
 import { parseTarget, setLoadedConfig } from "@rolaca11/mcp-inspector-core/target";
 import {
@@ -47,6 +48,8 @@ interface GlobalOpts {
   scope?: string;
   clientName?: string;
   countTokens?: boolean;
+  elicitation?: boolean;
+  elicitResponse?: string;
 }
 
 function attachGlobal(cmd: Command): Command {
@@ -64,7 +67,25 @@ function attachGlobal(cmd: Command): Command {
     .option(
       "--count-tokens",
       "count response tokens via the claude-tokenizer API",
+    )
+    .option(
+      "--no-elicitation",
+      "do not advertise elicitation support to the server",
+    )
+    .option(
+      "--elicit-response <json>",
+      'answer elicitation requests with this ElicitResult, or a JSON array of them in order (e.g. \'{"action":"accept","content":{"name":"Ada"}}\')',
     );
+}
+
+function sessionConnectOptions(opts: GlobalOpts, askLine?: AskLine): ConnectOptions {
+  const handler = resolveCliElicitationHandler(opts, askLine ? { askLine } : {});
+  return {
+    ...(opts.scope ? { scope: opts.scope } : {}),
+    ...(opts.clientName ? { clientName: opts.clientName } : {}),
+    ...(opts.quiet ? { quiet: true } : {}),
+    ...(handler ? { elicitation: { handler } } : {}),
+  };
 }
 
 /**
@@ -81,11 +102,7 @@ function withSession(
     const cmd = _rest[_rest.length - 1] as Command;
     const opts = collectOpts(cmd);
     const spec = parseTarget(target);
-    const session = await connect(spec, {
-      ...(opts.scope ? { scope: opts.scope } : {}),
-      ...(opts.clientName ? { clientName: opts.clientName } : {}),
-      ...(opts.quiet ? { quiet: true } : {}),
-    });
+    const session = await connect(spec, sessionConnectOptions(opts));
     try {
       await fn(session, { format: { json: !!opts.json, countTokens: !!opts.countTokens } });
     } finally {
@@ -126,13 +143,10 @@ attachGlobal(
     .action(async (target: string, _opts, cmd: Command) => {
       const opts = collectOpts(cmd);
       const spec = parseTarget(target);
-      const session = await connect(spec, {
-        ...(opts.scope ? { scope: opts.scope } : {}),
-        ...(opts.clientName ? { clientName: opts.clientName } : {}),
-        ...(opts.quiet ? { quiet: true } : {}),
-      });
+      const lineBridge = createReplLineBridge();
+      const session = await connect(spec, sessionConnectOptions(opts, lineBridge.askLine));
       try {
-        await runRepl(session);
+        await runRepl(session, { lineBridge });
       } finally {
         await session.close();
       }
@@ -196,11 +210,7 @@ attachGlobal(
     .action(async (target: string, uri: string, _opts, cmd: Command) => {
       const opts = collectOpts(cmd);
       const spec = parseTarget(target);
-      const session = await connect(spec, {
-        ...(opts.scope ? { scope: opts.scope } : {}),
-        ...(opts.clientName ? { clientName: opts.clientName } : {}),
-        ...(opts.quiet ? { quiet: true } : {}),
-      });
+      const session = await connect(spec, sessionConnectOptions(opts));
       try {
         await actions.readResource(session, uri, { json: !!opts.json, countTokens: !!opts.countTokens });
       } finally {
@@ -278,11 +288,7 @@ attachGlobal(
         const opts = collectOpts(cmd) as GlobalOpts & { args?: string };
         const spec = parseTarget(target);
         const args = parseJsonObject(opts.args ?? "{}", "--args");
-        const session = await connect(spec, {
-          ...(opts.scope ? { scope: opts.scope } : {}),
-          ...(opts.clientName ? { clientName: opts.clientName } : {}),
-          ...(opts.quiet ? { quiet: true } : {}),
-        });
+        const session = await connect(spec, sessionConnectOptions(opts));
         try {
           await actions.callTool(
             session,
@@ -332,11 +338,7 @@ attachGlobal(
         for (const [k, v] of Object.entries(parsed)) {
           stringified[k] = typeof v === "string" ? v : JSON.stringify(v);
         }
-        const session = await connect(spec, {
-          ...(opts.scope ? { scope: opts.scope } : {}),
-          ...(opts.clientName ? { clientName: opts.clientName } : {}),
-          ...(opts.quiet ? { quiet: true } : {}),
-        });
+        const session = await connect(spec, sessionConnectOptions(opts));
         try {
           await actions.getPrompt(session, name, stringified, { json: !!opts.json, countTokens: !!opts.countTokens });
         } finally {
